@@ -4,6 +4,7 @@ import json
 import threading
 import time
 import traceback
+import faulthandler
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QTableView, QVBoxLayout,
     QWidget, QHBoxLayout, QPushButton, QGroupBox, QLabel, 
@@ -15,6 +16,7 @@ from PyQt6.QtGui import QColor, QAction, QFont
 from pathlib import Path
 
 LOG_PATH = Path(__file__).resolve().parent / "server_log.txt"
+FAULT_LOG_PATH = Path(__file__).resolve().parent / "fault_log.txt"
 
 def append_log(message):
     try:
@@ -22,6 +24,21 @@ def append_log(message):
             fp.write(f"[PY] {message}\n")
     except Exception:
         pass
+
+def _install_exception_hooks():
+    fault_fp = FAULT_LOG_PATH.open("a", encoding="utf-8")
+    faulthandler.enable(file=fault_fp)
+
+    def _excepthook(exc_type, exc_value, exc_tb):
+        msg = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+        append_log(f"[UNCAUGHT EXCEPTION]\n{msg}")
+        sys.__excepthook__(exc_type, exc_value, exc_tb)
+    sys.excepthook = _excepthook
+
+    def _thread_excepthook(args):
+        msg = "".join(traceback.format_exception(args.exc_type, args.exc_value, args.exc_traceback))
+        append_log(f"[THREAD EXCEPTION] thread={args.thread}\n{msg}")
+    threading.excepthook = _thread_excepthook
 
 def normalize_label(value):
     
@@ -203,13 +220,29 @@ class PropertyTableModel(QAbstractTableModel):
             return True
         return False
 
+    def refresh_view(self):
+        """データ変更後に全セルを再描画（構造変更なし → dataChanged を使用）"""
+        if self._elements and self._properties:
+            tl = self.index(0, 0)
+            br = self.index(len(self._elements) - 1, len(self._properties))
+            self.dataChanged.emit(tl, br, [Qt.ItemDataRole.BackgroundRole,
+                                           Qt.ItemDataRole.ForegroundRole,
+                                           Qt.ItemDataRole.FontRole,
+                                           Qt.ItemDataRole.ToolTipRole])
+
     def update_change_status(self, guids, value):
+        guid_set = set(guids)
         for g in guids:
             if value == 0:
                 self._change_status.pop(g, None)
             else:
                 self._change_status[g] = value
-        self.layoutChanged.emit()
+        # 対象行のみ再描画（layoutChanged は proxy の内部マッピングを破壊するため使わない）
+        for row, elem in enumerate(self._elements):
+            if elem["guid"] in guid_set:
+                tl = self.index(row, 0)
+                br = self.index(row, len(self._properties))
+                self.dataChanged.emit(tl, br, [Qt.ItemDataRole.BackgroundRole])
 
     def flags(self, index):
         if index.column() == 0: return Qt.ItemFlag.ItemIsEnabled
@@ -422,7 +455,7 @@ class MainWindow(QMainWindow):
             })
         self.model._value_conflict_cells.clear()
         self.model._value_conflict_guids.clear()
-        self.model.layoutChanged.emit()
+        self.model.refresh_view()
         self.btn_clear_flags.setEnabled(False)
         self.status_label.setText("フラグ解除中（ArchiCAD含む）...")
 
@@ -513,31 +546,43 @@ class MainWindow(QMainWindow):
         self.status_label.setText(f"全件リセット中: {len(guids)}件...")
 
     def on_change_status_result(self, data):
-        if data.get("status") == "ok":
-            val = data.get("value", -1)
-            count = data.get("set", 0)
-            label_map = {0: "未変更（リセット）", 1: "変更済", 2: "確認済"}
-            label = label_map.get(val, str(val))
-            if self._pending_status_change:
-                self.model.update_change_status(
-                    self._pending_status_change["guids"],
-                    self._pending_status_change["value"]
-                )
+        try:
+            append_log(f"on_change_status_result: {data}")
+            if data.get("status") == "ok":
+                val = data.get("value", -1)
+                count = data.get("set", 0)
+                label_map = {0: "未変更（リセット）", 1: "変更済", 2: "確認済"}
+                label = label_map.get(val, str(val))
+                if self._pending_status_change:
+                    append_log(f"on_change_status_result: calling update_change_status guids={self._pending_status_change['guids']} val={self._pending_status_change['value']}")
+                    self.model.update_change_status(
+                        self._pending_status_change["guids"],
+                        self._pending_status_change["value"]
+                    )
+                    self._pending_status_change = None
+                    append_log("on_change_status_result: update_change_status done")
+                self.status_label.setText(f"ChangeStatus={label}: {count}件 設定完了")
+            else:
                 self._pending_status_change = None
-            self.status_label.setText(f"ChangeStatus={label}: {count}件 設定完了")
-        else:
-            self._pending_status_change = None
-            self.status_label.setText(f"ChangeStatusエラー: {data.get('reason', '')}")
+                self.status_label.setText(f"ChangeStatusエラー: {data.get('reason', '')}")
+        except Exception as e:
+            append_log(f"on_change_status_result ERROR: {e}\n{traceback.format_exc()}")
 
     def on_table_clicked(self, index):
-        source_index = self.proxy.mapToSource(index)
-        row = source_index.row()
-        if row < len(self.model._elements):
+        try:
+            source_index = self.proxy.mapToSource(index)
+            row = source_index.row()
+            append_log(f"on_table_clicked: proxy row={index.row()} → source row={row}, total_elems={len(self.model._elements)}")
+            if row < 0 or row >= len(self.model._elements):
+                append_log(f"on_table_clicked: invalid row {row}, skipping")
+                return
             guid = self.model._elements[row]["guid"]
             self._selected_guids = [guid]
             self.btn_confirm.setEnabled(True)
             self.btn_reset_status.setEnabled(True)
             self.send_to_ac_async({"command": "select_elements", "guids": [guid]})
+        except Exception as e:
+            append_log(f"on_table_clicked ERROR: {e}\n{traceback.format_exc()}")
 
     def show_filter_menu(self, pos):
         col = self.table.horizontalHeader().logicalIndexAt(pos)
@@ -763,7 +808,7 @@ class MainWindow(QMainWindow):
         safe_changes     = [c for c in pending if (c["guid"], c["propId"]) not in conflict_keys]
         conflict_changes = [c for c in pending if (c["guid"], c["propId"]) in conflict_keys]
 
-        self.model.layoutChanged.emit()
+        self.model.refresh_view()
         lines = [
             f"  [{c['guid_short']}] {c['prop_name']}\n"
             f"    取得時: {c['orig_val']}  ／  ArchiCAD現在: {c['ac_val']}  ／  あなたの編集: {c['user_val']}"
@@ -806,7 +851,7 @@ class MainWindow(QMainWindow):
                     "user_val": cf["user_val"]
                 }
                 self.model._value_conflict_guids.add(cf["guid"])
-            self.model.layoutChanged.emit()
+            self.model.refresh_view()
             self.btn_clear_flags.setEnabled(True)
             self._pending_skip_count = len(conflict_changes)
 
@@ -833,8 +878,10 @@ class MainWindow(QMainWindow):
 
     def on_sync_complete(self, data):
         append_log("=== SYNC COMPLETE RECEIVED ===")
-        append_log(f"sync payload: {json.dumps(data, indent=2, ensure_ascii=False)[:1000]}")
+        append_log(f"sync payload keys: {list(data.keys()) if isinstance(data, dict) else type(data).__name__}")
+        append_log(f"sync results count: {len(data.get('results', []))}")
         try:
+            append_log("on_sync_complete: [1] checking results key")
             if "results" not in data:
                 if "data" in data and "results" in data["data"]: data = data["data"]
                 else:
@@ -845,8 +892,10 @@ class MainWindow(QMainWindow):
 
             results = data.get("results", [])
             sc, cc, ec, stamp_stale_cnt, details = 0, 0, 0, 0, []
+            append_log(f"on_sync_complete: [2] model props={len(self.model._properties)}, elems={len(self.model._elements)}")
             self.model._conflicts.clear()
 
+            append_log(f"on_sync_complete: [3] processing {len(results)} results")
             for res in results:
                 g = res.get("guid")
                 if not g: continue
@@ -863,12 +912,11 @@ class MainWindow(QMainWindow):
                     if current_stamp:
                         self.model._stamps[g] = current_stamp
                     self.model._stamp_flags[g] = PropertyTableModel.STAMP_OK
-                    self.model._change_status[g] = 1  # 変更済(赤)
+                    self.model._change_status[g] = 1
 
                 elif s in ("conflict", "skipped"):
                     cc += 1
                     self.model._conflicts[g] = s
-                    # stamp変化検出: ArchiCAD側で別の変更が入っていた
                     if current_stamp and current_stamp != prev_stamp:
                         self.model._stamp_flags[g] = PropertyTableModel.STAMP_STALE
                         self.model._stamps[g] = current_stamp
@@ -888,22 +936,28 @@ class MainWindow(QMainWindow):
                     else:
                         details.append(f"{g[:8]}: ERROR ({r})")
 
-            self.model.layoutChanged.emit()
+            append_log(f"on_sync_complete: [4] loop done sc={sc} cc={cc} ec={ec}, refreshing view")
+            self.model.refresh_view()
+            append_log("on_sync_complete: [5] refresh_view done")
+
             py_skip = self._pending_skip_count
             self._pending_skip_count = 0
             stamp_txt   = f" / stamp変化:{stamp_stale_cnt}" if stamp_stale_cnt > 0 else ""
             py_skip_txt = f" / 競合スキップ:{py_skip}"      if py_skip > 0         else ""
             msg = f"成功:{sc} / 競合:{cc} / エラー:{ec}{stamp_txt}{py_skip_txt}"
+            append_log(f"on_sync_complete: [6] setting status label: {msg}")
             self.status_label.setText(msg)
             d_txt = "\n".join(details[:10])
 
             has_issue = ec > 0 or cc > 0 or py_skip > 0
+            append_log(f"on_sync_complete: [7] showing dialog has_issue={has_issue}")
             if not has_issue:
                 QMessageBox.information(self, "同期完了", msg)
             elif ec == 0:
                 QMessageBox.warning(self, "一部競合/スキップ", f"{msg}\n\n{d_txt}" if d_txt else msg)
             else:
                 QMessageBox.critical(self, "エラー", f"{msg}\n\n{d_txt}")
+            append_log("on_sync_complete: [8] dialog closed, done")
         except Exception as e:
             append_log(f"SYNC ERROR: {e}\n{traceback.format_exc()}")
             QMessageBox.critical(self, "内部エラー", str(e))
@@ -927,7 +981,9 @@ class MainWindow(QMainWindow):
         threading.Thread(target=_send, daemon=True).start()
 
 if __name__ == "__main__":
+    _install_exception_hooks()
     append_log("--- Starting Application ---")
+    append_log(f"Python {sys.version}")
     app = QApplication(sys.argv); win = MainWindow()
     server_thread = TcpServerThread(win.signals); win.server_thread = server_thread
     server_thread.start(); sys.exit(app.exec())

@@ -533,10 +533,23 @@ void ExecuteBatch(const CommandBatch& batch) {
         else if (cmd.find("\"get_values\"") != std::string::npos) ExportValues(cmd);
         else if (cmd.find("\"select_elements\"") != std::string::npos) {
             GS::Array<API_Guid> guids = ExtractGuids(cmd, "guids");
+            WriteExternalLog("select_elements: " + std::to_string(guids.GetSize()) + " guid(s)");
             if (!guids.IsEmpty()) {
                 GS::Array<API_Neig> sel;
-                for (const auto& g : guids) { API_Neig n; if (ACAPI_Selection_SetSelectedElementNeig(&g, &n) == NoError) sel.Push(n); }
-                if (!sel.IsEmpty()) ACAPI_Selection_Select(sel, true);
+                for (const auto& g : guids) {
+                    API_Neig n;
+                    BNZeroMemory(&n, sizeof(n));
+                    GSErrCode e = ACAPI_Selection_SetSelectedElementNeig(&g, &n);
+                    if (e == NoError) {
+                        sel.Push(n);
+                    } else {
+                        WriteExternalLog("select_elements: SetSelectedElementNeig failed err=" + std::to_string(e));
+                    }
+                }
+                if (!sel.IsEmpty()) {
+                    GSErrCode e = ACAPI_Selection_Select(sel, true);
+                    WriteExternalLog("select_elements: Select returned " + std::to_string(e));
+                }
             }
         }
         else if (cmd.find("\"mark_change_flags\"") != std::string::npos) MarkChangeFlags(cmd, false);

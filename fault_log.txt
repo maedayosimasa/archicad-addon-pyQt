@@ -1,0 +1,10 @@
+Windows fatal exception: access violation
+
+Thread 0x00006908 (most recent call first):
+  File "C:\Users\gdre1\anaconda3\Lib\socket.py", line 294 in accept
+  File "C:\AC28_AddOnProject\archicad-addon-pyQt\server.py", line 273 in run
+  File "C:\Users\gdre1\anaconda3\Lib\threading.py", line 1045 in _bootstrap_inner
+  File "C:\Users\gdre1\anaconda3\Lib\threading.py", line 1002 in _bootstrap
+
+Current thread 0x00002d14 (most recent call first):
+  File "C:\AC28_AddOnProject\archicad-addon-pyQt\server.py", line 961 in <module>
