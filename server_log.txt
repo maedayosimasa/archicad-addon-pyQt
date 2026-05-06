@@ -1,71 +1,71 @@
-[2026-05-06 19:00:55] Loaded binary: C:\AC28_AddOnProject\archicad-addon-pyQt\Build\Release\maedaAddOnPyqt.apx
-[2026-05-06 19:00:55] Build stamp: May  6 2026 18:58:06
-[2026-05-06 19:00:55] Command listener started on port 5001
-[2026-05-06 19:00:55] Started Python server process
+[2026-05-06 19:49:59] Loaded binary: C:\AC28_AddOnProject\archicad-addon-pyQt\Build\Release\maedaAddOnPyqt.apx
+[2026-05-06 19:49:59] Build stamp: May  6 2026 19:48:35
+[2026-05-06 19:49:59] Command listener started on port 5001
+[2026-05-06 19:50:00] Started Python server process
 [PY] --- Starting Application ---
 [PY] Python 3.11.7 | packaged by Anaconda, Inc. | (main, Dec 15 2023, 18:05:47) [MSC v.1916 64 bit (AMD64)]
 [PY] Server started (5000)
-[2026-05-06 19:01:01] Attempting to send message to Python (368 bytes)
-[2026-05-06 19:01:01] Successfully sent to Python (368 bytes)
-[PY] [CONNECT] ('127.0.0.1', 65300)
+[2026-05-06 19:50:05] Attempting to send message to Python (368 bytes)
+[2026-05-06 19:50:05] Successfully sent to Python (368 bytes)
+[PY] [CONNECT] ('127.0.0.1', 64146)
 [PY] [RECV RAW] {"type":"project_config","stories":[{"index":-2,"name":"-2 Floor (基礎)"},{"index":-1,"name":"-1 Floor (GL)"},{"index":0,"name":"1 Floor (1FL)"},{"index":1,"name":"2 Floor (2Fl)"},{"index":2,"name":"3 Floor (3FL)"},{"index":3,"name":"4 Floor (4FL)"}],"elementTypes":{"Wall":35,"Column":100,"Beam":68,"Slab":20,"Window":63,"Door":28,"Zone":12,"Roof":1,"Object":100}}
 [PY] [TYPE] project_config
 [PY] [SEND] {"command":"get_elements","stories":[3],"Wall":false,"Column":true,"Beam":false,"Slab":false,"Window":false,"Door":false,"Zone":false,"Roof":false,"Object":false}
 ...
 [PY] [NO ACK]
-[2026-05-06 19:01:13] EXEC START: other
-[2026-05-06 19:01:13] EXEC END: other
-[2026-05-06 19:01:13] Attempting to send message to Python (1233 bytes)
-[2026-05-06 19:01:13] Successfully sent to Python (1233 bytes)
-[PY] [CONNECT] ('127.0.0.1', 65313)
+[2026-05-06 19:50:13] EXEC START: other
+[2026-05-06 19:50:13] EXEC END: other
+[2026-05-06 19:50:13] Attempting to send message to Python (1233 bytes)
+[PY] [CONNECT] ('127.0.0.1', 64155)
+[2026-05-06 19:50:13] Successfully sent to Python (1233 bytes)
 [PY] [RECV RAW] {"type":"elements","elements":[{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51"},{"guid":"621A2BFC-294E-4053-A8EB-4C09E88B4102"},{"guid":"9343A401-F25A-4531-94B4-759D544C98DB"},{"guid":"3A74654B-2A98-4C79-AB13-99A522C96ADC"},{"guid":"0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7"},{"guid":"F4634548-6780-4119-B364-659A435619AE"},{"guid":"90B13C43-C9D8-48D3-8AE9-3A5D708550EE"},{"guid":"B9847E03-A18E-4AAA-98AA-979416C319AD"},{"guid":"2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2"},{"guid":"E05A10BE-3ED3-4A2E-808C-9698D7B97297"},{"guid":"6CAB21B1-9233-4AE2-8BCC-387B5371AD7D"},{"guid":"766492CD-2AB2-4605-B2FC-B0BC5474846C"},{"guid":"4AE155E3-8ACF-449C-AB14-C4C7F4143A5D"},{"guid":"50A04EB7-E0C6-48AA-BF97-0A2A6F51F344"},{"guid":"C4251015-F1D7-4B0E-B933-9EB0D3749A9C"},{"guid":"77918003-4ACC-4A97-A602-620C17EA556E"},{"guid":"5A8669B1-BFC5-4305-8E71-EDBB8BCADB15"},{"guid":"DDEACD4F-5038-4F30-982F-852DDDA12E97"},{"guid":"73F07854-FB55-43C8-AB92-A83B3042E818"},{"guid":"866F1801-9543-49F5-A85C-135D1380E748"},{"guid":"
 [PY] [TYPE] elements
 [PY] [SEND] {"command":"get_definitions","guids":["5AE160A8-CE9D-4D1E-97B2-238CE3E63E51"]}
 ...
 [PY] [NO ACK]
-[2026-05-06 19:01:20] EXEC START: other
-[2026-05-06 19:01:20] EXEC END: other
-[2026-05-06 19:01:20] Attempting to send message to Python (82552 bytes)
-[2026-05-06 19:01:20] Successfully sent to Python (82552 bytes)
-[PY] [CONNECT] ('127.0.0.1', 65322)
+[2026-05-06 19:50:24] EXEC START: other
+[2026-05-06 19:50:24] EXEC END: other
+[2026-05-06 19:50:24] Attempting to send message to Python (82407 bytes)
+[2026-05-06 19:50:24] Successfully sent to Python (82407 bytes)
+[PY] [CONNECT] ('127.0.0.1', 54753)
 [PY] [RECV RAW] {"type":"property_definitions","definitions":[{"guid":"builtin:element_id","name":"ID","group":"IDとカテゴリ","editable":true,"valueType":1,"collectionType":0},{"guid":"builtin:RenovationStatus","name":"リノベーションステータス","group":"IDとカテゴリ","editable":true,"valueType":2,"collectionType":1,"enums":["既存","新設","解体"]},{"guid":"builtin:StructuralFunction","name":"構造機能","group":"IDとカテゴリ","editable":true,"valueType":2,"collectionType":1,"enums":["耐力要素","非耐力要素","未定義"]},{"guid":"builtin:Position","name":"位置","group":"IDとカテゴリ","editable":true,"valueType":2,"collectionType":1,"enums":["外部","内部","未定義"]},{"guid":"5EC3A7BC-599A-4B51-9AC7-902127526EF3","name":"柱面積 (Archicad 22)","group":"柱","editable":false,"valueType":2,"collectionType":1},{"guid":"FE56A31F-CF4B-44A7-ABE0-DA22A895845E","name":"柱 ビルディングマテリアル/プロファイル (Archicad 20)","group":"柱","editable":true,"valueType":1,"collectionType":1},{"guid":"013560E7-ED78-4382-9937-32DCB47EE13A","name":"躯体高さ / 直径","group":"柱","editable":true,"valueType":2,"collectionTyp
 [PY] [TYPE] property_definitions
 [PY] [SEND] {"command":"get_values","guids":["5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","621A2BFC-294E-4053-A8EB-4C09E88B4102","9343A401-F25A-4531-94B4-759D544C98DB","3A74654B-2A98-4C79-AB13-99A522C96ADC","0AAC6DB7-A...
 [PY] [NO ACK]
-[2026-05-06 19:01:25] EXEC START: other
-[2026-05-06 19:01:25] EXEC END: other
-[2026-05-06 19:01:25] Attempting to send message to Python (2813 bytes)
-[2026-05-06 19:01:25] Successfully sent to Python (2813 bytes)
-[PY] [CONNECT] ('127.0.0.1', 65326)
+[2026-05-06 19:50:28] EXEC START: other
+[2026-05-06 19:50:28] EXEC END: other
+[2026-05-06 19:50:28] Attempting to send message to Python (2813 bytes)
+[PY] [CONNECT] ('127.0.0.1', 54758)
+nt to Python (2813 bytes)
 [PY] [RECV RAW] {"type":"property_values","values":[{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","modiStamp":5289314,"props":{"builtin:element_id":"CRE - 001"}},{"guid":"621A2BFC-294E-4053-A8EB-4C09E88B4102","modiStamp":5289331,"props":{"builtin:element_id":"CRE - 002"}},{"guid":"9343A401-F25A-4531-94B4-759D544C98DB","modiStamp":5289348,"props":{"builtin:element_id":"CRE - 003"}},{"guid":"3A74654B-2A98-4C79-AB13-99A522C96ADC","modiStamp":5289363,"props":{"builtin:element_id":"CRE - 004"}},{"guid":"0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7","modiStamp":5289380,"props":{"builtin:element_id":"CRE - 005"}},{"guid":"F4634548-6780-4119-B364-659A435619AE","modiStamp":5289397,"props":{"builtin:element_id":"CRE - 001"}},{"guid":"90B13C43-C9D8-48D3-8AE9-3A5D708550EE","modiStamp":5289414,"props":{"builtin:element_id":"CRE - 002"}},{"guid":"B9847E03-A18E-4AAA-98AA-979416C319AD","modiStamp":5289431,"props":{"builtin:element_id":"CRE - 003"}},{"guid":"2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2","modiStamp":5289446,"props":{
 [PY] [TYPE] property_values
 [PY] on_table_clicked: proxy row=0 → source row=0, total_elems=25
 [PY] [SEND] {"command":"select_elements","guids":["5AE160A8-CE9D-4D1E-97B2-238CE3E63E51"]}
 ...
 [PY] [NO ACK]
-[2026-05-06 19:01:35] EXEC START: other
-[2026-05-06 19:01:35] select_elements: 1 guid(s)
-[2026-05-06 19:01:36] select_elements: Select returned 0
-[2026-05-06 19:01:36] EXEC END: other
-[PY] [SEND] {"command":"get_values","guids":["73F07854-FB55-43C8-AB92-A83B3042E818","F4634548-6780-4119-B364-659A435619AE","B9847E03-A18E-4AAA-98AA-979416C319AD","866F1801-9543-49F5-A85C-135D1380E748","59E976DB-6...
+[2026-05-06 19:50:32] EXEC START: other
+[2026-05-06 19:50:32] select_elements: 1 guid(s)
+[2026-05-06 19:50:33] select_elements: Select returned 0
+[2026-05-06 19:50:33] EXEC END: other
+[PY] [SEND] {"command":"get_values","guids":["77918003-4ACC-4A97-A602-620C17EA556E","50A04EB7-E0C6-48AA-BF97-0A2A6F51F344","C4251015-F1D7-4B0E-B933-9EB0D3749A9C","90B13C43-C9D8-48D3-8AE9-3A5D708550EE","766492CD-2...
 [PY] [NO ACK]
-[2026-05-06 19:01:53] EXEC START: other
-[2026-05-06 19:01:53] EXEC END: other
-[2026-05-06 19:01:53] Attempting to send message to Python (2813 bytes)
-[2026-05-06 19:01:53] Successfully sent to Python (2813 bytes)
-[PY] [CONNECT] ('127.0.0.1', 49882)
-[PY] [RECV RAW] {"type":"property_values","values":[{"guid":"73F07854-FB55-43C8-AB92-A83B3042E818","modiStamp":5289622,"props":{"builtin:element_id":"CRE - 004"}},{"guid":"F4634548-6780-4119-B364-659A435619AE","modiStamp":5289397,"props":{"builtin:element_id":"CRE - 001"}},{"guid":"B9847E03-A18E-4AAA-98AA-979416C319AD","modiStamp":5289431,"props":{"builtin:element_id":"CRE - 003"}},{"guid":"866F1801-9543-49F5-A85C-135D1380E748","modiStamp":5289641,"props":{"builtin:element_id":"CRE - 005"}},{"guid":"59E976DB-65C3-402F-B593-D8228C007F09","modiStamp":5289728,"props":{"builtin:element_id":"CRE - 005"}},{"guid":"4AE155E3-8ACF-449C-AB14-C4C7F4143A5D","modiStamp":5289516,"props":{"builtin:element_id":"CRE - 003"}},{"guid":"E05A10BE-3ED3-4A2E-808C-9698D7B97297","modiStamp":5289463,"props":{"builtin:element_id":"CRE - 005"}},{"guid":"50A04EB7-E0C6-48AA-BF97-0A2A6F51F344","modiStamp":5289533,"props":{"builtin:element_id":"CRE - 004"}},{"guid":"DDEACD4F-5038-4F30-982F-852DDDA12E97","modiStamp":5289603,"props":{
+[2026-05-06 19:50:49] EXEC START: other
+[2026-05-06 19:50:49] EXEC END: other
+[2026-05-06 19:50:49] Attempting to send message to Python (2813 bytes)
+[2026-05-06 19:50:49] Successfully sent to Python (2813 bytes)
+[PY] [CONNECT] ('127.0.0.1', 54772)
+[PY] [RECV RAW] {"type":"property_values","values":[{"guid":"77918003-4ACC-4A97-A602-620C17EA556E","modiStamp":5289567,"props":{"builtin:element_id":"CRE - 001"}},{"guid":"50A04EB7-E0C6-48AA-BF97-0A2A6F51F344","modiStamp":5289533,"props":{"builtin:element_id":"CRE - 004"}},{"guid":"C4251015-F1D7-4B0E-B933-9EB0D3749A9C","modiStamp":5289550,"props":{"builtin:element_id":"CRE - 005"}},{"guid":"90B13C43-C9D8-48D3-8AE9-3A5D708550EE","modiStamp":5289414,"props":{"builtin:element_id":"CRE - 002"}},{"guid":"766492CD-2AB2-4605-B2FC-B0BC5474846C","modiStamp":5289497,"props":{"builtin:element_id":"CRE - 002"}},{"guid":"6CAB21B1-9233-4AE2-8BCC-387B5371AD7D","modiStamp":5289480,"props":{"builtin:element_id":"CRE - 001"}},{"guid":"ACCA1BF0-C7EE-4492-8170-DC8B1FBD5AB0","modiStamp":5289694,"props":{"builtin:element_id":"CRE - 003"}},{"guid":"0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7","modiStamp":5289380,"props":{"builtin:element_id":"CRE - 005"}},{"guid":"F4634548-6780-4119-B364-659A435619AE","modiStamp":5289397,"props":{
 [PY] [TYPE] property_values
 [PY] [PRE-VERIFY] 競合なし → 反映 25 件
 [PY] [SEND] {"command":"apply_changes","changes":[{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","group":"element_id","propId":"builtin:element_id","propName":"ID","propGroup":"IDとカテゴリ","specialType":"element_id"...
 [PY] [NO ACK]
-[2026-05-06 19:01:55] EXEC START: apply_changes
-[2026-05-06 19:01:55] Enqueueing sync_complete: 2603 bytes. Status=success
-[2026-05-06 19:01:55] EXEC END: apply_changes
-[2026-05-06 19:01:55] Attempting to send message to Python (2604 bytes)
-[2026-05-06 19:01:55] Successfully sent to Python (2604 bytes)
-[PY] [CONNECT] ('127.0.0.1', 49884)
-[PY] [RECV RAW] {"type":"sync_result","results":[{"guid":"0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7","status":"success","reason":"","currentStamp":6390109},{"guid":"2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2","status":"success","reason":"","currentStamp":6390113},{"guid":"3A74654B-2A98-4C79-AB13-99A522C96ADC","status":"success","reason":"","currentStamp":6390117},{"guid":"4AE155E3-8ACF-449C-AB14-C4C7F4143A5D","status":"success","reason":"","currentStamp":6390121},{"guid":"50A04EB7-E0C6-48AA-BF97-0A2A6F51F344","status":"success","reason":"","currentStamp":6390125},{"guid":"59E976DB-65C3-402F-B593-D8228C007F09","status":"success","reason":"","currentStamp":6390129},{"guid":"5A8669B1-BFC5-4305-8E71-EDBB8BCADB15","status":"success","reason":"","currentStamp":6390133},{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","status":"success","reason":"","currentStamp":6390137},{"guid":"621A2BFC-294E-4053-A8EB-4C09E88B4102","status":"success","reason":"","currentStamp":6390141},{"guid":"6CAB21B1-9233-4AE2-8BCC-387B5371AD7D","s
+[2026-05-06 19:50:51] EXEC START: apply_changes
+[2026-05-06 19:50:51] Enqueueing sync_complete: 2603 bytes. Status=success
+[2026-05-06 19:50:51] EXEC END: apply_changes
+[2026-05-06 19:50:51] Attempting to send message to Python (2604 bytes)
+[PY] [CONNECT] ('127.0.0.1', 54775)
+[2026-05-06 19:50:51] Successfully sent to Python (2604 bytes)
+[PY] [RECV RAW] {"type":"sync_result","results":[{"guid":"0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7","status":"success","reason":"","currentStamp":6381643},{"guid":"2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2","status":"success","reason":"","currentStamp":6381644},{"guid":"3A74654B-2A98-4C79-AB13-99A522C96ADC","status":"success","reason":"","currentStamp":6381645},{"guid":"4AE155E3-8ACF-449C-AB14-C4C7F4143A5D","status":"success","reason":"","currentStamp":6381646},{"guid":"50A04EB7-E0C6-48AA-BF97-0A2A6F51F344","status":"success","reason":"","currentStamp":6381647},{"guid":"59E976DB-65C3-402F-B593-D8228C007F09","status":"success","reason":"","currentStamp":6381648},{"guid":"5A8669B1-BFC5-4305-8E71-EDBB8BCADB15","status":"success","reason":"","currentStamp":6381649},{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","status":"success","reason":"","currentStamp":6381650},{"guid":"621A2BFC-294E-4053-A8EB-4C09E88B4102","status":"success","reason":"","currentStamp":6381651},{"guid":"6CAB21B1-9233-4AE2-8BCC-387B5371AD7D","s
 [PY] [TYPE] sync_result
 [PY] === SYNC SIGNAL EMIT ===
 [PY] === SYNC COMPLETE RECEIVED ===
@@ -79,126 +79,734 @@
 [PY] on_sync_complete: [6] setting status label: 成功:25 / 競合:0 / エラー:0
 [PY] on_sync_complete: [7] showing dialog has_issue=False
 [PY] on_sync_complete: [8] dialog closed, done
-[PY] on_table_clicked: proxy row=11 → source row=11, total_elems=25
-[PY] [SEND] {"command":"select_elements","guids":["766492CD-2AB2-4605-B2FC-B0BC5474846C"]}
+[PY] [SEND] {"command":"setup_bim_override"}
 ...
 [PY] [NO ACK]
-[2026-05-06 19:02:02] EXEC START: other
-[2026-05-06 19:02:02] select_elements: 1 guid(s)
-[2026-05-06 19:02:02] select_elements: Select returned 0
-[2026-05-06 19:02:02] EXEC END: other
-[PY] [SEND] {"command":"set_change_status","guids":["766492CD-2AB2-4605-B2FC-B0BC5474846C"],"status":2}
+[2026-05-06 19:51:58] EXEC START: other
+[2026-05-06 19:51:58] SetupBIMOverride: projDir=C:\AC28_AddOnProject\archicad-addon-pyQt\
+[2026-05-06 19:51:58] Property XML read OK, len=275486
+[2026-05-06 19:51:58] ACAPI_Property_Import result=0
+[2026-05-06 19:51:58] GO XML parsed: 2 rules
+[2026-05-06 19:51:58] Created rule: BIM変更済
+[2026-05-06 19:51:58] Created rule: BIM確認済
+[2026-05-06 19:51:58] EXEC END: other
+[2026-05-06 19:51:58] Attempting to send message to Python (201 bytes)
+[PY] [CONNECT] ('127.0.0.1', 54816)
+[2026-05-06 19:51:58] Successfully sent to Python (201 bytes)
+[PY] [RECV RAW] {"type":"bim_override_result","status":"ok","action":"setup","propCreated":true,"combinationCreated":true,"combinationName":"BIM変更管理","changeStatusGuid":"8B690061-D83B-4F70-83FC-32657625024A"}
+[PY] [TYPE] bim_override_result
+[PY] on_table_clicked: proxy row=0 → source row=0, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["5AE160A8-CE9D-4D1E-97B2-238CE3E63E51"]}
+...
+[PY] on_table_clicked: proxy row=0 → source row=0, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["5AE160A8-CE9D-4D1E-97B2-238CE3E63E51"]}
 ...
 [PY] [NO ACK]
-[2026-05-06 19:02:05] EXEC START: other
-[2026-05-06 19:02:05] EXEC END: other
-[2026-05-06 19:02:05] Attempting to send message to Python (64 bytes)
-[2026-05-06 19:02:05] Successfully sent to Python (64 bytes)
-[PY] [CONNECT] ('127.0.0.1', 49893)
+[2026-05-06 19:53:32] EXEC START: other
+[2026-05-06 19:53:32] select_elements: 1 guid(s)
+[2026-05-06 19:53:33] select_elements: Select returned 0
+[2026-05-06 19:53:33] EXEC END: other
+[PY] [NO ACK]
+[2026-05-06 19:53:34] EXEC START: other
+[2026-05-06 19:53:34] select_elements: 1 guid(s)
+[2026-05-06 19:53:34] select_elements: Select returned 0
+[2026-05-06 19:53:34] EXEC END: other
+[PY] [SEND] {"command":"get_values","guids":["77918003-4ACC-4A97-A602-620C17EA556E","50A04EB7-E0C6-48AA-BF97-0A2A6F51F344","C4251015-F1D7-4B0E-B933-9EB0D3749A9C","90B13C43-C9D8-48D3-8AE9-3A5D708550EE","766492CD-2...
+[PY] [NO ACK]
+[2026-05-06 19:54:13] EXEC START: other
+[2026-05-06 19:54:13] EXEC END: other
+[2026-05-06 19:54:13] Attempting to send message to Python (2613 bytes)
+[2026-05-06 19:54:13] Successfully sent to Python (2613 bytes)
+[PY] [CONNECT] ('127.0.0.1', 52658)
+[PY] [RECV RAW] {"type":"property_values","values":[{"guid":"77918003-4ACC-4A97-A602-620C17EA556E","modiStamp":6381656,"props":{"builtin:element_id":"C"}},{"guid":"50A04EB7-E0C6-48AA-BF97-0A2A6F51F344","modiStamp":6381647,"props":{"builtin:element_id":"C"}},{"guid":"C4251015-F1D7-4B0E-B933-9EB0D3749A9C","modiStamp":6381664,"props":{"builtin:element_id":"C"}},{"guid":"90B13C43-C9D8-48D3-8AE9-3A5D708550EE","modiStamp":6381659,"props":{"builtin:element_id":"C"}},{"guid":"766492CD-2AB2-4605-B2FC-B0BC5474846C","modiStamp":6381655,"props":{"builtin:element_id":"C"}},{"guid":"6CAB21B1-9233-4AE2-8BCC-387B5371AD7D","modiStamp":6381652,"props":{"builtin:element_id":"C"}},{"guid":"ACCA1BF0-C7EE-4492-8170-DC8B1FBD5AB0","modiStamp":6381661,"props":{"builtin:element_id":"C"}},{"guid":"0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7","modiStamp":6381643,"props":{"builtin:element_id":"C"}},{"guid":"F4634548-6780-4119-B364-659A435619AE","modiStamp":6381667,"props":{"builtin:element_id":"C"}},{"guid":"83E7DDE7-94CA-443F-A626-D93A
+[PY] [TYPE] property_values
+[PY] [PRE-VERIFY] 競合なし → 反映 25 件
+[PY] [SEND] {"command":"apply_changes","changes":[{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","group":"element_id","propId":"builtin:element_id","propName":"ID","propGroup":"IDとカテゴリ","specialType":"element_id"...
+[PY] [NO ACK]
+[2026-05-06 19:54:15] EXEC START: apply_changes
+[2026-05-06 19:54:15] Enqueueing sync_complete: 2603 bytes. Status=success
+[2026-05-06 19:54:15] EXEC END: apply_changes
+[2026-05-06 19:54:15] Attempting to send message to Python (2604 bytes)
+[PY] [CONNECT] ('127.0.0.1', 52661)
+[2026-05-06 19:54:15] Successfully sent to Python (2604 bytes)
+[PY] [RECV RAW] {"type":"sync_result","results":[{"guid":"0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7","status":"success","reason":"","currentStamp":6387904},{"guid":"2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2","status":"success","reason":"","currentStamp":6387908},{"guid":"3A74654B-2A98-4C79-AB13-99A522C96ADC","status":"success","reason":"","currentStamp":6387912},{"guid":"4AE155E3-8ACF-449C-AB14-C4C7F4143A5D","status":"success","reason":"","currentStamp":6387916},{"guid":"50A04EB7-E0C6-48AA-BF97-0A2A6F51F344","status":"success","reason":"","currentStamp":6387920},{"guid":"59E976DB-65C3-402F-B593-D8228C007F09","status":"success","reason":"","currentStamp":6387924},{"guid":"5A8669B1-BFC5-4305-8E71-EDBB8BCADB15","status":"success","reason":"","currentStamp":6387928},{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","status":"success","reason":"","currentStamp":6387932},{"guid":"621A2BFC-294E-4053-A8EB-4C09E88B4102","status":"success","reason":"","currentStamp":6387936},{"guid":"6CAB21B1-9233-4AE2-8BCC-387B5371AD7D","s
+[PY] [TYPE] sync_result
+[PY] === SYNC SIGNAL EMIT ===
+[PY] === SYNC COMPLETE RECEIVED ===
+[PY] sync payload keys: ['type', 'results', 'status']
+[PY] sync results count: 25
+[PY] on_sync_complete: [1] checking results key
+[PY] on_sync_complete: [2] model props=1, elems=25
+[PY] on_sync_complete: [3] processing 25 results
+[PY] on_sync_complete: [4] loop done sc=25 cc=0 ec=0, refreshing view
+[PY] on_sync_complete: [5] refresh_view done
+[PY] on_sync_complete: [6] setting status label: 成功:25 / 競合:0 / エラー:0
+[PY] on_sync_complete: [7] showing dialog has_issue=False
+[PY] on_sync_complete: [8] dialog closed, done
+[PY] on_table_clicked: proxy row=13 → source row=13, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["50A04EB7-E0C6-48AA-BF97-0A2A6F51F344"]}
+...
+[PY] [NO ACK]
+[2026-05-06 19:55:27] EXEC START: other
+[2026-05-06 19:55:27] select_elements: 1 guid(s)
+[PY] [SEND] {"command":"set_change_status","guids":["50A04EB7-E0C6-48AA-BF97-0A2A6F51F344"],"status":2}
+...
+[2026-05-06 19:55:28] select_elements: Select returned 0
+[2026-05-06 19:55:28] EXEC END: other
+[PY] [NO ACK]
+[2026-05-06 19:55:29] EXEC START: other
+[2026-05-06 19:55:29] EXEC END: other
+[2026-05-06 19:55:29] Attempting to send message to Python (64 bytes)
+[2026-05-06 19:55:29] Successfully sent to Python (64 bytes)
+[PY] [CONNECT] ('127.0.0.1', 52189)
 [PY] [RECV RAW] {"type":"change_status_result","status":"ok","set":1,"value":2}
 [PY] [TYPE] change_status_result
 [PY] on_change_status_result: {'type': 'change_status_result', 'status': 'ok', 'set': 1, 'value': 2}
-[PY] on_change_status_result: calling update_change_status guids=['766492CD-2AB2-4605-B2FC-B0BC5474846C'] val=2
+[PY] on_change_status_result: calling update_change_status guids=['50A04EB7-E0C6-48AA-BF97-0A2A6F51F344'] val=2
 [PY] on_change_status_result: update_change_status done
-[PY] on_table_clicked: proxy row=14 → source row=14, total_elems=25
-[PY] [SEND] {"command":"select_elements","guids":["C4251015-F1D7-4B0E-B933-9EB0D3749A9C"]}
+[PY] [SEND] {"command":"setup_bim_override"}
 ...
 [PY] [NO ACK]
-[2026-05-06 19:02:08] EXEC START: other
-[2026-05-06 19:02:08] select_elements: 1 guid(s)
-[PY] [SEND] {"command":"set_change_status","guids":["C4251015-F1D7-4B0E-B933-9EB0D3749A9C"],"status":2}
+[2026-05-06 19:56:40] EXEC START: other
+[2026-05-06 19:56:40] SetupBIMOverride: projDir=C:\AC28_AddOnProject\archicad-addon-pyQt\
+[2026-05-06 19:56:40] EXEC END: other
+[2026-05-06 19:56:40] Attempting to send message to Python (203 bytes)
+[2026-05-06 19:56:40] Successfully sent to Python (203 bytes)
+[PY] [CONNECT] ('127.0.0.1', 59402)
+[PY] [RECV RAW] {"type":"bim_override_result","status":"ok","action":"setup","propCreated":false,"combinationCreated":false,"combinationName":"BIM変更管理","changeStatusGuid":"8B690061-D83B-4F70-83FC-32657625024A"}
+[PY] [TYPE] bim_override_result
+[2026-05-07 05:38:22] Loaded binary: C:\AC28_AddOnProject\archicad-addon-pyQt\Build\Release\maedaAddOnPyqt.apx
+[2026-05-07 05:38:22] Build stamp: May  6 2026 19:48:35
+[2026-05-07 05:38:22] Command listener started on port 5001
+[2026-05-07 05:38:22] Started Python server process
+[PY] --- Starting Application ---
+[PY] Python 3.11.7 | packaged by Anaconda, Inc. | (main, Dec 15 2023, 18:05:47) [MSC v.1916 64 bit (AMD64)]
+[PY] Server started (5000)
+[2026-05-07 05:38:27] Attempting to send message to Python (368 bytes)
+[2026-05-07 05:38:27] Successfully sent to Python (368 bytes)
+[PY] [CONNECT] ('127.0.0.1', 63398)
+[PY] [RECV RAW] {"type":"project_config","stories":[{"index":-2,"name":"-2 Floor (基礎)"},{"index":-1,"name":"-1 Floor (GL)"},{"index":0,"name":"1 Floor (1FL)"},{"index":1,"name":"2 Floor (2Fl)"},{"index":2,"name":"3 Floor (3FL)"},{"index":3,"name":"4 Floor (4FL)"}],"elementTypes":{"Wall":35,"Column":100,"Beam":68,"Slab":20,"Window":63,"Door":28,"Zone":12,"Roof":1,"Object":100}}
+[PY] [TYPE] project_config
+[PY] [SEND] {"command":"get_elements","stories":[3],"Wall":false,"Column":true,"Beam":false,"Slab":false,"Window":false,"Door":false,"Zone":false,"Roof":false,"Object":false}
 ...
-[2026-05-06 19:02:08] select_elements: Select returned 0
-[2026-05-06 19:02:08] EXEC END: other
 [PY] [NO ACK]
-[2026-05-06 19:02:10] EXEC START: other
-[2026-05-06 19:02:10] EXEC END: other
-[2026-05-06 19:02:10] Attempting to send message to Python (64 bytes)
-[2026-05-06 19:02:10] Successfully sent to Python (64 bytes)
-[PY] [CONNECT] ('127.0.0.1', 49243)
+[2026-05-07 05:38:38] EXEC START: other
+[2026-05-07 05:38:38] EXEC END: other
+[2026-05-07 05:38:38] Attempting to send message to Python (1233 bytes)
+[2026-05-07 05:38:38] Successfully sent to Python (1233 bytes)
+[PY] [CONNECT] ('127.0.0.1', 49865)
+[PY] [RECV RAW] {"type":"elements","elements":[{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51"},{"guid":"621A2BFC-294E-4053-A8EB-4C09E88B4102"},{"guid":"9343A401-F25A-4531-94B4-759D544C98DB"},{"guid":"3A74654B-2A98-4C79-AB13-99A522C96ADC"},{"guid":"0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7"},{"guid":"F4634548-6780-4119-B364-659A435619AE"},{"guid":"90B13C43-C9D8-48D3-8AE9-3A5D708550EE"},{"guid":"B9847E03-A18E-4AAA-98AA-979416C319AD"},{"guid":"2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2"},{"guid":"E05A10BE-3ED3-4A2E-808C-9698D7B97297"},{"guid":"6CAB21B1-9233-4AE2-8BCC-387B5371AD7D"},{"guid":"766492CD-2AB2-4605-B2FC-B0BC5474846C"},{"guid":"4AE155E3-8ACF-449C-AB14-C4C7F4143A5D"},{"guid":"50A04EB7-E0C6-48AA-BF97-0A2A6F51F344"},{"guid":"C4251015-F1D7-4B0E-B933-9EB0D3749A9C"},{"guid":"77918003-4ACC-4A97-A602-620C17EA556E"},{"guid":"5A8669B1-BFC5-4305-8E71-EDBB8BCADB15"},{"guid":"DDEACD4F-5038-4F30-982F-852DDDA12E97"},{"guid":"73F07854-FB55-43C8-AB92-A83B3042E818"},{"guid":"866F1801-9543-49F5-A85C-135D1380E748"},{"guid":"
+[PY] [TYPE] elements
+[PY] [SEND] {"command":"get_definitions","guids":["5AE160A8-CE9D-4D1E-97B2-238CE3E63E51"]}
+...
+[PY] [NO ACK]
+[2026-05-07 05:38:41] EXEC START: other
+[2026-05-07 05:38:41] EXEC END: other
+[2026-05-07 05:38:41] Attempting to send message to Python (82407 bytes)
+[PY] [CONNECT] ('127.0.0.1', 49869)
+nt to Python (82407 bytes)
+[PY] [RECV RAW] {"type":"property_definitions","definitions":[{"guid":"builtin:element_id","name":"ID","group":"IDとカテゴリ","editable":true,"valueType":1,"collectionType":0},{"guid":"builtin:RenovationStatus","name":"リノベーションステータス","group":"IDとカテゴリ","editable":true,"valueType":2,"collectionType":1,"enums":["既存","新設","解体"]},{"guid":"builtin:StructuralFunction","name":"構造機能","group":"IDとカテゴリ","editable":true,"valueType":2,"collectionType":1,"enums":["耐力要素","非耐力要素","未定義"]},{"guid":"builtin:Position","name":"位置","group":"IDとカテゴリ","editable":true,"valueType":2,"collectionType":1,"enums":["外部","内部","未定義"]},{"guid":"5EC3A7BC-599A-4B51-9AC7-902127526EF3","name":"柱面積 (Archicad 22)","group":"柱","editable":false,"valueType":2,"collectionType":1},{"guid":"FE56A31F-CF4B-44A7-ABE0-DA22A895845E","name":"柱 ビルディングマテリアル/プロファイル (Archicad 20)","group":"柱","editable":true,"valueType":1,"collectionType":1},{"guid":"013560E7-ED78-4382-9937-32DCB47EE13A","name":"躯体高さ / 直径","group":"柱","editable":true,"valueType":2,"collectionTyp
+[PY] [TYPE] property_definitions
+[PY] [SEND] {"command":"get_values","guids":["5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","621A2BFC-294E-4053-A8EB-4C09E88B4102","9343A401-F25A-4531-94B4-759D544C98DB","3A74654B-2A98-4C79-AB13-99A522C96ADC","0AAC6DB7-A...
+[PY] [NO ACK]
+[2026-05-07 05:38:46] EXEC START: other
+[2026-05-07 05:38:46] EXEC END: other
+[2026-05-07 05:38:46] Attempting to send message to Python (2813 bytes)
+[PY] [CONNECT] ('127.0.0.1', 49872)
+nt to Python (2813 bytes)
+[PY] [RECV RAW] {"type":"property_values","values":[{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","modiStamp":5289314,"props":{"builtin:element_id":"CRE - 001"}},{"guid":"621A2BFC-294E-4053-A8EB-4C09E88B4102","modiStamp":5289331,"props":{"builtin:element_id":"CRE - 002"}},{"guid":"9343A401-F25A-4531-94B4-759D544C98DB","modiStamp":5289348,"props":{"builtin:element_id":"CRE - 003"}},{"guid":"3A74654B-2A98-4C79-AB13-99A522C96ADC","modiStamp":5289363,"props":{"builtin:element_id":"CRE - 004"}},{"guid":"0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7","modiStamp":5289380,"props":{"builtin:element_id":"CRE - 005"}},{"guid":"F4634548-6780-4119-B364-659A435619AE","modiStamp":5289397,"props":{"builtin:element_id":"CRE - 001"}},{"guid":"90B13C43-C9D8-48D3-8AE9-3A5D708550EE","modiStamp":5289414,"props":{"builtin:element_id":"CRE - 002"}},{"guid":"B9847E03-A18E-4AAA-98AA-979416C319AD","modiStamp":5289431,"props":{"builtin:element_id":"CRE - 003"}},{"guid":"2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2","modiStamp":5289446,"props":{
+[PY] [TYPE] property_values
+[PY] on_table_clicked: proxy row=0 → source row=0, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["5AE160A8-CE9D-4D1E-97B2-238CE3E63E51"]}
+...
+[PY] [NO ACK]
+[2026-05-07 05:38:51] EXEC START: other
+[2026-05-07 05:38:51] select_elements: 1 guid(s)
+[2026-05-07 05:38:52] select_elements: Select returned 0
+[2026-05-07 05:38:52] EXEC END: other
+[PY] [SEND] {"command":"get_values","guids":["73F07854-FB55-43C8-AB92-A83B3042E818","6CAB21B1-9233-4AE2-8BCC-387B5371AD7D","90B13C43-C9D8-48D3-8AE9-3A5D708550EE","5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","766492CD-2...
+[PY] [NO ACK]
+[2026-05-07 05:39:04] EXEC START: other
+[2026-05-07 05:39:04] EXEC END: other
+[2026-05-07 05:39:04] Attempting to send message to Python (2702 bytes)
+[2026-05-07 05:39:04] Successfully sent to Python (2702 bytes)
+[PY] [CONNECT] ('127.0.0.1', 49884)
+[PY] [RECV RAW] {"type":"property_values","values":[{"guid":"73F07854-FB55-43C8-AB92-A83B3042E818","modiStamp":5289622,"props":{"builtin:element_id":"CRE - 004"}},{"guid":"6CAB21B1-9233-4AE2-8BCC-387B5371AD7D","modiStamp":5289480,"props":{"builtin:element_id":"CRE - 001"}},{"guid":"90B13C43-C9D8-48D3-8AE9-3A5D708550EE","modiStamp":5289414,"props":{"builtin:element_id":"CRE - 002"}},{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","modiStamp":5289314,"props":{"builtin:element_id":"CRE - 001"}},{"guid":"766492CD-2AB2-4605-B2FC-B0BC5474846C","modiStamp":5289497,"props":{"builtin:element_id":"CRE - 002"}},{"guid":"6F8D5FEB-E154-4F63-8636-7AC787C44820","modiStamp":5289660,"props":{"builtin:element_id":"CRE - 001"}},{"guid":"4AE155E3-8ACF-449C-AB14-C4C7F4143A5D","modiStamp":5289516,"props":{"builtin:element_id":"CRE - 003"}},{"guid":"F4634548-6780-4119-B364-659A435619AE","modiStamp":5289397,"props":{"builtin:element_id":"CRE - 001"}},{"guid":"ACCA1BF0-C7EE-4492-8170-DC8B1FBD5AB0","modiStamp":5289694,"props":{
+[PY] [TYPE] property_values
+[PY] [PRE-VERIFY] 競合なし → 反映 24 件
+[PY] [SEND] {"command":"apply_changes","changes":[{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","group":"element_id","propId":"builtin:element_id","propName":"ID","propGroup":"IDとカテゴリ","specialType":"element_id"...
+[PY] [NO ACK]
+[2026-05-07 05:39:06] EXEC START: apply_changes
+[2026-05-07 05:39:06] Enqueueing sync_complete: 2501 bytes. Status=success
+[2026-05-07 05:39:06] EXEC END: apply_changes
+[2026-05-07 05:39:06] Attempting to send message to Python (2502 bytes)
+[2026-05-07 05:39:06] Successfully sent to Python (2502 bytes)
+[PY] [CONNECT] ('127.0.0.1', 49887)
+[PY] [RECV RAW] {"type":"sync_result","results":[{"guid":"0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7","status":"success","reason":"","currentStamp":6376548},{"guid":"2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2","status":"success","reason":"","currentStamp":6376549},{"guid":"3A74654B-2A98-4C79-AB13-99A522C96ADC","status":"success","reason":"","currentStamp":6376550},{"guid":"4AE155E3-8ACF-449C-AB14-C4C7F4143A5D","status":"success","reason":"","currentStamp":6376551},{"guid":"50A04EB7-E0C6-48AA-BF97-0A2A6F51F344","status":"success","reason":"","currentStamp":6376552},{"guid":"5A8669B1-BFC5-4305-8E71-EDBB8BCADB15","status":"success","reason":"","currentStamp":6376553},{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","status":"success","reason":"","currentStamp":6376554},{"guid":"621A2BFC-294E-4053-A8EB-4C09E88B4102","status":"success","reason":"","currentStamp":6376555},{"guid":"6CAB21B1-9233-4AE2-8BCC-387B5371AD7D","status":"success","reason":"","currentStamp":6376556},{"guid":"6F8D5FEB-E154-4F63-8636-7AC787C44820","s
+[PY] [TYPE] sync_result
+[PY] === SYNC SIGNAL EMIT ===
+[PY] === SYNC COMPLETE RECEIVED ===
+[PY] sync payload keys: ['type', 'results', 'status']
+[PY] sync results count: 24
+[PY] on_sync_complete: [1] checking results key
+[PY] on_sync_complete: [2] model props=1, elems=25
+[PY] on_sync_complete: [3] processing 24 results
+[PY] on_sync_complete: [4] loop done sc=24 cc=0 ec=0, refreshing view
+[PY] on_sync_complete: [5] refresh_view done
+[PY] on_sync_complete: [6] setting status label: 成功:24 / 競合:0 / エラー:0
+[PY] on_sync_complete: [7] showing dialog has_issue=False
+[PY] on_sync_complete: [8] dialog closed, done
+[PY] [SEND] {"command":"setup_bim_override"}
+...
+[PY] [NO ACK]
+[2026-05-07 05:39:46] EXEC START: other
+[2026-05-07 05:39:46] SetupBIMOverride: projDir=C:\AC28_AddOnProject\archicad-addon-pyQt\
+[2026-05-07 05:39:46] Property XML read OK, len=275486
+[2026-05-07 05:39:46] ACAPI_Property_Import result=0
+[2026-05-07 05:39:46] GO XML parsed: 2 rules
+[2026-05-07 05:39:46] Created rule: BIM変更済
+[2026-05-07 05:39:46] Created rule: BIM確認済
+[2026-05-07 05:39:46] EXEC END: other
+[2026-05-07 05:39:46] Attempting to send message to Python (201 bytes)
+[2026-05-07 05:39:46] Successfully sent to Python (201 bytes)
+[PY] [CONNECT] ('127.0.0.1', 49913)
+[PY] [RECV RAW] {"type":"bim_override_result","status":"ok","action":"setup","propCreated":true,"combinationCreated":true,"combinationName":"BIM変更管理","changeStatusGuid":"F3047657-5243-4476-B52C-5D3051D47B79"}
+[PY] [TYPE] bim_override_result
+[PY] on_table_clicked: proxy row=7 → source row=7, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["B9847E03-A18E-4AAA-98AA-979416C319AD"]}
+...
+[PY] [NO ACK]
+[2026-05-07 05:40:39] EXEC START: other
+[2026-05-07 05:40:39] select_elements: 1 guid(s)
+[2026-05-07 05:40:39] select_elements: Select returned 0
+[2026-05-07 05:40:39] EXEC END: other
+[PY] on_table_clicked: proxy row=0 → source row=0, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["5AE160A8-CE9D-4D1E-97B2-238CE3E63E51"]}
+...
+[PY] [NO ACK]
+[2026-05-07 05:40:51] EXEC START: other
+[2026-05-07 05:40:51] select_elements: 1 guid(s)
+[2026-05-07 05:40:51] select_elements: Select returned 0
+[2026-05-07 05:40:51] EXEC END: other
+[PY] [SEND] {"command":"get_values","guids":["73F07854-FB55-43C8-AB92-A83B3042E818","6CAB21B1-9233-4AE2-8BCC-387B5371AD7D","90B13C43-C9D8-48D3-8AE9-3A5D708550EE","5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","766492CD-2...
+[PY] [NO ACK]
+[2026-05-07 05:41:02] EXEC START: other
+[2026-05-07 05:41:02] EXEC END: other
+[2026-05-07 05:41:02] Attempting to send message to Python (2621 bytes)
+[2026-05-07 05:41:02] Successfully sent to Python (2621 bytes)
+[PY] [CONNECT] ('127.0.0.1', 49960)
+[PY] [RECV RAW] {"type":"property_values","values":[{"guid":"73F07854-FB55-43C8-AB92-A83B3042E818","modiStamp":6376558,"props":{"builtin:element_id":"C"}},{"guid":"6CAB21B1-9233-4AE2-8BCC-387B5371AD7D","modiStamp":6376556,"props":{"builtin:element_id":"C"}},{"guid":"90B13C43-C9D8-48D3-8AE9-3A5D708550EE","modiStamp":6376563,"props":{"builtin:element_id":"C"}},{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","modiStamp":6376554,"props":{"builtin:element_id":"C"}},{"guid":"766492CD-2AB2-4605-B2FC-B0BC5474846C","modiStamp":6376559,"props":{"builtin:element_id":"C"}},{"guid":"6F8D5FEB-E154-4F63-8636-7AC787C44820","modiStamp":6376557,"props":{"builtin:element_id":"C"}},{"guid":"4AE155E3-8ACF-449C-AB14-C4C7F4143A5D","modiStamp":6376551,"props":{"builtin:element_id":"C"}},{"guid":"F4634548-6780-4119-B364-659A435619AE","modiStamp":6376571,"props":{"builtin:element_id":"C"}},{"guid":"ACCA1BF0-C7EE-4492-8170-DC8B1FBD5AB0","modiStamp":6376565,"props":{"builtin:element_id":"C"}},{"guid":"9343A401-F25A-4531-94B4-759D
+[PY] [TYPE] property_values
+[PY] [PRE-VERIFY] 競合なし → 反映 25 件
+[PY] [SEND] {"command":"apply_changes","changes":[{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","group":"element_id","propId":"builtin:element_id","propName":"ID","propGroup":"IDとカテゴリ","specialType":"element_id"...
+[PY] [NO ACK]
+[2026-05-07 05:41:04] EXEC START: apply_changes
+[2026-05-07 05:41:04] Enqueueing sync_complete: 2603 bytes. Status=success
+[2026-05-07 05:41:04] EXEC END: apply_changes
+[2026-05-07 05:41:04] Attempting to send message to Python (2604 bytes)
+[PY] [CONNECT] ('127.0.0.1', 49963)
+nt to Python (2604 bytes)
+[PY] [RECV RAW] {"type":"sync_result","results":[{"guid":"0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7","status":"success","reason":"","currentStamp":6382127},{"guid":"2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2","status":"success","reason":"","currentStamp":6382131},{"guid":"3A74654B-2A98-4C79-AB13-99A522C96ADC","status":"success","reason":"","currentStamp":6382135},{"guid":"4AE155E3-8ACF-449C-AB14-C4C7F4143A5D","status":"success","reason":"","currentStamp":6382139},{"guid":"50A04EB7-E0C6-48AA-BF97-0A2A6F51F344","status":"success","reason":"","currentStamp":6382143},{"guid":"59E976DB-65C3-402F-B593-D8228C007F09","status":"success","reason":"","currentStamp":6382147},{"guid":"5A8669B1-BFC5-4305-8E71-EDBB8BCADB15","status":"success","reason":"","currentStamp":6382151},{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","status":"success","reason":"","currentStamp":6382155},{"guid":"621A2BFC-294E-4053-A8EB-4C09E88B4102","status":"success","reason":"","currentStamp":6382159},{"guid":"6CAB21B1-9233-4AE2-8BCC-387B5371AD7D","s
+[PY] [TYPE] sync_result
+[PY] === SYNC SIGNAL EMIT ===
+[PY] === SYNC COMPLETE RECEIVED ===
+[PY] sync payload keys: ['type', 'results', 'status']
+[PY] sync results count: 25
+[PY] on_sync_complete: [1] checking results key
+[PY] on_sync_complete: [2] model props=1, elems=25
+[PY] on_sync_complete: [3] processing 25 results
+[PY] on_sync_complete: [4] loop done sc=25 cc=0 ec=0, refreshing view
+[PY] on_sync_complete: [5] refresh_view done
+[PY] on_sync_complete: [6] setting status label: 成功:25 / 競合:0 / エラー:0
+[PY] on_sync_complete: [7] showing dialog has_issue=False
+[PY] on_sync_complete: [8] dialog closed, done
+[PY] on_table_clicked: proxy row=6 → source row=6, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["90B13C43-C9D8-48D3-8AE9-3A5D708550EE"]}
+...
+[PY] [NO ACK]
+[2026-05-07 05:41:11] EXEC START: other
+[2026-05-07 05:41:11] select_elements: 1 guid(s)
+[2026-05-07 05:41:11] select_elements: Select returned 0
+[2026-05-07 05:41:11] EXEC END: other
+[PY] [SEND] {"command":"set_change_status","guids":["90B13C43-C9D8-48D3-8AE9-3A5D708550EE"],"status":2}
+...
+[PY] [NO ACK]
+[2026-05-07 05:41:13] EXEC START: other
+[2026-05-07 05:41:13] EXEC END: other
+[2026-05-07 05:41:13] Attempting to send message to Python (64 bytes)
+[2026-05-07 05:41:13] Successfully sent to Python (64 bytes)
+[PY] [CONNECT] ('127.0.0.1', 49971)
 [PY] [RECV RAW] {"type":"change_status_result","status":"ok","set":1,"value":2}
 [PY] [TYPE] change_status_result
 [PY] on_change_status_result: {'type': 'change_status_result', 'status': 'ok', 'set': 1, 'value': 2}
-[PY] on_change_status_result: calling update_change_status guids=['C4251015-F1D7-4B0E-B933-9EB0D3749A9C'] val=2
-[PY] on_change_status_result: update_change_status done
-[PY] on_table_clicked: proxy row=17 → source row=17, total_elems=25
-[PY] [SEND] {"command":"select_elements","guids":["DDEACD4F-5038-4F30-982F-852DDDA12E97"]}
-...
-[PY] [NO ACK]
-[2026-05-06 19:02:13] EXEC START: other
-[2026-05-06 19:02:13] select_elements: 1 guid(s)
-[2026-05-06 19:02:13] select_elements: Select returned 0
-[2026-05-06 19:02:13] EXEC END: other
-[PY] [SEND] {"command":"set_change_status","guids":["DDEACD4F-5038-4F30-982F-852DDDA12E97"],"status":2}
-...
-[PY] [NO ACK]
-[2026-05-06 19:02:16] EXEC START: other
-[2026-05-06 19:02:16] EXEC END: other
-[2026-05-06 19:02:16] Attempting to send message to Python (64 bytes)
-[PY] [CONNECT] ('127.0.0.1', 49248)
-[2026-05-06 19:02:16] Successfully sent to Python (64 bytes)
-[PY] [RECV RAW] {"type":"change_status_result","status":"ok","set":1,"value":2}
-[PY] [TYPE] change_status_result
-[PY] on_change_status_result: {'type': 'change_status_result', 'status': 'ok', 'set': 1, 'value': 2}
-[PY] on_change_status_result: calling update_change_status guids=['DDEACD4F-5038-4F30-982F-852DDDA12E97'] val=2
-[PY] on_change_status_result: update_change_status done
-[PY] on_table_clicked: proxy row=21 → source row=21, total_elems=25
-[PY] [SEND] {"command":"select_elements","guids":["C02ECF42-A7FD-4F67-AAE6-3CC1420E9B73"]}
-...
-[PY] [SEND] {"command":"set_change_status","guids":["C02ECF42-A7FD-4F67-AAE6-3CC1420E9B73"],"status":2}
-...
-[PY] [NO ACK]
-[2026-05-06 19:02:19] EXEC START: other
-[2026-05-06 19:02:19] select_elements: 1 guid(s)
-[2026-05-06 19:02:19] select_elements: Select returned 0
-[2026-05-06 19:02:19] EXEC END: other
-[PY] [NO ACK]
-[2026-05-06 19:02:21] EXEC START: other
-[2026-05-06 19:02:21] EXEC END: other
-[2026-05-06 19:02:21] Attempting to send message to Python (64 bytes)
-[PY] [CONNECT] ('127.0.0.1', 49254)
-nt to Python (64 bytes)
-[PY] [RECV RAW] {"type":"change_status_result","status":"ok","set":1,"value":2}
-[PY] [TYPE] change_status_result
-[PY] on_change_status_result: {'type': 'change_status_result', 'status': 'ok', 'set': 1, 'value': 2}
-[PY] on_change_status_result: calling update_change_status guids=['C02ECF42-A7FD-4F67-AAE6-3CC1420E9B73'] val=2
-[PY] on_change_status_result: update_change_status done
-[PY] on_table_clicked: proxy row=1 → source row=1, total_elems=25
-[PY] [SEND] {"command":"select_elements","guids":["621A2BFC-294E-4053-A8EB-4C09E88B4102"]}
-...
-[PY] [SEND] {"command":"set_change_status","guids":["621A2BFC-294E-4053-A8EB-4C09E88B4102"],"status":2}
-...
-[PY] [NO ACK]
-[2026-05-06 19:02:30] EXEC START: other
-[2026-05-06 19:02:30] select_elements: 1 guid(s)
-[2026-05-06 19:02:31] select_elements: Select returned 0
-[2026-05-06 19:02:31] EXEC END: other
-[PY] [NO ACK]
-[2026-05-06 19:02:32] EXEC START: other
-[2026-05-06 19:02:32] EXEC END: other
-[2026-05-06 19:02:32] Attempting to send message to Python (64 bytes)
-[2026-05-06 19:02:32] Successfully sent to Python (64 bytes)
-[PY] [CONNECT] ('127.0.0.1', 55322)
-[PY] [RECV RAW] {"type":"change_status_result","status":"ok","set":1,"value":2}
-[PY] [TYPE] change_status_result
-[PY] on_change_status_result: {'type': 'change_status_result', 'status': 'ok', 'set': 1, 'value': 2}
-[PY] on_change_status_result: calling update_change_status guids=['621A2BFC-294E-4053-A8EB-4C09E88B4102'] val=2
+[PY] on_change_status_result: calling update_change_status guids=['90B13C43-C9D8-48D3-8AE9-3A5D708550EE'] val=2
 [PY] on_change_status_result: update_change_status done
 [PY] on_table_clicked: proxy row=8 → source row=8, total_elems=25
 [PY] [SEND] {"command":"select_elements","guids":["2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2"]}
 ...
 [PY] [NO ACK]
-[2026-05-06 19:02:40] EXEC START: other
-[2026-05-06 19:02:40] select_elements: 1 guid(s)
-[2026-05-06 19:02:41] select_elements: Select returned 0
-[2026-05-06 19:02:41] EXEC END: other
+[2026-05-07 05:41:16] EXEC START: other
+[2026-05-07 05:41:16] select_elements: 1 guid(s)
+[2026-05-07 05:41:16] select_elements: Select returned 0
+[2026-05-07 05:41:16] EXEC END: other
+[PY] [SEND] {"command":"set_change_status","guids":["2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2"],"status":2}
+...
+[PY] [NO ACK]
+[2026-05-07 05:41:18] EXEC START: other
+[2026-05-07 05:41:18] EXEC END: other
+[2026-05-07 05:41:18] Attempting to send message to Python (64 bytes)
+[2026-05-07 05:41:18] Successfully sent to Python (64 bytes)
+[PY] [CONNECT] ('127.0.0.1', 49976)
+[PY] [RECV RAW] {"type":"change_status_result","status":"ok","set":1,"value":2}
+[PY] [TYPE] change_status_result
+[PY] on_change_status_result: {'type': 'change_status_result', 'status': 'ok', 'set': 1, 'value': 2}
+[PY] on_change_status_result: calling update_change_status guids=['2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2'] val=2
+[PY] on_change_status_result: update_change_status done
+[PY] on_table_clicked: proxy row=2 → source row=2, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["9343A401-F25A-4531-94B4-759D544C98DB"]}
+...
+[PY] [SEND] {"command":"set_change_status","guids":["9343A401-F25A-4531-94B4-759D544C98DB"],"status":2}
+...
+[PY] [NO ACK]
+[2026-05-07 05:41:21] EXEC START: other
+[2026-05-07 05:41:21] select_elements: 1 guid(s)
+[2026-05-07 05:41:22] select_elements: Select returned 0
+[2026-05-07 05:41:22] EXEC END: other
+[PY] [NO ACK]
+[2026-05-07 05:41:23] EXEC START: other
+[2026-05-07 05:41:23] EXEC END: other
+[2026-05-07 05:41:23] Attempting to send message to Python (64 bytes)
+[2026-05-07 05:41:23] Successfully sent to Python (64 bytes)
+[PY] [CONNECT] ('127.0.0.1', 49981)
+[PY] [RECV RAW] {"type":"change_status_result","status":"ok","set":1,"value":2}
+[PY] [TYPE] change_status_result
+[PY] on_change_status_result: {'type': 'change_status_result', 'status': 'ok', 'set': 1, 'value': 2}
+[PY] on_change_status_result: calling update_change_status guids=['9343A401-F25A-4531-94B4-759D544C98DB'] val=2
+[PY] on_change_status_result: update_change_status done
+[PY] on_table_clicked: proxy row=17 → source row=17, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["DDEACD4F-5038-4F30-982F-852DDDA12E97"]}
+...
+[PY] [NO ACK]
+[2026-05-07 05:41:32] EXEC START: other
+[2026-05-07 05:41:32] select_elements: 1 guid(s)
+[PY] [SEND] {"command":"set_change_status","guids":["DDEACD4F-5038-4F30-982F-852DDDA12E97"],"status":2}
+...
+[2026-05-07 05:41:33] select_elements: Select returned 0
+[2026-05-07 05:41:33] EXEC END: other
+[PY] [NO ACK]
+[2026-05-07 05:41:34] EXEC START: other
+[2026-05-07 05:41:34] EXEC END: other
+[2026-05-07 05:41:34] Attempting to send message to Python (64 bytes)
+[2026-05-07 05:41:34] Successfully sent to Python (64 bytes)
+[PY] [CONNECT] ('127.0.0.1', 49989)
+[PY] [RECV RAW] {"type":"change_status_result","status":"ok","set":1,"value":2}
+[PY] [TYPE] change_status_result
+[PY] on_change_status_result: {'type': 'change_status_result', 'status': 'ok', 'set': 1, 'value': 2}
+[PY] on_change_status_result: calling update_change_status guids=['DDEACD4F-5038-4F30-982F-852DDDA12E97'] val=2
+[PY] on_change_status_result: update_change_status done
+[PY] on_table_clicked: proxy row=14 → source row=14, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["C4251015-F1D7-4B0E-B933-9EB0D3749A9C"]}
+...
+[PY] [SEND] {"command":"set_change_status","guids":["C4251015-F1D7-4B0E-B933-9EB0D3749A9C"],"status":0}
+...
+[PY] [NO ACK]
+[2026-05-07 05:42:07] EXEC START: other
+[2026-05-07 05:42:07] select_elements: 1 guid(s)
+[2026-05-07 05:42:07] select_elements: Select returned 0
+[2026-05-07 05:42:07] EXEC END: other
+[PY] [NO ACK]
+[2026-05-07 05:42:08] EXEC START: other
+[2026-05-07 05:42:08] EXEC END: other
+[2026-05-07 05:42:08] Attempting to send message to Python (64 bytes)
+[2026-05-07 05:42:08] Successfully sent to Python (64 bytes)
+[PY] [CONNECT] ('127.0.0.1', 50016)
+[PY] [RECV RAW] {"type":"change_status_result","status":"ok","set":1,"value":0}
+[PY] [TYPE] change_status_result
+[PY] on_change_status_result: {'type': 'change_status_result', 'status': 'ok', 'set': 1, 'value': 0}
+[PY] on_change_status_result: calling update_change_status guids=['C4251015-F1D7-4B0E-B933-9EB0D3749A9C'] val=0
+[PY] on_change_status_result: update_change_status done
 [PY] [SEND] {"command":"set_change_status","guids":["5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","621A2BFC-294E-4053-A8EB-4C09E88B4102","9343A401-F25A-4531-94B4-759D544C98DB","3A74654B-2A98-4C79-AB13-99A522C96ADC","0AA...
 [PY] [NO ACK]
-[2026-05-06 19:02:56] EXEC START: other
-[2026-05-06 19:02:57] EXEC END: other
-[2026-05-06 19:02:57] Attempting to send message to Python (65 bytes)
-[2026-05-06 19:02:57] Successfully sent to Python (65 bytes)
-[PY] [CONNECT] ('127.0.0.1', 56015)
+[2026-05-07 05:42:19] EXEC START: other
+[2026-05-07 05:42:19] EXEC END: other
+[2026-05-07 05:42:19] Attempting to send message to Python (65 bytes)
+[PY] [CONNECT] ('127.0.0.1', 50025)
+[2026-05-07 05:42:19] Successfully sent to Python (65 bytes)
+[PY] [RECV RAW] {"type":"change_status_result","status":"ok","set":25,"value":0}
+[PY] [TYPE] change_status_result
+[PY] on_change_status_result: {'type': 'change_status_result', 'status': 'ok', 'set': 25, 'value': 0}
+[PY] on_change_status_result: calling update_change_status guids=['5AE160A8-CE9D-4D1E-97B2-238CE3E63E51', '621A2BFC-294E-4053-A8EB-4C09E88B4102', '9343A401-F25A-4531-94B4-759D544C98DB', '3A74654B-2A98-4C79-AB13-99A522C96ADC', '0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7', 'F4634548-6780-4119-B364-659A435619AE', '90B13C43-C9D8-48D3-8AE9-3A5D708550EE', 'B9847E03-A18E-4AAA-98AA-979416C319AD', '2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2', 'E05A10BE-3ED3-4A2E-808C-9698D7B97297', '6CAB21B1-9233-4AE2-8BCC-387B5371AD7D', '766492CD-2AB2-4605-B2FC-B0BC5474846C', '4AE155E3-8ACF-449C-AB14-C4C7F4143A5D', '50A04EB7-E0C6-48AA-BF97-0A2A6F51F344', 'C4251015-F1D7-4B0E-B933-9EB0D3749A9C', '77918003-4ACC-4A97-A602-620C17EA556E', '5A8669B1-BFC5-4305-8E71-EDBB8BCADB15', 'DDEACD4F-5038-4F30-982F-852DDDA12E97', '73F07854-FB55-43C8-AB92-A83B3042E818', '866F1801-9543-49F5-A85C-135D1380E748', '6F8D5FEB-E154-4F63-8636-7AC787C44820', 'C02ECF42-A7FD-4F67-AAE6-3CC1420E9B73', 'ACCA1BF0-C7EE-4492-8170-DC8B1FBD5AB0', '83E7DDE7-94CA-443F-A626-D93A0D62BECE', '59E976DB-65C3-402F-B593-D8228C007F09'] val=0
+[PY] on_change_status_result: update_change_status done
+[2026-05-07 05:43:42] Loaded binary: C:\AC28_AddOnProject\archicad-addon-pyQt\Build\Release\maedaAddOnPyqt.apx
+[2026-05-07 05:43:42] Build stamp: May  6 2026 19:48:35
+[2026-05-07 05:43:42] Command listener started on port 5001
+[2026-05-07 05:43:42] Started Python server process
+[PY] --- Starting Application ---
+[PY] Python 3.11.7 | packaged by Anaconda, Inc. | (main, Dec 15 2023, 18:05:47) [MSC v.1916 64 bit (AMD64)]
+[PY] Server started (5000)
+[2026-05-07 05:43:48] Attempting to send message to Python (368 bytes)
+[2026-05-07 05:43:48] Successfully sent to Python (368 bytes)
+[PY] [CONNECT] ('127.0.0.1', 51395)
+[PY] [RECV RAW] {"type":"project_config","stories":[{"index":-2,"name":"-2 Floor (基礎)"},{"index":-1,"name":"-1 Floor (GL)"},{"index":0,"name":"1 Floor (1FL)"},{"index":1,"name":"2 Floor (2Fl)"},{"index":2,"name":"3 Floor (3FL)"},{"index":3,"name":"4 Floor (4FL)"}],"elementTypes":{"Wall":35,"Column":100,"Beam":68,"Slab":20,"Window":63,"Door":28,"Zone":12,"Roof":1,"Object":100}}
+[PY] [TYPE] project_config
+[PY] [SEND] {"command":"get_elements","stories":[3],"Wall":false,"Column":true,"Beam":false,"Slab":false,"Window":false,"Door":false,"Zone":false,"Roof":false,"Object":false}
+...
+[PY] [NO ACK]
+[2026-05-07 05:43:58] EXEC START: other
+[2026-05-07 05:43:58] EXEC END: other
+[2026-05-07 05:43:58] Attempting to send message to Python (1233 bytes)
+[2026-05-07 05:43:58] Successfully sent to Python (1233 bytes)
+[PY] [CONNECT] ('127.0.0.1', 51402)
+[PY] [RECV RAW] {"type":"elements","elements":[{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51"},{"guid":"621A2BFC-294E-4053-A8EB-4C09E88B4102"},{"guid":"9343A401-F25A-4531-94B4-759D544C98DB"},{"guid":"3A74654B-2A98-4C79-AB13-99A522C96ADC"},{"guid":"0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7"},{"guid":"F4634548-6780-4119-B364-659A435619AE"},{"guid":"90B13C43-C9D8-48D3-8AE9-3A5D708550EE"},{"guid":"B9847E03-A18E-4AAA-98AA-979416C319AD"},{"guid":"2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2"},{"guid":"E05A10BE-3ED3-4A2E-808C-9698D7B97297"},{"guid":"6CAB21B1-9233-4AE2-8BCC-387B5371AD7D"},{"guid":"766492CD-2AB2-4605-B2FC-B0BC5474846C"},{"guid":"4AE155E3-8ACF-449C-AB14-C4C7F4143A5D"},{"guid":"50A04EB7-E0C6-48AA-BF97-0A2A6F51F344"},{"guid":"C4251015-F1D7-4B0E-B933-9EB0D3749A9C"},{"guid":"77918003-4ACC-4A97-A602-620C17EA556E"},{"guid":"5A8669B1-BFC5-4305-8E71-EDBB8BCADB15"},{"guid":"DDEACD4F-5038-4F30-982F-852DDDA12E97"},{"guid":"73F07854-FB55-43C8-AB92-A83B3042E818"},{"guid":"866F1801-9543-49F5-A85C-135D1380E748"},{"guid":"
+[PY] [TYPE] elements
+[PY] [SEND] {"command":"get_definitions","guids":["5AE160A8-CE9D-4D1E-97B2-238CE3E63E51"]}
+...
+[PY] [NO ACK]
+[2026-05-07 05:44:03] EXEC START: other
+[2026-05-07 05:44:04] EXEC END: other
+[2026-05-07 05:44:04] Attempting to send message to Python (82407 bytes)
+[PY] [CONNECT] ('127.0.0.1', 51407)
+nt to Python (82407 bytes)
+[PY] [RECV RAW] {"type":"property_definitions","definitions":[{"guid":"builtin:element_id","name":"ID","group":"IDとカテゴリ","editable":true,"valueType":1,"collectionType":0},{"guid":"builtin:RenovationStatus","name":"リノベーションステータス","group":"IDとカテゴリ","editable":true,"valueType":2,"collectionType":1,"enums":["既存","新設","解体"]},{"guid":"builtin:StructuralFunction","name":"構造機能","group":"IDとカテゴリ","editable":true,"valueType":2,"collectionType":1,"enums":["耐力要素","非耐力要素","未定義"]},{"guid":"builtin:Position","name":"位置","group":"IDとカテゴリ","editable":true,"valueType":2,"collectionType":1,"enums":["外部","内部","未定義"]},{"guid":"5EC3A7BC-599A-4B51-9AC7-902127526EF3","name":"柱面積 (Archicad 22)","group":"柱","editable":false,"valueType":2,"collectionType":1},{"guid":"FE56A31F-CF4B-44A7-ABE0-DA22A895845E","name":"柱 ビルディングマテリアル/プロファイル (Archicad 20)","group":"柱","editable":true,"valueType":1,"collectionType":1},{"guid":"013560E7-ED78-4382-9937-32DCB47EE13A","name":"躯体高さ / 直径","group":"柱","editable":true,"valueType":2,"collectionTyp
+[PY] [TYPE] property_definitions
+[PY] [SEND] {"command":"get_values","guids":["5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","621A2BFC-294E-4053-A8EB-4C09E88B4102","9343A401-F25A-4531-94B4-759D544C98DB","3A74654B-2A98-4C79-AB13-99A522C96ADC","0AAC6DB7-A...
+[PY] [NO ACK]
+[2026-05-07 05:44:29] EXEC START: other
+[2026-05-07 05:44:29] EXEC END: other
+[2026-05-07 05:44:29] Attempting to send message to Python (2813 bytes)
+[2026-05-07 05:44:29] Successfully sent to Python (2813 bytes)
+[PY] [CONNECT] ('127.0.0.1', 59739)
+[PY] [RECV RAW] {"type":"property_values","values":[{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","modiStamp":5289314,"props":{"builtin:element_id":"CRE - 001"}},{"guid":"621A2BFC-294E-4053-A8EB-4C09E88B4102","modiStamp":5289331,"props":{"builtin:element_id":"CRE - 002"}},{"guid":"9343A401-F25A-4531-94B4-759D544C98DB","modiStamp":5289348,"props":{"builtin:element_id":"CRE - 003"}},{"guid":"3A74654B-2A98-4C79-AB13-99A522C96ADC","modiStamp":5289363,"props":{"builtin:element_id":"CRE - 004"}},{"guid":"0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7","modiStamp":5289380,"props":{"builtin:element_id":"CRE - 005"}},{"guid":"F4634548-6780-4119-B364-659A435619AE","modiStamp":5289397,"props":{"builtin:element_id":"CRE - 001"}},{"guid":"90B13C43-C9D8-48D3-8AE9-3A5D708550EE","modiStamp":5289414,"props":{"builtin:element_id":"CRE - 002"}},{"guid":"B9847E03-A18E-4AAA-98AA-979416C319AD","modiStamp":5289431,"props":{"builtin:element_id":"CRE - 003"}},{"guid":"2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2","modiStamp":5289446,"props":{
+[PY] [TYPE] property_values
+[PY] on_table_clicked: proxy row=0 → source row=0, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["5AE160A8-CE9D-4D1E-97B2-238CE3E63E51"]}
+...
+[PY] [NO ACK]
+[2026-05-07 05:44:32] EXEC START: other
+[2026-05-07 05:44:32] select_elements: 1 guid(s)
+[2026-05-07 05:44:34] select_elements: Select returned 0
+[2026-05-07 05:44:34] EXEC END: other
+[PY] on_table_clicked: proxy row=0 → source row=0, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["5AE160A8-CE9D-4D1E-97B2-238CE3E63E51"]}
+...
+[PY] [NO ACK]
+[2026-05-07 05:44:40] EXEC START: other
+[2026-05-07 05:44:40] select_elements: 1 guid(s)
+[2026-05-07 05:44:41] select_elements: Select returned 0
+[2026-05-07 05:44:41] EXEC END: other
+[PY] on_table_clicked: proxy row=1 → source row=1, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["621A2BFC-294E-4053-A8EB-4C09E88B4102"]}
+...
+[PY] on_table_clicked: proxy row=2 → source row=2, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["9343A401-F25A-4531-94B4-759D544C98DB"]}
+...
+[PY] on_table_clicked: proxy row=3 → source row=3, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["3A74654B-2A98-4C79-AB13-99A522C96ADC"]}
+...
+[PY] on_table_clicked: proxy row=4 → source row=4, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7"]}
+...
+[PY] [NO ACK]
+[2026-05-07 05:44:44] EXEC START: other
+[2026-05-07 05:44:44] select_elements: 1 guid(s)
+[2026-05-07 05:44:44] select_elements: Select returned 0
+[2026-05-07 05:44:44] EXEC END: other
+[PY] on_table_clicked: proxy row=5 → source row=5, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["F4634548-6780-4119-B364-659A435619AE"]}
+...
+[PY] [NO ACK]
+[2026-05-07 05:44:45] EXEC START: other
+[2026-05-07 05:44:45] select_elements: 1 guid(s)
+[2026-05-07 05:44:45] select_elements: Select returned 0
+[2026-05-07 05:44:45] EXEC END: other
+[PY] on_table_clicked: proxy row=6 → source row=6, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["90B13C43-C9D8-48D3-8AE9-3A5D708550EE"]}
+...
+[PY] [NO ACK]
+[2026-05-07 05:44:45] EXEC START: other
+[2026-05-07 05:44:45] select_elements: 1 guid(s)
+[2026-05-07 05:44:45] select_elements: Select returned 0
+[2026-05-07 05:44:45] EXEC END: other
+[PY] on_table_clicked: proxy row=7 → source row=7, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["B9847E03-A18E-4AAA-98AA-979416C319AD"]}
+...
+[PY] [NO ACK]
+[2026-05-07 05:44:46] EXEC START: other
+[2026-05-07 05:44:46] select_elements: 1 guid(s)
+[2026-05-07 05:44:46] select_elements: Select returned 0
+[2026-05-07 05:44:46] EXEC END: other
+[PY] [NO ACK]
+[2026-05-07 05:44:47] EXEC START: other
+[2026-05-07 05:44:47] select_elements: 1 guid(s)
+[2026-05-07 05:44:47] select_elements: Select returned 0
+[2026-05-07 05:44:47] EXEC END: other
+[PY] [NO ACK]
+[2026-05-07 05:44:47] EXEC START: other
+[2026-05-07 05:44:47] select_elements: 1 guid(s)
+[2026-05-07 05:44:47] select_elements: Select returned 0
+[2026-05-07 05:44:47] EXEC END: other
+[PY] [NO ACK]
+[2026-05-07 05:44:48] EXEC START: other
+[2026-05-07 05:44:48] select_elements: 1 guid(s)
+[2026-05-07 05:44:48] select_elements: Select returned 0
+[2026-05-07 05:44:48] EXEC END: other
+[PY] [SEND] {"command":"setup_bim_override"}
+...
+[PY] [NO ACK]
+[2026-05-07 05:44:52] EXEC START: other
+[2026-05-07 05:44:52] SetupBIMOverride: projDir=C:\AC28_AddOnProject\archicad-addon-pyQt\
+[2026-05-07 05:44:52] Property XML read OK, len=275486
+[2026-05-07 05:44:52] ACAPI_Property_Import result=0
+[2026-05-07 05:44:52] GO XML parsed: 2 rules
+[2026-05-07 05:44:52] Created rule: BIM変更済
+[2026-05-07 05:44:52] Created rule: BIM確認済
+[2026-05-07 05:44:52] EXEC END: other
+[2026-05-07 05:44:52] Attempting to send message to Python (201 bytes)
+[2026-05-07 05:44:52] Successfully sent to Python (201 bytes)
+[PY] [CONNECT] ('127.0.0.1', 59762)
+[PY] [RECV RAW] {"type":"bim_override_result","status":"ok","action":"setup","propCreated":true,"combinationCreated":true,"combinationName":"BIM変更管理","changeStatusGuid":"F5C5472B-8A91-49F8-9FFA-823188A1E077"}
+[PY] [TYPE] bim_override_result
+[PY] [SEND] {"command":"get_values","guids":["621A2BFC-294E-4053-A8EB-4C09E88B4102","5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","B9847E03-A18E-4AAA-98AA-979416C319AD","3A74654B-2A98-4C79-AB13-99A522C96ADC","2E7DA3C5-B...
+[PY] [NO ACK]
+[2026-05-07 05:46:45] EXEC START: other
+[2026-05-07 05:46:45] EXEC END: other
+[2026-05-07 05:46:45] Attempting to send message to Python (1037 bytes)
+[2026-05-07 05:46:45] Successfully sent to Python (1037 bytes)
+[PY] [CONNECT] ('127.0.0.1', 65444)
+[PY] [RECV RAW] {"type":"property_values","values":[{"guid":"621A2BFC-294E-4053-A8EB-4C09E88B4102","modiStamp":5289331,"props":{"builtin:element_id":"CRE - 002"}},{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","modiStamp":5289314,"props":{"builtin:element_id":"CRE - 001"}},{"guid":"B9847E03-A18E-4AAA-98AA-979416C319AD","modiStamp":5289431,"props":{"builtin:element_id":"CRE - 003"}},{"guid":"3A74654B-2A98-4C79-AB13-99A522C96ADC","modiStamp":5289363,"props":{"builtin:element_id":"CRE - 004"}},{"guid":"2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2","modiStamp":5289446,"props":{"builtin:element_id":"CRE - 004"}},{"guid":"0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7","modiStamp":5289380,"props":{"builtin:element_id":"CRE - 005"}},{"guid":"F4634548-6780-4119-B364-659A435619AE","modiStamp":5289397,"props":{"builtin:element_id":"CRE - 001"}},{"guid":"90B13C43-C9D8-48D3-8AE9-3A5D708550EE","modiStamp":5289414,"props":{"builtin:element_id":"CRE - 002"}},{"guid":"9343A401-F25A-4531-94B4-759D544C98DB","modiStamp":5289348,"props":{
+[PY] [TYPE] property_values
+[PY] [PRE-VERIFY] 競合なし → 反映 9 件
+[PY] [SEND] {"command":"apply_changes","changes":[{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","group":"element_id","propId":"builtin:element_id","propName":"ID","propGroup":"IDとカテゴリ","specialType":"element_id"...
+[PY] [NO ACK]
+[2026-05-07 05:46:47] EXEC START: apply_changes
+[2026-05-07 05:46:47] Enqueueing sync_complete: 971 bytes. Status=success
+[2026-05-07 05:46:47] EXEC END: apply_changes
+[2026-05-07 05:46:47] Attempting to send message to Python (972 bytes)
+[2026-05-07 05:46:47] Successfully sent to Python (972 bytes)
+[PY] [CONNECT] ('127.0.0.1', 65447)
+[PY] [RECV RAW] {"type":"sync_result","results":[{"guid":"0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7","status":"success","reason":"","currentStamp":6383776},{"guid":"2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2","status":"success","reason":"","currentStamp":6383780},{"guid":"3A74654B-2A98-4C79-AB13-99A522C96ADC","status":"success","reason":"","currentStamp":6383784},{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","status":"success","reason":"","currentStamp":6383788},{"guid":"621A2BFC-294E-4053-A8EB-4C09E88B4102","status":"success","reason":"","currentStamp":6383792},{"guid":"90B13C43-C9D8-48D3-8AE9-3A5D708550EE","status":"success","reason":"","currentStamp":6383796},{"guid":"9343A401-F25A-4531-94B4-759D544C98DB","status":"success","reason":"","currentStamp":6383800},{"guid":"B9847E03-A18E-4AAA-98AA-979416C319AD","status":"success","reason":"","currentStamp":6383804},{"guid":"F4634548-6780-4119-B364-659A435619AE","status":"success","reason":"","currentStamp":6383808}],"status":"success"}
+[PY] [TYPE] sync_result
+[PY] === SYNC SIGNAL EMIT ===
+[PY] === SYNC COMPLETE RECEIVED ===
+[PY] sync payload keys: ['type', 'results', 'status']
+[PY] sync results count: 9
+[PY] on_sync_complete: [1] checking results key
+[PY] on_sync_complete: [2] model props=1, elems=25
+[PY] on_sync_complete: [3] processing 9 results
+[PY] on_sync_complete: [4] loop done sc=9 cc=0 ec=0, refreshing view
+[PY] on_sync_complete: [5] refresh_view done
+[PY] on_sync_complete: [6] setting status label: 成功:9 / 競合:0 / エラー:0
+[PY] on_sync_complete: [7] showing dialog has_issue=False
+[PY] on_sync_complete: [8] dialog closed, done
+[2026-05-07 06:30:20] Loaded binary: C:\AC28_AddOnProject\archicad-addon-pyQt\Build\Release\maedaAddOnPyqt.apx
+[2026-05-07 06:30:20] Build stamp: May  7 2026 06:09:54
+[2026-05-07 06:30:20] Command listener started on port 5001
+[2026-05-07 06:30:20] Started Python server process
+[PY] --- Starting Application ---
+[PY] Python 3.11.7 | packaged by Anaconda, Inc. | (main, Dec 15 2023, 18:05:47) [MSC v.1916 64 bit (AMD64)]
+[PY] Server started (5000)
+[2026-05-07 06:30:25] Attempting to send message to Python (368 bytes)
+[2026-05-07 06:30:25] Successfully sent to Python (368 bytes)
+[PY] [CONNECT] ('127.0.0.1', 49294)
+[PY] [RECV RAW] {"type":"project_config","stories":[{"index":-2,"name":"-2 Floor (基礎)"},{"index":-1,"name":"-1 Floor (GL)"},{"index":0,"name":"1 Floor (1FL)"},{"index":1,"name":"2 Floor (2Fl)"},{"index":2,"name":"3 Floor (3FL)"},{"index":3,"name":"4 Floor (4FL)"}],"elementTypes":{"Wall":35,"Column":100,"Beam":68,"Slab":20,"Window":63,"Door":28,"Zone":12,"Roof":1,"Object":100}}
+[PY] [TYPE] project_config
+[PY] [SEND] {"command":"get_elements","stories":[3],"Wall":false,"Column":true,"Beam":false,"Slab":false,"Window":false,"Door":false,"Zone":false,"Roof":false,"Object":false}
+...
+[PY] [NO ACK]
+[2026-05-07 06:31:01] EXEC START: other
+[2026-05-07 06:31:01] EXEC END: other
+[2026-05-07 06:31:01] Attempting to send message to Python (1233 bytes)
+[2026-05-07 06:31:01] Successfully sent to Python (1233 bytes)
+[PY] [CONNECT] ('127.0.0.1', 49319)
+[PY] [RECV RAW] {"type":"elements","elements":[{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51"},{"guid":"621A2BFC-294E-4053-A8EB-4C09E88B4102"},{"guid":"9343A401-F25A-4531-94B4-759D544C98DB"},{"guid":"3A74654B-2A98-4C79-AB13-99A522C96ADC"},{"guid":"0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7"},{"guid":"F4634548-6780-4119-B364-659A435619AE"},{"guid":"90B13C43-C9D8-48D3-8AE9-3A5D708550EE"},{"guid":"B9847E03-A18E-4AAA-98AA-979416C319AD"},{"guid":"2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2"},{"guid":"E05A10BE-3ED3-4A2E-808C-9698D7B97297"},{"guid":"6CAB21B1-9233-4AE2-8BCC-387B5371AD7D"},{"guid":"766492CD-2AB2-4605-B2FC-B0BC5474846C"},{"guid":"4AE155E3-8ACF-449C-AB14-C4C7F4143A5D"},{"guid":"50A04EB7-E0C6-48AA-BF97-0A2A6F51F344"},{"guid":"C4251015-F1D7-4B0E-B933-9EB0D3749A9C"},{"guid":"77918003-4ACC-4A97-A602-620C17EA556E"},{"guid":"5A8669B1-BFC5-4305-8E71-EDBB8BCADB15"},{"guid":"DDEACD4F-5038-4F30-982F-852DDDA12E97"},{"guid":"73F07854-FB55-43C8-AB92-A83B3042E818"},{"guid":"866F1801-9543-49F5-A85C-135D1380E748"},{"guid":"
+[PY] [TYPE] elements
+[PY] [SEND] {"command":"get_definitions","guids":["5AE160A8-CE9D-4D1E-97B2-238CE3E63E51"]}
+...
+[PY] [NO ACK]
+[2026-05-07 06:31:05] EXEC START: other
+[2026-05-07 06:31:05] EXEC END: other
+[2026-05-07 06:31:05] Attempting to send message to Python (82407 bytes)
+[2026-05-07 06:31:05] Successfully sent to Python (82407 bytes)
+[PY] [CONNECT] ('127.0.0.1', 49322)
+[PY] [RECV RAW] {"type":"property_definitions","definitions":[{"guid":"builtin:element_id","name":"ID","group":"IDとカテゴリ","editable":true,"valueType":1,"collectionType":0},{"guid":"builtin:RenovationStatus","name":"リノベーションステータス","group":"IDとカテゴリ","editable":true,"valueType":2,"collectionType":1,"enums":["既存","新設","解体"]},{"guid":"builtin:StructuralFunction","name":"構造機能","group":"IDとカテゴリ","editable":true,"valueType":2,"collectionType":1,"enums":["耐力要素","非耐力要素","未定義"]},{"guid":"builtin:Position","name":"位置","group":"IDとカテゴリ","editable":true,"valueType":2,"collectionType":1,"enums":["外部","内部","未定義"]},{"guid":"5EC3A7BC-599A-4B51-9AC7-902127526EF3","name":"柱面積 (Archicad 22)","group":"柱","editable":false,"valueType":2,"collectionType":1},{"guid":"FE56A31F-CF4B-44A7-ABE0-DA22A895845E","name":"柱 ビルディングマテリアル/プロファイル (Archicad 20)","group":"柱","editable":true,"valueType":1,"collectionType":1},{"guid":"013560E7-ED78-4382-9937-32DCB47EE13A","name":"躯体高さ / 直径","group":"柱","editable":true,"valueType":2,"collectionTyp
+[PY] [TYPE] property_definitions
+[PY] [SEND] {"command":"get_values","guids":["5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","621A2BFC-294E-4053-A8EB-4C09E88B4102","9343A401-F25A-4531-94B4-759D544C98DB","3A74654B-2A98-4C79-AB13-99A522C96ADC","0AAC6DB7-A...
+[PY] [NO ACK]
+[2026-05-07 06:31:11] EXEC START: other
+[2026-05-07 06:31:11] EXEC END: other
+[2026-05-07 06:31:11] Attempting to send message to Python (2813 bytes)
+[PY] [CONNECT] ('127.0.0.1', 49327)
+nt to Python (2813 bytes)
+[PY] [RECV RAW] {"type":"property_values","values":[{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","modiStamp":5289314,"props":{"builtin:element_id":"CRE - 001"}},{"guid":"621A2BFC-294E-4053-A8EB-4C09E88B4102","modiStamp":5289331,"props":{"builtin:element_id":"CRE - 002"}},{"guid":"9343A401-F25A-4531-94B4-759D544C98DB","modiStamp":5289348,"props":{"builtin:element_id":"CRE - 003"}},{"guid":"3A74654B-2A98-4C79-AB13-99A522C96ADC","modiStamp":5289363,"props":{"builtin:element_id":"CRE - 004"}},{"guid":"0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7","modiStamp":5289380,"props":{"builtin:element_id":"CRE - 005"}},{"guid":"F4634548-6780-4119-B364-659A435619AE","modiStamp":5289397,"props":{"builtin:element_id":"CRE - 001"}},{"guid":"90B13C43-C9D8-48D3-8AE9-3A5D708550EE","modiStamp":5289414,"props":{"builtin:element_id":"CRE - 002"}},{"guid":"B9847E03-A18E-4AAA-98AA-979416C319AD","modiStamp":5289431,"props":{"builtin:element_id":"CRE - 003"}},{"guid":"2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2","modiStamp":5289446,"props":{
+[PY] [TYPE] property_values
+[PY] on_table_clicked: proxy row=0 → source row=0, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["5AE160A8-CE9D-4D1E-97B2-238CE3E63E51"]}
+...
+[PY] [NO ACK]
+[2026-05-07 06:31:19] EXEC START: other
+[2026-05-07 06:31:19] select_elements: 1 guid(s)
+[2026-05-07 06:31:20] select_elements: Select returned 0
+[2026-05-07 06:31:20] EXEC END: other
+[PY] [SEND] {"command":"setup_bim_override"}
+...
+[PY] [NO ACK]
+[2026-05-07 06:31:31] EXEC START: other
+[2026-05-07 06:31:31] SetupBIMOverride: projDir=C:\AC28_AddOnProject\archicad-addon-pyQt\
+[2026-05-07 06:31:31] Property XML read OK, len=275486
+[2026-05-07 06:31:31] ACAPI_Property_Import result=0
+[2026-05-07 06:31:31] GO XML parsed: 2 rules
+[2026-05-07 06:31:31] Created rule: BIM変更済
+[2026-05-07 06:31:31] Created rule: BIM確認済
+[2026-05-07 06:31:31] EXEC END: other
+[2026-05-07 06:31:31] Attempting to send message to Python (201 bytes)
+[PY] [CONNECT] ('127.0.0.1', 63222)
+nt to Python (201 bytes)
+[PY] [RECV RAW] {"type":"bim_override_result","status":"ok","action":"setup","propCreated":true,"combinationCreated":true,"combinationName":"BIM変更管理","changeStatusGuid":"F5565B4E-17AD-43AF-872F-8868D48B4A23"}
+[PY] [TYPE] bim_override_result
+[PY] [SEND] {"command":"get_values","guids":["6CAB21B1-9233-4AE2-8BCC-387B5371AD7D","621A2BFC-294E-4053-A8EB-4C09E88B4102","0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7","90B13C43-C9D8-48D3-8AE9-3A5D708550EE","5A8669B1-B...
+[PY] [NO ACK]
+[2026-05-07 06:32:21] EXEC START: other
+[2026-05-07 06:32:21] EXEC END: other
+[2026-05-07 06:32:21] Attempting to send message to Python (2036 bytes)
+[2026-05-07 06:32:21] Successfully sent to Python (2036 bytes)
+[PY] [CONNECT] ('127.0.0.1', 55454)
+[PY] [RECV RAW] {"type":"property_values","values":[{"guid":"6CAB21B1-9233-4AE2-8BCC-387B5371AD7D","modiStamp":5289480,"props":{"builtin:element_id":"CRE - 001"}},{"guid":"621A2BFC-294E-4053-A8EB-4C09E88B4102","modiStamp":5289331,"props":{"builtin:element_id":"CRE - 002"}},{"guid":"0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7","modiStamp":5289380,"props":{"builtin:element_id":"CRE - 005"}},{"guid":"90B13C43-C9D8-48D3-8AE9-3A5D708550EE","modiStamp":5289414,"props":{"builtin:element_id":"CRE - 002"}},{"guid":"5A8669B1-BFC5-4305-8E71-EDBB8BCADB15","modiStamp":5289584,"props":{"builtin:element_id":"CRE - 002"}},{"guid":"766492CD-2AB2-4605-B2FC-B0BC5474846C","modiStamp":5289497,"props":{"builtin:element_id":"CRE - 002"}},{"guid":"C4251015-F1D7-4B0E-B933-9EB0D3749A9C","modiStamp":5289550,"props":{"builtin:element_id":"CRE - 005"}},{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","modiStamp":5289314,"props":{"builtin:element_id":"CRE - 001"}},{"guid":"F4634548-6780-4119-B364-659A435619AE","modiStamp":5289397,"props":{
+[PY] [TYPE] property_values
+[PY] [PRE-VERIFY] 競合なし → 反映 18 件
+[PY] [SEND] {"command":"apply_changes","changes":[{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","group":"element_id","propId":"builtin:element_id","propName":"ID","propGroup":"IDとカテゴリ","specialType":"element_id"...
+[PY] [NO ACK]
+[2026-05-07 06:32:23] EXEC START: apply_changes
+[2026-05-07 06:32:23] Enqueueing sync_complete: 1889 bytes. Status=success
+[2026-05-07 06:32:23] EXEC END: apply_changes
+[2026-05-07 06:32:23] Attempting to send message to Python (1890 bytes)
+[PY] [CONNECT] ('127.0.0.1', 55457)
+[2026-05-07 06:32:23] Successfully sent to Python (1890 bytes)
+[PY] [RECV RAW] {"type":"sync_result","results":[{"guid":"0AAC6DB7-ADBE-4413-8A1A-53AE2A7A6DB7","status":"success","reason":"","currentStamp":6379784},{"guid":"2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2","status":"success","reason":"","currentStamp":6379788},{"guid":"3A74654B-2A98-4C79-AB13-99A522C96ADC","status":"success","reason":"","currentStamp":6379792},{"guid":"4AE155E3-8ACF-449C-AB14-C4C7F4143A5D","status":"success","reason":"","currentStamp":6379796},{"guid":"50A04EB7-E0C6-48AA-BF97-0A2A6F51F344","status":"success","reason":"","currentStamp":6379800},{"guid":"5A8669B1-BFC5-4305-8E71-EDBB8BCADB15","status":"success","reason":"","currentStamp":6379804},{"guid":"5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","status":"success","reason":"","currentStamp":6379808},{"guid":"621A2BFC-294E-4053-A8EB-4C09E88B4102","status":"success","reason":"","currentStamp":6379812},{"guid":"6CAB21B1-9233-4AE2-8BCC-387B5371AD7D","status":"success","reason":"","currentStamp":6379816},{"guid":"766492CD-2AB2-4605-B2FC-B0BC5474846C","s
+[PY] [TYPE] sync_result
+[PY] === SYNC SIGNAL EMIT ===
+[PY] === SYNC COMPLETE RECEIVED ===
+[PY] sync payload keys: ['type', 'results', 'status']
+[PY] sync results count: 18
+[PY] on_sync_complete: [1] checking results key
+[PY] on_sync_complete: [2] model props=1, elems=25
+[PY] on_sync_complete: [3] processing 18 results
+[PY] on_sync_complete: [4] loop done sc=18 cc=0 ec=0, refreshing view
+[PY] on_sync_complete: [5] refresh_view done
+[PY] on_sync_complete: [6] setting status label: 成功:18 / 競合:0 / エラー:0
+[PY] on_sync_complete: [7] showing dialog has_issue=False
+[PY] on_sync_complete: [8] dialog closed, done
+[PY] on_table_clicked: proxy row=8 → source row=8, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2"]}
+...
+[PY] [NO ACK]
+[2026-05-07 06:32:39] EXEC START: other
+[2026-05-07 06:32:39] select_elements: 1 guid(s)
+[PY] [SEND] {"command":"set_change_status","guids":["2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2"],"status":2}
+...
+[2026-05-07 06:32:40] select_elements: Select returned 0
+[2026-05-07 06:32:40] EXEC END: other
+[PY] on_table_clicked: proxy row=12 → source row=12, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["4AE155E3-8ACF-449C-AB14-C4C7F4143A5D"]}
+...
+[PY] [NO ACK]
+[2026-05-07 06:32:42] EXEC START: other
+[2026-05-07 06:32:42] EXEC END: other
+[2026-05-07 06:32:42] Attempting to send message to Python (64 bytes)
+[2026-05-07 06:32:42] Successfully sent to Python (64 bytes)
+[PY] [CONNECT] ('127.0.0.1', 57603)
+[PY] [RECV RAW] {"type":"change_status_result","status":"ok","set":1,"value":2}
+[PY] [TYPE] change_status_result
+[PY] on_change_status_result: {'type': 'change_status_result', 'status': 'ok', 'set': 1, 'value': 2}
+[PY] on_change_status_result: calling update_change_status guids=['2E7DA3C5-B866-409D-B6C2-A1E75A4EC3F2'] val=2
+[PY] on_change_status_result: update_change_status done
+[PY] [SEND] {"command":"set_change_status","guids":["4AE155E3-8ACF-449C-AB14-C4C7F4143A5D"],"status":2}
+...
+[PY] [NO ACK]
+[2026-05-07 06:32:44] EXEC START: other
+[2026-05-07 06:32:44] select_elements: 1 guid(s)
+[2026-05-07 06:32:44] select_elements: Select returned 0
+[2026-05-07 06:32:44] EXEC END: other
+[PY] [NO ACK]
+[2026-05-07 06:32:45] EXEC START: other
+[2026-05-07 06:32:45] EXEC END: other
+[2026-05-07 06:32:45] Attempting to send message to Python (64 bytes)
+[2026-05-07 06:32:45] Successfully sent to Python (64 bytes)
+[PY] [CONNECT] ('127.0.0.1', 57606)
+[PY] [RECV RAW] {"type":"change_status_result","status":"ok","set":1,"value":2}
+[PY] [TYPE] change_status_result
+[PY] on_change_status_result: {'type': 'change_status_result', 'status': 'ok', 'set': 1, 'value': 2}
+[PY] on_change_status_result: calling update_change_status guids=['4AE155E3-8ACF-449C-AB14-C4C7F4143A5D'] val=2
+[PY] on_change_status_result: update_change_status done
+[PY] on_table_clicked: proxy row=10 → source row=10, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["6CAB21B1-9233-4AE2-8BCC-387B5371AD7D"]}
+...
+[PY] [NO ACK]
+[2026-05-07 06:32:49] EXEC START: other
+[2026-05-07 06:32:50] select_elements: 1 guid(s)
+[2026-05-07 06:32:50] select_elements: Select returned 0
+[2026-05-07 06:32:50] EXEC END: other
+[PY] [SEND] {"command":"set_change_status","guids":["6CAB21B1-9233-4AE2-8BCC-387B5371AD7D"],"status":2}
+...
+[PY] [NO ACK]
+[2026-05-07 06:32:58] EXEC START: other
+[2026-05-07 06:32:58] EXEC END: other
+[2026-05-07 06:32:58] Attempting to send message to Python (64 bytes)
+[2026-05-07 06:32:58] Successfully sent to Python (64 bytes)
+[PY] [CONNECT] ('127.0.0.1', 55279)
+[PY] [RECV RAW] {"type":"change_status_result","status":"ok","set":1,"value":2}
+[PY] [TYPE] change_status_result
+[PY] on_change_status_result: {'type': 'change_status_result', 'status': 'ok', 'set': 1, 'value': 2}
+[PY] on_change_status_result: calling update_change_status guids=['6CAB21B1-9233-4AE2-8BCC-387B5371AD7D'] val=2
+[PY] on_change_status_result: update_change_status done
+[PY] on_table_clicked: proxy row=6 → source row=6, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["90B13C43-C9D8-48D3-8AE9-3A5D708550EE"]}
+...
+[PY] [NO ACK]
+[2026-05-07 06:33:03] EXEC START: other
+[2026-05-07 06:33:03] select_elements: 1 guid(s)
+[2026-05-07 06:33:03] select_elements: Select returned 0
+[2026-05-07 06:33:03] EXEC END: other
+[PY] [SEND] {"command":"set_change_status","guids":["90B13C43-C9D8-48D3-8AE9-3A5D708550EE"],"status":2}
+...
+[PY] [NO ACK]
+[PY] on_table_clicked: proxy row=6 → source row=6, total_elems=25
+[PY] [SEND] {"command":"select_elements","guids":["90B13C43-C9D8-48D3-8AE9-3A5D708550EE"]}
+...
+[PY] [NO ACK]
+[2026-05-07 06:33:34] EXEC START: other
+[2026-05-07 06:33:34] EXEC END: other
+[2026-05-07 06:33:34] Attempting to send message to Python (64 bytes)
+[2026-05-07 06:33:34] Successfully sent to Python (64 bytes)
+[PY] [CONNECT] ('127.0.0.1', 61623)
+[PY] [RECV RAW] {"type":"change_status_result","status":"ok","set":1,"value":2}
+[PY] [TYPE] change_status_result
+[PY] on_change_status_result: {'type': 'change_status_result', 'status': 'ok', 'set': 1, 'value': 2}
+[PY] on_change_status_result: calling update_change_status guids=['90B13C43-C9D8-48D3-8AE9-3A5D708550EE'] val=2
+[PY] on_change_status_result: update_change_status done
+[2026-05-07 06:33:34] EXEC START: other
+[2026-05-07 06:33:34] select_elements: 1 guid(s)
+[2026-05-07 06:33:35] select_elements: Select returned 0
+[2026-05-07 06:33:35] EXEC END: other
+[PY] [SEND] {"command":"set_change_status","guids":["90B13C43-C9D8-48D3-8AE9-3A5D708550EE"],"status":0}
+...
+[PY] [NO ACK]
+[2026-05-07 06:33:40] EXEC START: other
+[2026-05-07 06:33:40] EXEC END: other
+[2026-05-07 06:33:41] Attempting to send message to Python (64 bytes)
+[PY] [CONNECT] ('127.0.0.1', 61628)
+[2026-05-07 06:33:41] Successfully sent to Python (64 bytes)
+[PY] [RECV RAW] {"type":"change_status_result","status":"ok","set":1,"value":0}
+[PY] [TYPE] change_status_result
+[PY] on_change_status_result: {'type': 'change_status_result', 'status': 'ok', 'set': 1, 'value': 0}
+[PY] on_change_status_result: calling update_change_status guids=['90B13C43-C9D8-48D3-8AE9-3A5D708550EE'] val=0
+[PY] on_change_status_result: update_change_status done
+[PY] [SEND] {"command":"set_change_status","guids":["5AE160A8-CE9D-4D1E-97B2-238CE3E63E51","621A2BFC-294E-4053-A8EB-4C09E88B4102","9343A401-F25A-4531-94B4-759D544C98DB","3A74654B-2A98-4C79-AB13-99A522C96ADC","0AA...
+[PY] [NO ACK]
+[2026-05-07 06:33:47] EXEC START: other
+[2026-05-07 06:33:48] EXEC END: other
+[2026-05-07 06:33:48] Attempting to send message to Python (65 bytes)
+[2026-05-07 06:33:48] Successfully sent to Python (65 bytes)
+[PY] [CONNECT] ('127.0.0.1', 61635)
 [PY] [RECV RAW] {"type":"change_status_result","status":"ok","set":25,"value":0}
 [PY] [TYPE] change_status_result
 [PY] on_change_status_result: {'type': 'change_status_result', 'status': 'ok', 'set': 25, 'value': 0}

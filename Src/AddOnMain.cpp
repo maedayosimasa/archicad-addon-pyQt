@@ -835,98 +835,276 @@ void SetChangeStatus(const std::string& json) {
     EnqueueResult(std::string((const char*)out.ToCStr(CC_UTF8)));
 }
 
+// ─── XML / File ヘルパー (SetupBIMOverride 用) ───
+static std::string XmlTagContent(const std::string& xml, const std::string& tag) {
+    const std::string open = "<" + tag + ">";
+    const std::string openAttr = "<" + tag + " ";
+    const std::string close = "</" + tag + ">";
+    size_t s = xml.find(open);
+    size_t startOff;
+    if (s != std::string::npos) {
+        startOff = s + open.length();
+    } else {
+        s = xml.find(openAttr);
+        if (s == std::string::npos) return "";
+        const size_t gt = xml.find('>', s);
+        if (gt == std::string::npos) return "";
+        startOff = gt + 1;
+    }
+    const size_t e = xml.find(close, startOff);
+    if (e == std::string::npos) return "";
+    return xml.substr(startOff, e - startOff);
+}
+
+static std::string XmlElementOuter(const std::string& xml, const std::string& tag, size_t from = 0) {
+    const std::string open  = "<"  + tag;
+    const std::string close = "</" + tag + ">";
+    const size_t s = xml.find(open, from);
+    if (s == std::string::npos) return "";
+    const size_t e = xml.find(close, s);
+    if (e == std::string::npos) return "";
+    return xml.substr(s, e + close.length() - s);
+}
+
+static int XmlInt(const std::string& xml, const std::string& tag, int def = 0) {
+    const std::string v = XmlTagContent(xml, tag);
+    if (v.empty()) return def;
+    try { return std::stoi(v); } catch(...) { return def; }
+}
+
+static std::string WstrToLogStr(const std::wstring& ws) {
+    std::string s; s.reserve(ws.size());
+    for (wchar_t c : ws) s += (c < 128) ? static_cast<char>(c) : '?';
+    return s;
+}
+
+static std::wstring FindProjectDirW() {
+    IO::Location loc;
+    if (ACAPI_GetOwnLocation(&loc) != NoError) return L"";
+    for (int i = 0; i < 6; i++) {
+        loc.DeleteLastLocalName();
+        IO::Location t = loc;
+        t.AppendToLocal(IO::Name("server.py"));
+        bool ex = false;
+        if (IO::fileSystem.Contains(t, &ex) == NoError && ex) {
+            GS::UniString p;
+            loc.ToPath(&p);
+            std::wstring ws((const wchar_t*)p.ToUStr().Get());
+            if (!ws.empty() && ws.back() != L'\\' && ws.back() != L'/') ws += L'\\';
+            return ws;
+        }
+    }
+    return L"";
+}
+
+static bool ReadFileToUniString(const std::wstring& wpath, GS::UniString& out) {
+    HANDLE h = CreateFileW(wpath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
+                           OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (h == INVALID_HANDLE_VALUE) return false;
+    DWORD sz = GetFileSize(h, NULL);
+    if (sz == 0 || sz == INVALID_FILE_SIZE) { CloseHandle(h); return false; }
+    std::vector<char> buf(sz + 1, 0);
+    DWORD rd = 0;
+    const bool ok = ReadFile(h, buf.data(), sz, &rd, NULL) != FALSE;
+    CloseHandle(h);
+    if (!ok || rd == 0) return false;
+    size_t start = 0;
+    if (rd >= 3 && (unsigned char)buf[0]==0xEF &&
+                   (unsigned char)buf[1]==0xBB &&
+                   (unsigned char)buf[2]==0xBF) start = 3;
+    buf[rd] = '\0';
+    out = GS::UniString(buf.data() + start, CC_UTF8);
+    return true;
+}
+
 // ─── SetupBIMOverride: ChangeStatus プロパティ + Graphic Override ルール/コンビネーション作成 ───
 void SetupBIMOverride(const std::string& /*json*/) {
-    const GS::UniString kGroupName        ("変更管理",     CC_UTF8);
+    const GS::UniString kGroupName        ("\xe5\xa4\x89\xe6\x9b\xb4\xe7\xae\xa1\xe7\x90\x86", CC_UTF8); // 変更管理
     const GS::UniString kCSName           ("ChangeStatus", CC_UTF8);
-    const GS::UniString kRuleGroupName    ("BIM変更管理",  CC_UTF8);
-    const GS::UniString kRuleChangedName  ("BIM変更済",    CC_UTF8);
-    const GS::UniString kRuleConfirmedName("BIM確認済",    CC_UTF8);
-    const GS::UniString kComboName        ("BIM変更管理",  CC_UTF8);
+    const GS::UniString kRuleGroupName    ("BIM\xe5\xa4\x89\xe6\x9b\xb4\xe7\xae\xa1\xe7\x90\x86", CC_UTF8); // BIM変更管理
+    const GS::UniString kRuleChangedName  ("BIM\xe5\xa4\x89\xe6\x9b\xb4\xe6\xb8\x88", CC_UTF8);  // BIM変更済
+    const GS::UniString kRuleConfirmedName("BIM\xe7\xa2\xba\xe8\xaa\x8d\xe6\xb8\x88", CC_UTF8);  // BIM確認済
+    const GS::UniString kComboName        ("BIM\xe5\xa4\x89\xe6\x9b\xb4\xe7\xae\xa1\xe7\x90\x86", CC_UTF8); // BIM変更管理
 
     bool propCreated = false, comboCreated = false;
     API_Guid csDefGuid = APINULLGuid;
 
-    // Step 1: ChangeStatus プロパティを検索または作成
+    // Step 0: プロジェクトディレクトリを取得
+    const std::wstring projDir = FindProjectDirW();
+    WriteExternalLog("SetupBIMOverride: projDir=" + WstrToLogStr(projDir));
+
+    // Step 1: ChangeStatus プロパティを検索
     GS::Array<API_Guid> anyGuids;
-    for (const auto& t : SupportedTypes) {
+    for (const auto& t : SupportedTypes)
         if (ACAPI_Element_GetElemList(API_ElemType(t.id), &anyGuids) == NoError && !anyGuids.IsEmpty()) break;
-    }
-    if (!anyGuids.IsEmpty()) {
+
+    auto findCSGuid = [&]() {
+        csDefGuid = APINULLGuid;
+        if (anyGuids.IsEmpty()) return;
         GS::Array<API_PropertyDefinition> defs;
         ACAPI_Element_GetPropertyDefinitions(anyGuids[0], API_PropertyDefinitionFilter_All, defs);
-        for (UInt32 i = 0; i < defs.GetSize(); i++) { if (defs[i].name == kCSName) { csDefGuid = defs[i].guid; break; } }
+        for (UInt32 i = 0; i < defs.GetSize(); i++)
+            if (defs[i].name == kCSName) { csDefGuid = defs[i].guid; break; }
+    };
+    findCSGuid();
 
-        if (csDefGuid == APINULLGuid) {
-            API_Guid groupGuid = APINULLGuid;
-            for (UInt32 i = 0; i < defs.GetSize() && groupGuid == APINULLGuid; i++) {
-                API_PropertyGroup grp = {}; grp.guid = defs[i].groupGuid;
-                if (ACAPI_Property_GetPropertyGroup(grp) == NoError && grp.name == kGroupName) groupGuid = grp.guid;
-            }
-            ACAPI_CallUndoableCommand("BIM ChangeStatus プロパティ作成", [&]() -> GSErrCode {
-                if (groupGuid == APINULLGuid) {
-                    API_PropertyGroup ng = {}; ng.name = kGroupName;
-                    GSErrCode e = ACAPI_Property_CreatePropertyGroup(ng); if (e != NoError) return e;
-                    groupGuid = ng.guid;
-                }
-                API_PropertyDefinition nd = {};
-                nd.groupGuid = groupGuid; nd.name = kCSName;
-                nd.valueType = API_PropertyIntegerValueType;
-                nd.collectionType = API_PropertySingleChoiceEnumerationCollectionType;
-                nd.defaultValue.hasExpression = false;
-                nd.defaultValue.basicValue.singleVariant.variant.type = API_PropertyIntegerValueType;
-                nd.defaultValue.basicValue.singleVariant.variant.intValue = 0;
-                auto addEnum = [&](int key, const char* disp) {
-                    API_SingleEnumerationVariant ev = {};
-                    ev.keyVariant.type = API_PropertyIntegerValueType; ev.keyVariant.intValue = key;
-                    ev.displayVariant.type = API_PropertyStringValueType;
-                    ev.displayVariant.uniStringValue = GS::UniString(disp, CC_UTF8);
-                    nd.possibleEnumValues.Push(ev);
-                };
-                addEnum(0, "未変更"); addEnum(1, "変更済"); addEnum(2, "確認済");
-                GSErrCode e2 = ACAPI_Property_CreatePropertyDefinition(nd); if (e2 != NoError) return e2;
-                csDefGuid = nd.guid; propCreated = true; return NoError;
-            });
+    if (csDefGuid == APINULLGuid) {
+        // XML ファイルからプロパティをインポート
+        // 変更フラグプロパティ.xml
+        const std::wstring propXmlPath = projDir +
+            L"変更フラグプロパティ.xml";
+        GS::UniString propXml;
+        if (!projDir.empty() && ReadFileToUniString(propXmlPath, propXml)) {
+            WriteExternalLog("Property XML read OK, len=" + std::to_string(propXml.GetLength()));
+            const GSErrCode ie = ACAPI_Property_Import(propXml, API_SkipConflictingProperties);
+            WriteExternalLog("ACAPI_Property_Import result=" + std::to_string(ie));
+            if (ie == NoError) { propCreated = true; findCSGuid(); }
+        } else {
+            WriteExternalLog("Cannot read property XML, will create via API");
         }
     }
-    GS::UniString csGuidStr = (csDefGuid != APINULLGuid) ? APIGuid2GSGuid(csDefGuid).ToUniString() : GS::UniString("N/A");
 
-    // Step 2: Graphic Override ルールグループを検索または作成
+    // フォールバック: API で直接 ChangeStatus プロパティを作成
+    if (csDefGuid == APINULLGuid && !anyGuids.IsEmpty()) {
+        API_Guid groupGuid = APINULLGuid;
+        GS::Array<API_PropertyDefinition> defs;
+        ACAPI_Element_GetPropertyDefinitions(anyGuids[0], API_PropertyDefinitionFilter_All, defs);
+        for (UInt32 i = 0; i < defs.GetSize() && groupGuid == APINULLGuid; i++) {
+            API_PropertyGroup grp = {}; grp.guid = defs[i].groupGuid;
+            if (ACAPI_Property_GetPropertyGroup(grp) == NoError && grp.name == kGroupName)
+                groupGuid = grp.guid;
+        }
+        ACAPI_CallUndoableCommand("BIM ChangeStatus \xe3\x83\x97\xe3\x83\xad\xe3\x83\x91\xe3\x83\x86\xe3\x82\xa3\xe4\xbd\x9c\xe6\x88\x90", [&]() -> GSErrCode {
+            if (groupGuid == APINULLGuid) {
+                API_PropertyGroup ng = {}; ng.name = kGroupName;
+                GSErrCode e = ACAPI_Property_CreatePropertyGroup(ng); if (e != NoError) return e;
+                groupGuid = ng.guid;
+            }
+            API_PropertyDefinition nd = {};
+            nd.groupGuid = groupGuid; nd.name = kCSName;
+            nd.valueType = API_PropertyIntegerValueType;
+            nd.collectionType = API_PropertySingleChoiceEnumerationCollectionType;
+            nd.defaultValue.hasExpression = false;
+            nd.defaultValue.basicValue.singleVariant.variant.type = API_PropertyIntegerValueType;
+            nd.defaultValue.basicValue.singleVariant.variant.intValue = 0;
+            auto addEnum = [&](int key, const char* disp) {
+                API_SingleEnumerationVariant ev = {};
+                ev.keyVariant.type = API_PropertyIntegerValueType; ev.keyVariant.intValue = key;
+                ev.displayVariant.type = API_PropertyStringValueType;
+                ev.displayVariant.uniStringValue = GS::UniString(disp, CC_UTF8);
+                nd.possibleEnumValues.Push(ev);
+            };
+            addEnum(0, "\xe6\x9c\xaa\xe5\xa4\x89\xe6\x9b\xb4"); // 未変更
+            addEnum(1, "\xe5\xa4\x89\xe6\x9b\xb4\xe6\xb8\x88"); // 変更済
+            addEnum(2, "\xe7\xa2\xba\xe8\xaa\x8d\xe6\xb8\x88"); // 確認済
+            GSErrCode e2 = ACAPI_Property_CreatePropertyDefinition(nd); if (e2 != NoError) return e2;
+            csDefGuid = nd.guid; propCreated = true; return NoError;
+        });
+    }
+
+    GS::UniString csGuidStr = (csDefGuid != APINULLGuid) ?
+        APIGuid2GSGuid(csDefGuid).ToUniString() : GS::UniString("N/A");
+
+    // Step 2: ルールグループを検索または作成
     API_Guid rgGuid = APINULLGuid;
     { API_OverrideRuleGroup rg = {APINULLGuid, kRuleGroupName};
       if (ACAPI_GraphicalOverride_GetOverrideRuleGroup(rg) == NoError) { rgGuid = rg.guid; }
-      else { API_OverrideRuleGroup ng = {APINULLGuid, kRuleGroupName}; if (ACAPI_GraphicalOverride_CreateOverrideRuleGroup(ng) == NoError) rgGuid = ng.guid; } }
+      else { API_OverrideRuleGroup ng = {APINULLGuid, kRuleGroupName};
+             if (ACAPI_GraphicalOverride_CreateOverrideRuleGroup(ng) == NoError) rgGuid = ng.guid; } }
     if (rgGuid == APINULLGuid) {
-        EnqueueResult("{\"type\":\"bim_override_result\",\"status\":\"error\",\"action\":\"setup\",\"reason\":\"rule group failed\",\"propCreated\":false,\"combinationCreated\":false,\"changeStatusGuid\":\"N/A\"}");
+        EnqueueResult("{\"type\":\"bim_override_result\",\"status\":\"error\",\"action\":\"setup\","
+                      "\"reason\":\"rule group failed\",\"propCreated\":false,"
+                      "\"combinationCreated\":false,\"changeStatusGuid\":\"N/A\"}");
         return;
     }
 
-    // Step 3: "BIM変更済" ルール (赤)
-    // NOTE: criterionXML 空 = 全要素に適用。ArchiCAD Graphic Override UI で条件 ChangeStatus=1 を手動設定してください
-    API_Guid rChangedGuid = APINULLGuid;
+    // Step 3 & 4: ルールを検索、なければ XML または ハードコードで作成
+    API_Guid rChangedGuid = APINULLGuid, rConfGuid = APINULLGuid;
     { API_OverrideRule r = {APINULLGuid, kRuleChangedName};
-      if (ACAPI_GraphicalOverride_GetOverrideRuleByName(r, rgGuid) == NoError) { rChangedGuid = r.guid; }
-      else { r.criterionXML = ""; r.style = API_OverrideRuleStyle();
-             r.style.lineMarkerTextPen  = static_cast<short>(2);
-             r.style.surfaceOverride    = API_RGBColor{0.9, 0.1, 0.1};
-             r.style.surfaceType.overrideCutSurface = true; r.style.surfaceType.overrideUncutSurface = true;
-             r.style.fillForegroundPenOverride = static_cast<short>(2);
-             r.style.fillType.overrideCutFill = true; r.style.fillType.overrideCoverFill = true;
-             if (ACAPI_GraphicalOverride_CreateOverrideRule(r, rgGuid) == NoError) rChangedGuid = r.guid; } }
-
-    // Step 4: "BIM確認済" ルール (緑)
-    API_Guid rConfGuid = APINULLGuid;
+      if (ACAPI_GraphicalOverride_GetOverrideRuleByName(r, rgGuid) == NoError) rChangedGuid = r.guid; }
     { API_OverrideRule r = {APINULLGuid, kRuleConfirmedName};
-      if (ACAPI_GraphicalOverride_GetOverrideRuleByName(r, rgGuid) == NoError) { rConfGuid = r.guid; }
-      else { r.criterionXML = ""; r.style = API_OverrideRuleStyle();
-             r.style.lineMarkerTextPen  = static_cast<short>(14);
-             r.style.surfaceOverride    = API_RGBColor{0.1, 0.8, 0.1};
-             r.style.surfaceType.overrideCutSurface = true; r.style.surfaceType.overrideUncutSurface = true;
-             r.style.fillForegroundPenOverride = static_cast<short>(14);
-             r.style.fillType.overrideCutFill = true; r.style.fillType.overrideCoverFill = true;
-             if (ACAPI_GraphicalOverride_CreateOverrideRule(r, rgGuid) == NoError) rConfGuid = r.guid; } }
+      if (ACAPI_GraphicalOverride_GetOverrideRuleByName(r, rgGuid) == NoError) rConfGuid = r.guid; }
 
-    // Step 5: "BIM変更管理" コンビネーションを検索または作成
+    if (rChangedGuid == APINULLGuid || rConfGuid == APINULLGuid) {
+        struct RuleSpec {
+            std::string nameUtf8;
+            std::string criterionXml;
+            short pen; short fillPen;
+            double r, g, b;
+        };
+        std::vector<RuleSpec> specs;
+
+        bool xmlParsed = false;
+        if (!projDir.empty()) {
+            GS::UniString goXmlUni;
+            // BIM変更管理Graphic Override.xml
+            const std::wstring goXmlPath = projDir +
+                L"BIM変更管理Graphic Override.xml";
+            if (ReadFileToUniString(goXmlPath, goXmlUni)) {
+                const std::string goXml = std::string((const char*)goXmlUni.ToCStr(CC_UTF8));
+                size_t pos = 0;
+                const std::string closeRule = "</OverrideRule>";
+                while (true) {
+                    const size_t rs = goXml.find("<OverrideRule>", pos);
+                    if (rs == std::string::npos) break;
+                    const size_t re = goXml.find(closeRule, rs);
+                    if (re == std::string::npos) break;
+                    const std::string rx = goXml.substr(rs, re + closeRule.length() - rs);
+                    RuleSpec sp;
+                    sp.nameUtf8     = XmlTagContent(rx, "Name");
+                    sp.pen          = static_cast<short>(XmlInt(rx, "LineMarkerTextPen", 2));
+                    sp.fillPen      = static_cast<short>(XmlInt(rx, "FillFGPen", sp.pen));
+                    sp.r            = XmlInt(rx, "Red",   128) / 255.0;
+                    sp.g            = XmlInt(rx, "Green", 128) / 255.0;
+                    sp.b            = XmlInt(rx, "Blue",  128) / 255.0;
+                    sp.criterionXml = XmlElementOuter(rx, "CriterionExpression");
+                    if (!sp.nameUtf8.empty()) specs.push_back(sp);
+                    pos = re + closeRule.length();
+                }
+                xmlParsed = !specs.empty();
+                WriteExternalLog("GO XML parsed: " + std::to_string(specs.size()) + " rules");
+            } else {
+                WriteExternalLog("Cannot read GO XML, using hardcoded fallback");
+            }
+        }
+
+        if (!xmlParsed) {
+            // ハードコードフォールバック
+            const std::string cName = std::string((const char*)kRuleChangedName.ToCStr(CC_UTF8));
+            const std::string fName = std::string((const char*)kRuleConfirmedName.ToCStr(CC_UTF8));
+            specs.push_back({cName, "", 20, 20, 230/255.0, 25/255.0,  25/255.0});
+            specs.push_back({fName, "", 80, 80, 25/255.0,  204/255.0, 25/255.0});
+        }
+
+        for (auto& sp : specs) {
+            const GS::UniString ruleName(sp.nameUtf8.c_str(), CC_UTF8);
+            API_Guid* tgt = nullptr;
+            if      (ruleName == kRuleChangedName   && rChangedGuid == APINULLGuid) tgt = &rChangedGuid;
+            else if (ruleName == kRuleConfirmedName && rConfGuid    == APINULLGuid) tgt = &rConfGuid;
+            else continue;
+
+            API_OverrideRule r = {APINULLGuid, ruleName};
+            r.criterionXML = GS::UniString(sp.criterionXml.c_str(), CC_UTF8);
+            r.style = API_OverrideRuleStyle();
+            r.style.lineMarkerTextPen                      = sp.pen;
+            r.style.surfaceOverride                        = API_RGBColor{sp.r, sp.g, sp.b};
+            r.style.surfaceType.overrideCutSurface          = true;
+            r.style.surfaceType.overrideUncutSurface        = true;
+            r.style.fillForegroundPenOverride              = sp.fillPen;
+            // fillTypeForegroundPen: 塗りつぶし前景色ペンをどの種類に適用するか（断面・上面・下書き）
+            r.style.fillTypeForegroundPen.overrideCutFill      = true;
+            r.style.fillTypeForegroundPen.overrideCoverFill    = true;
+            r.style.fillTypeForegroundPen.overrideDraftingFill = true;
+            if (ACAPI_GraphicalOverride_CreateOverrideRule(r, rgGuid) == NoError) {
+                *tgt = r.guid;
+                WriteExternalLog("Created rule: " + sp.nameUtf8);
+            } else {
+                WriteExternalLog("Failed to create rule: " + sp.nameUtf8);
+            }
+        }
+    }
+
+    // Step 5: コンビネーションを検索または作成
     { API_OverrideCombination combo = {APINULLGuid, kComboName};
       if (ACAPI_GraphicalOverride_GetOverrideCombination(combo, nullptr) != NoError) {
           GS::Array<API_Guid> rl;
