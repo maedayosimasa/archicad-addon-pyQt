@@ -7,9 +7,9 @@ import traceback
 import faulthandler
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QTableView, QVBoxLayout,
-    QWidget, QHBoxLayout, QPushButton, QGroupBox, QLabel, 
+    QWidget, QHBoxLayout, QPushButton, QGroupBox, QLabel,
     QTreeWidget, QTreeWidgetItem, QSplitter, QMessageBox, QHeaderView,
-    QTreeWidgetItemIterator, QMenu, QInputDialog
+    QTreeWidgetItemIterator, QMenu, QInputDialog, QAbstractItemView
 )
 from PyQt6.QtCore import Qt, QAbstractTableModel, pyqtSignal, QObject, QSortFilterProxyModel
 from PyQt6.QtGui import QColor, QAction, QFont
@@ -121,6 +121,7 @@ class PropertyTableModel(QAbstractTableModel):
         self._value_conflict_cells = {}  # (guid, propId) -> {ac_val, orig_val, user_val}
         self._value_conflict_guids = set()  # 高速lookup用
         self._change_status = {}      # guid -> 0:未変更 / 1:変更済(赤) / 2:確認済(緑)
+        self._selected_guid = None    # テーブルクリックで選択中の GUID
 
     def set_data(self, elements, properties, values, stamps=None):
         self.beginResetModel()
@@ -137,6 +138,7 @@ class PropertyTableModel(QAbstractTableModel):
         self._value_conflict_cells.clear()
         self._value_conflict_guids.clear()
         self._change_status.clear()
+        self._selected_guid = None
         self.endResetModel()
 
     def rowCount(self, parent=None): return len(self._elements)
@@ -158,6 +160,7 @@ class PropertyTableModel(QAbstractTableModel):
             if val != orig: return QColor("red")
             return QColor("darkRed") if guid in self._conflicts else QColor("black")
         if role == Qt.ItemDataRole.BackgroundRole:
+            if guid == self._selected_guid: return QColor("#AED6F1")   # 選択中: 水色
             conf = self._conflicts.get(guid)
             if conf == "conflict": return QColor("#FFCCCC")
             if conf == "skipped": return QColor("#FFE5CC")
@@ -244,6 +247,14 @@ class PropertyTableModel(QAbstractTableModel):
                 br = self.index(row, len(self._properties))
                 self.dataChanged.emit(tl, br, [Qt.ItemDataRole.BackgroundRole])
 
+    def set_selected_guid(self, guid):
+        prev, self._selected_guid = self._selected_guid, guid
+        for row, elem in enumerate(self._elements):
+            if elem["guid"] in (prev, guid):
+                tl = self.index(row, 0)
+                br = self.index(row, len(self._properties))
+                self.dataChanged.emit(tl, br, [Qt.ItemDataRole.BackgroundRole])
+
     def flags(self, index):
         if index.column() == 0: return Qt.ItemFlag.ItemIsEnabled
         return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable
@@ -262,6 +273,7 @@ class CommunicationSignals(QObject):
     flag_result_received = pyqtSignal(dict)
     bim_override_result_received = pyqtSignal(dict)
     change_status_result_received = pyqtSignal(dict)
+    selection_changed = pyqtSignal(dict)
     show_window = pyqtSignal()
     error_occurred = pyqtSignal(str)
 
@@ -348,6 +360,8 @@ class TcpServerThread(threading.Thread):
                         self.signals.bim_override_result_received.emit(payload)
                     elif t == "change_status_result":
                         self.signals.change_status_result_received.emit(payload)
+                    elif t == "selection_changed":
+                        self.signals.selection_changed.emit(payload)
                     else:
                         append_log(f"[UNKNOWN TYPE] {t}")
                 except Exception as e:
@@ -374,6 +388,7 @@ class MainWindow(QMainWindow):
         self.signals.change_status_result_received.connect(self.on_change_status_result)
         self.signals.show_window.connect(self.show)
         self.signals.error_occurred.connect(self.on_error)
+        self.signals.selection_changed.connect(self.on_archicad_selection_changed)
         self.server_thread = None
         # 事前確認フェーズ用状態
         self._pending_changes = None
@@ -383,6 +398,8 @@ class MainWindow(QMainWindow):
         self._pending_skip_count = 0  # Python側でスキップした競合件数
         self._selected_guids = []          # テーブルで現在選択中の GUID リスト
         self._pending_status_change = None # set_change_status の待機中データ {guids, value}
+        self._click_prev_guid   = None     # 前のクリック選択 GUID（ハイライトリセット用）
+        self._click_prev_status = 0        # 前のクリック前の ChangeStatus 値
 
     def on_error(self, m):
         if self._verifying_stamps:
@@ -410,6 +427,7 @@ class MainWindow(QMainWindow):
         right = QWidget(); r_lay = QVBoxLayout(right)
         self.table = QTableView(); self.model = PropertyTableModel(); self.proxy = ExcelFilterProxyModel()
         self.proxy.setSourceModel(self.model); self.table.setModel(self.proxy)
+        self.table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self.table.horizontalHeader().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.table.horizontalHeader().customContextMenuRequested.connect(self.show_filter_menu)
         self.btn_sync = QPushButton("Archicadへ反映"); self.btn_sync.clicked.connect(self.sync_data)
@@ -577,12 +595,54 @@ class MainWindow(QMainWindow):
                 append_log(f"on_table_clicked: invalid row {row}, skipping")
                 return
             guid = self.model._elements[row]["guid"]
+
             self._selected_guids = [guid]
+            self.model.set_selected_guid(guid)
+            self.table.viewport().update()
+
+            # ステータスバーに選択要素の ID を表示
+            elem_id = next(
+                (str(self.model._values.get((guid, p["guid"]), ""))
+                 for p in self.model._properties if "element_id" in p.get("guid", "")),
+                guid[:8]
+            ) or guid[:8]
+            self.status_label.setText(f"選択中: {elem_id}  ({guid[:8]}...)")
+
             self.btn_confirm.setEnabled(True)
             self.btn_reset_status.setEnabled(True)
+
+            # ChangeStatus は変えず、選択状態のみ ArchiCAD に伝えてフォアグラウンドへ
             self.send_to_ac_async({"command": "select_elements", "guids": [guid]})
+
         except Exception as e:
             append_log(f"on_table_clicked ERROR: {e}\n{traceback.format_exc()}")
+
+    def on_archicad_selection_changed(self, payload):
+        try:
+            guid = payload.get("guid", "")
+            if not guid:
+                return
+            row = next((i for i, e in enumerate(self.model._elements) if e["guid"] == guid), -1)
+            if row < 0:
+                append_log(f"on_archicad_selection_changed: guid={guid} not found in table")
+                return
+            append_log(f"on_archicad_selection_changed: guid={guid[:8]} → row={row}")
+            self._selected_guids = [guid]
+            self.model.set_selected_guid(guid)
+            self.table.viewport().update()
+            proxy_index = self.proxy.mapFromSource(self.model.index(row, 0))
+            if proxy_index.isValid():
+                self.table.scrollTo(proxy_index, QAbstractItemView.ScrollHint.EnsureVisible)
+            elem_id = next(
+                (str(self.model._values.get((guid, p["guid"]), ""))
+                 for p in self.model._properties if "element_id" in p.get("guid", "")),
+                guid[:8]
+            ) or guid[:8]
+            self.status_label.setText(f"[AC選択] {elem_id}  ({guid[:8]}...)")
+            self.btn_confirm.setEnabled(True)
+            self.btn_reset_status.setEnabled(True)
+        except Exception as e:
+            append_log(f"on_archicad_selection_changed ERROR: {e}\n{traceback.format_exc()}")
 
     def show_filter_menu(self, pos):
         col = self.table.horizontalHeader().logicalIndexAt(pos)

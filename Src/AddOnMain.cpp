@@ -84,6 +84,7 @@ static std::mutex sendMutex;
 static std::deque<std::string> sendQueue;
 static std::thread senderThread;
 static std::atomic<bool> stopSender(false);
+static std::atomic<bool> g_selectingFromPyQt(false);
 
 static constexpr GSType EventLoopDispatcherCmdID = 'EVLP';
 static constexpr Int32 EventLoopDispatcherCmdVersion = 1;
@@ -436,6 +437,36 @@ static ElementSyncResult ApplyElementChanges_Internal(const std::string& guidStr
     ACAPI_Element_GetHeader(&element.header); res.currentStamp = (UInt32)element.header.modiStamp; return res;
 }
 
+// ArchiCAD のメインウィンドウをフォアグラウンドに持ってくる
+struct AcWndData { DWORD pid; HWND hwnd; };
+static BOOL CALLBACK FindAcMainWnd(HWND hwnd, LPARAM lp) {
+    auto* d = reinterpret_cast<AcWndData*>(lp);
+    DWORD pid = 0;
+    GetWindowThreadProcessId(hwnd, &pid);
+    if (pid == d->pid && IsWindowVisible(hwnd) && GetWindow(hwnd, GW_OWNER) == nullptr) {
+        d->hwnd = hwnd;
+        return FALSE;
+    }
+    return TRUE;
+}
+static void BringAcToFront() {
+    AcWndData wd = { GetCurrentProcessId(), nullptr };
+    EnumWindows(FindAcMainWnd, reinterpret_cast<LPARAM>(&wd));
+    if (wd.hwnd) SetForegroundWindow(wd.hwnd);
+}
+
+static GSErrCode OnSelectionChanged(const API_Neig* selElemNeig) {
+    if (g_selectingFromPyQt) return NoError;
+    if (selElemNeig == nullptr) return NoError;
+    if (selElemNeig->guid == APINULLGuid) return NoError;
+    GS::UniString guidUni = APIGuid2GSGuid(selElemNeig->guid).ToUniString();
+    std::string guidStr((const char*)guidUni.ToCStr(CC_UTF8));
+    if (guidStr.empty()) return NoError;
+    WriteExternalLog("OnSelectionChanged: guid=" + guidStr);
+    EnqueueResult("{\"type\":\"selection_changed\",\"guid\":\"" + guidStr + "\"}");
+    return NoError;
+}
+
 static void SetChangeStatusForElement(const API_Guid& eg, int csVal) {
     const GS::UniString kCSName("ChangeStatus", CC_UTF8);
     GS::Array<API_PropertyDefinition> allDefs;
@@ -547,8 +578,12 @@ void ExecuteBatch(const CommandBatch& batch) {
                     }
                 }
                 if (!sel.IsEmpty()) {
-                    GSErrCode e = ACAPI_Selection_Select(sel, true);
+                    g_selectingFromPyQt = true;
+                    ACAPI_Selection_DeselectAll();                    // 既存の選択を全解除
+                    GSErrCode e = ACAPI_Selection_Select(sel, true);  // 新しい要素を選択
+                    g_selectingFromPyQt = false;
                     WriteExternalLog("select_elements: Select returned " + std::to_string(e));
+                    BringAcToFront();
                 }
             }
         }
@@ -1236,6 +1271,7 @@ extern "C" {
         WSAData wsa; WSAStartup(MAKEWORD(2,2), &wsa); ACAPI_KeepInMemory(true); stopSender = false; senderThread = std::thread(SenderLoop); LogLoadedAddOnBinary(); StartCommandListener(); StartPythonServer();
         GSErrCode err = ACAPI_MenuItem_InstallMenuHandler(AddOnMenuID, MenuCommandHandler);
         if (err == NoError) err = ACAPI_AddOnIntegration_InstallModulCommandHandler(EventLoopDispatcherCmdID, EventLoopDispatcherCmdVersion, EventLoopCommandHandler);
+        ACAPI_Notification_CatchSelectionChange(OnSelectionChanged);
         if (err == NoError) ACAPI_RegisterModelessWindow(ExampleDialog::PaletteRefId(), ExampleDialog::PaletteAPIControlCallBack, API_PalEnabled_FloorPlan + API_PalEnabled_Section + API_PalEnabled_Elevation + API_PalEnabled_InteriorElevation + API_PalEnabled_3D + API_PalEnabled_Detail + API_PalEnabled_Worksheet + API_PalEnabled_Layout + API_PalEnabled_DocumentFrom3D, GSGuid2APIGuid(ExampleDialog::PaletteGuid()));
         return err;
     }
