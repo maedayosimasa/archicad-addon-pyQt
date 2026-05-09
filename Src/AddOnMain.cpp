@@ -106,7 +106,7 @@ void ExportDefs(const std::string& json);
 void ExportValues(const std::string& json);
 void MarkChangeFlags(const std::string& json, bool isClear);
 void SetChangeStatus(const std::string& json);
-void SetupBIMOverride(const std::string& json);
+void SetupBIMOverride(const std::string& json, bool silent = false);
 void ToggleBIMOverride(const std::string& json, bool enable);
 GSErrCode EventLoopCommandHandler(GSHandle params, GSPtr resultData, bool silentMode);
 void StartPythonServer();
@@ -953,25 +953,30 @@ static bool ReadFileToUniString(const std::wstring& wpath, GS::UniString& out) {
 }
 
 // ─── SetupBIMOverride: ChangeStatus プロパティ + Graphic Override ルール/コンビネーション作成 ───
-void SetupBIMOverride(const std::string& /*json*/) {
+void SetupBIMOverride(const std::string& /*json*/, bool silent) {
     const GS::UniString kGroupName        ("\xe5\xa4\x89\xe6\x9b\xb4\xe7\xae\xa1\xe7\x90\x86", CC_UTF8); // 変更管理
+    const GS::UniString kCSGroupName      ("\xe5\xa4\x89\xe6\x9b\xb4\xe3\x83\x95\xe3\x83\xa9\xe3\x82\xb0", CC_UTF8); // 変更フラグ（プロパティXMLと同じグループ名）
     const GS::UniString kCSName           ("ChangeStatus", CC_UTF8);
     const GS::UniString kRuleGroupName    ("BIM\xe5\xa4\x89\xe6\x9b\xb4\xe7\xae\xa1\xe7\x90\x86", CC_UTF8); // BIM変更管理
     const GS::UniString kRuleChangedName  ("BIM\xe5\xa4\x89\xe6\x9b\xb4\xe6\xb8\x88", CC_UTF8);  // BIM変更済
     const GS::UniString kRuleConfirmedName("BIM\xe7\xa2\xba\xe8\xaa\x8d\xe6\xb8\x88", CC_UTF8);  // BIM確認済
     const GS::UniString kComboName        ("BIM\xe5\xa4\x89\xe6\x9b\xb4\xe7\xae\xa1\xe7\x90\x86", CC_UTF8); // BIM変更管理
 
+    WriteExternalLog("SetupBIMOverride: start (silent=" + std::string(silent ? "true" : "false") + ")");
+
     bool propCreated = false, comboCreated = false;
     API_Guid csDefGuid = APINULLGuid;
 
-    // Step 0: プロジェクトディレクトリを取得
+    // Step 0: XML ファイルディレクトリを取得（binary 位置から server.py のある親フォルダを検索）
     const std::wstring projDir = FindProjectDirW();
-    WriteExternalLog("SetupBIMOverride: projDir=" + WstrToLogStr(projDir));
+    WriteExternalLog("SetupBIMOverride: xmlDir=" + WstrToLogStr(projDir));
 
-    // Step 1: ChangeStatus プロパティを検索
+    // ── Phase 1: ChangeStatus プロパティを確認 → XML インポート → API フォールバック ──
+    WriteExternalLog("SetupBIMOverride Phase1: ChangeStatus property check");
     GS::Array<API_Guid> anyGuids;
     for (const auto& t : SupportedTypes)
         if (ACAPI_Element_GetElemList(API_ElemType(t.id), &anyGuids) == NoError && !anyGuids.IsEmpty()) break;
+    WriteExternalLog("  anyGuids count=" + std::to_string(anyGuids.GetSize()));
 
     auto findCSGuid = [&]() {
         csDefGuid = APINULLGuid;
@@ -982,21 +987,23 @@ void SetupBIMOverride(const std::string& /*json*/) {
             if (defs[i].name == kCSName) { csDefGuid = defs[i].guid; break; }
     };
     findCSGuid();
+    WriteExternalLog("  ChangeStatus existing=" + std::string(csDefGuid != APINULLGuid ? "YES" : "NO"));
 
     if (csDefGuid == APINULLGuid) {
-        // XML ファイルからプロパティをインポート
-        // 変更フラグプロパティ.xml
-        const std::wstring propXmlPath = projDir +
-            L"変更フラグプロパティ.xml";
+        // 変更フラグプロパティ = 変更フラグプロパティ
+        const std::wstring propXmlPath = projDir + L"変更フラグプロパティ.xml";
         GS::UniString propXml;
+        WriteExternalLog("  Phase1: reading " + WstrToLogStr(propXmlPath));
         if (!projDir.empty() && ReadFileToUniString(propXmlPath, propXml)) {
-            WriteExternalLog("Property XML read OK, len=" + std::to_string(propXml.GetLength()));
+            WriteExternalLog("  Phase1: XML read OK len=" + std::to_string(propXml.GetLength()));
             const GSErrCode ie = ACAPI_Property_Import(propXml, API_SkipConflictingProperties);
-            WriteExternalLog("ACAPI_Property_Import result=" + std::to_string(ie));
+            WriteExternalLog("  Phase1: ACAPI_Property_Import=" + std::to_string(ie));
             if (ie == NoError) { propCreated = true; findCSGuid(); }
         } else {
-            WriteExternalLog("Cannot read property XML, will create via API");
+            WriteExternalLog("  Phase1: XML not found, fallback to API create");
         }
+    } else {
+        WriteExternalLog("  Phase1: ChangeStatus already exists, skip import");
     }
 
     // フォールバック: API で直接 ChangeStatus プロパティを作成
@@ -1006,12 +1013,12 @@ void SetupBIMOverride(const std::string& /*json*/) {
         ACAPI_Element_GetPropertyDefinitions(anyGuids[0], API_PropertyDefinitionFilter_All, defs);
         for (UInt32 i = 0; i < defs.GetSize() && groupGuid == APINULLGuid; i++) {
             API_PropertyGroup grp = {}; grp.guid = defs[i].groupGuid;
-            if (ACAPI_Property_GetPropertyGroup(grp) == NoError && grp.name == kGroupName)
+            if (ACAPI_Property_GetPropertyGroup(grp) == NoError && grp.name == kCSGroupName)
                 groupGuid = grp.guid;
         }
         ACAPI_CallUndoableCommand("BIM ChangeStatus \xe3\x83\x97\xe3\x83\xad\xe3\x83\x91\xe3\x83\x86\xe3\x82\xa3\xe4\xbd\x9c\xe6\x88\x90", [&]() -> GSErrCode {
             if (groupGuid == APINULLGuid) {
-                API_PropertyGroup ng = {}; ng.name = kGroupName;
+                API_PropertyGroup ng = {}; ng.name = kCSGroupName;
                 GSErrCode e = ACAPI_Property_CreatePropertyGroup(ng); if (e != NoError) return e;
                 groupGuid = ng.guid;
             }
@@ -1041,83 +1048,94 @@ void SetupBIMOverride(const std::string& /*json*/) {
         APIGuid2GSGuid(csDefGuid).ToUniString() : GS::UniString("N/A");
 
     // Step 2: ルールグループを検索または作成
+    // ── Phase 2: BIM変更管理Graphic Override.xml → ルール・コンビネーション作成 ──
+    WriteExternalLog("SetupBIMOverride Phase2: BIM graphic override check");
+    const std::wstring goXmlPath = projDir + L"BIM変更管理Graphic Override.xml";
+    WriteExternalLog("  Phase2: GO XML path=" + WstrToLogStr(goXmlPath));
+
     API_Guid rgGuid = APINULLGuid;
     { API_OverrideRuleGroup rg = {APINULLGuid, kRuleGroupName};
-      if (ACAPI_GraphicalOverride_GetOverrideRuleGroup(rg) == NoError) { rgGuid = rg.guid; }
+      if (ACAPI_GraphicalOverride_GetOverrideRuleGroup(rg) == NoError) { rgGuid = rg.guid; WriteExternalLog("  Phase2: rule group already exists"); }
       else { API_OverrideRuleGroup ng = {APINULLGuid, kRuleGroupName};
-             if (ACAPI_GraphicalOverride_CreateOverrideRuleGroup(ng) == NoError) rgGuid = ng.guid; } }
+             if (ACAPI_GraphicalOverride_CreateOverrideRuleGroup(ng) == NoError) { rgGuid = ng.guid; WriteExternalLog("  Phase2: rule group created"); } } }
     if (rgGuid == APINULLGuid) {
-        EnqueueResult("{\"type\":\"bim_override_result\",\"status\":\"error\",\"action\":\"setup\","
+        WriteExternalLog("  Phase2: ERROR rule group creation failed");
+        if (!silent) EnqueueResult("{\"type\":\"bim_override_result\",\"status\":\"error\",\"action\":\"setup\","
                       "\"reason\":\"rule group failed\",\"propCreated\":false,"
                       "\"combinationCreated\":false,\"changeStatusGuid\":\"N/A\"}");
         return;
     }
 
-    // Step 3 & 4: ルールを検索、なければ XML または ハードコードで作成
-    API_Guid rChangedGuid = APINULLGuid, rConfGuid = APINULLGuid;
-    { API_OverrideRule r = {APINULLGuid, kRuleChangedName};
-      if (ACAPI_GraphicalOverride_GetOverrideRuleByName(r, rgGuid) == NoError) rChangedGuid = r.guid; }
-    { API_OverrideRule r = {APINULLGuid, kRuleConfirmedName};
-      if (ACAPI_GraphicalOverride_GetOverrideRuleByName(r, rgGuid) == NoError) rConfGuid = r.guid; }
-
-    if (rChangedGuid == APINULLGuid || rConfGuid == APINULLGuid) {
-        struct RuleSpec {
-            std::string nameUtf8;
-            std::string criterionXml;
-            short pen; short fillPen;
-            double r, g, b;
-        };
-        std::vector<RuleSpec> specs;
-
-        bool xmlParsed = false;
-        if (!projDir.empty()) {
-            GS::UniString goXmlUni;
-            // BIM変更管理Graphic Override.xml
-            const std::wstring goXmlPath = projDir +
-                L"BIM変更管理Graphic Override.xml";
-            if (ReadFileToUniString(goXmlPath, goXmlUni)) {
-                const std::string goXml = std::string((const char*)goXmlUni.ToCStr(CC_UTF8));
-                size_t pos = 0;
-                const std::string closeRule = "</OverrideRule>";
-                while (true) {
-                    const size_t rs = goXml.find("<OverrideRule>", pos);
-                    if (rs == std::string::npos) break;
-                    const size_t re = goXml.find(closeRule, rs);
-                    if (re == std::string::npos) break;
-                    const std::string rx = goXml.substr(rs, re + closeRule.length() - rs);
-                    RuleSpec sp;
-                    sp.nameUtf8     = XmlTagContent(rx, "Name");
-                    sp.pen          = static_cast<short>(XmlInt(rx, "LineMarkerTextPen", 2));
-                    sp.fillPen      = static_cast<short>(XmlInt(rx, "FillFGPen", sp.pen));
-                    sp.r            = XmlInt(rx, "Red",   128) / 255.0;
-                    sp.g            = XmlInt(rx, "Green", 128) / 255.0;
-                    sp.b            = XmlInt(rx, "Blue",  128) / 255.0;
-                    sp.criterionXml = XmlElementOuter(rx, "CriterionExpression");
-                    if (!sp.nameUtf8.empty()) specs.push_back(sp);
-                    pos = re + closeRule.length();
-                }
-                xmlParsed = !specs.empty();
-                WriteExternalLog("GO XML parsed: " + std::to_string(specs.size()) + " rules");
-            } else {
-                WriteExternalLog("Cannot read GO XML, using hardcoded fallback");
+    // ── Step 3: BIM変更管理Graphic Override.xml からルール仕様（スタイル＋条件）を読み込む ──
+    struct RuleSpec {
+        std::string nameUtf8;
+        std::string criterionXml;
+        short pen; short fillPen;
+        double r, g, b;
+    };
+    std::vector<RuleSpec> specs;
+    bool xmlParsed = false;
+    if (!projDir.empty()) {
+        GS::UniString goXmlUni;
+        if (ReadFileToUniString(goXmlPath, goXmlUni)) {
+            const std::string goXml = std::string((const char*)goXmlUni.ToCStr(CC_UTF8));
+            size_t pos = 0;
+            const std::string closeRule = "</OverrideRule>";
+            while (true) {
+                const size_t rs = goXml.find("<OverrideRule>", pos);
+                if (rs == std::string::npos) break;
+                const size_t re = goXml.find(closeRule, rs);
+                if (re == std::string::npos) break;
+                const std::string rx = goXml.substr(rs, re + closeRule.length() - rs);
+                RuleSpec sp;
+                sp.nameUtf8     = XmlTagContent(rx, "Name");
+                sp.pen          = static_cast<short>(XmlInt(rx, "LineMarkerTextPen", 2));
+                sp.fillPen      = static_cast<short>(XmlInt(rx, "FillFGPen", sp.pen));
+                sp.r            = XmlInt(rx, "Red",   128) / 255.0;
+                sp.g            = XmlInt(rx, "Green", 128) / 255.0;
+                sp.b            = XmlInt(rx, "Blue",  128) / 255.0;
+                sp.criterionXml = XmlElementOuter(rx, "CriterionExpression");
+                if (!sp.nameUtf8.empty()) specs.push_back(sp);
+                pos = re + closeRule.length();
             }
+            xmlParsed = !specs.empty();
+            WriteExternalLog("  Phase2: GO XML parsed " + std::to_string(specs.size()) + " rules");
+        } else {
+            WriteExternalLog("  Phase2: Cannot read GO XML, using hardcoded fallback");
         }
+    }
+    if (!xmlParsed) {
+        const std::string cName = std::string((const char*)kRuleChangedName.ToCStr(CC_UTF8));
+        const std::string fName = std::string((const char*)kRuleConfirmedName.ToCStr(CC_UTF8));
+        specs.push_back({cName, "", 20, 20, 230/255.0, 25/255.0,  25/255.0});
+        specs.push_back({fName, "", 80, 80, 25/255.0,  204/255.0, 25/255.0});
+    }
 
-        if (!xmlParsed) {
-            // ハードコードフォールバック
-            const std::string cName = std::string((const char*)kRuleChangedName.ToCStr(CC_UTF8));
-            const std::string fName = std::string((const char*)kRuleConfirmedName.ToCStr(CC_UTF8));
-            specs.push_back({cName, "", 20, 20, 230/255.0, 25/255.0,  25/255.0});
-            specs.push_back({fName, "", 80, 80, 25/255.0,  204/255.0, 25/255.0});
-        }
+    // ── Step 4: ルールを新規作成 or 既存ルールに条件を適用（更新） ──
+    API_Guid rChangedGuid = APINULLGuid, rConfGuid = APINULLGuid;
+    for (auto& sp : specs) {
+        const GS::UniString ruleName(sp.nameUtf8.c_str(), CC_UTF8);
+        API_Guid* tgt = nullptr;
+        if      (ruleName == kRuleChangedName)   tgt = &rChangedGuid;
+        else if (ruleName == kRuleConfirmedName) tgt = &rConfGuid;
+        else continue;
 
-        for (auto& sp : specs) {
-            const GS::UniString ruleName(sp.nameUtf8.c_str(), CC_UTF8);
-            API_Guid* tgt = nullptr;
-            if      (ruleName == kRuleChangedName   && rChangedGuid == APINULLGuid) tgt = &rChangedGuid;
-            else if (ruleName == kRuleConfirmedName && rConfGuid    == APINULLGuid) tgt = &rConfGuid;
-            else continue;
+        // 既存ルールの確認
+        API_OverrideRule existing = {APINULLGuid, ruleName};
+        const bool ruleExists = (ACAPI_GraphicalOverride_GetOverrideRuleByName(existing, rgGuid) == NoError);
 
+        if (ruleExists) {
+            *tgt = existing.guid;
+            if (!sp.criterionXml.empty()) {
+                // 既存ルールに XML から取得した条件を設定して更新
+                existing.criterionXML = GS::UniString(sp.criterionXml.c_str(), CC_UTF8);
+                const GSErrCode ce = ACAPI_GraphicalOverride_ChangeOverrideRule(existing);
+                WriteExternalLog("  " + sp.nameUtf8 + ": criterion " + (ce == NoError ? "updated OK" : "update FAILED err=" + std::to_string(ce)));
+            } else {
+                WriteExternalLog("  " + sp.nameUtf8 + ": exists, no criterion in XML");
+            }
+        } else {
+            // 新規ルール作成
             API_OverrideRule r = {APINULLGuid, ruleName};
             r.criterionXML = GS::UniString(sp.criterionXml.c_str(), CC_UTF8);
             r.style = API_OverrideRuleStyle();
@@ -1126,15 +1144,14 @@ void SetupBIMOverride(const std::string& /*json*/) {
             r.style.surfaceType.overrideCutSurface          = true;
             r.style.surfaceType.overrideUncutSurface        = true;
             r.style.fillForegroundPenOverride              = sp.fillPen;
-            // fillTypeForegroundPen: 塗りつぶし前景色ペンをどの種類に適用するか（断面・上面・下書き）
             r.style.fillTypeForegroundPen.overrideCutFill      = true;
             r.style.fillTypeForegroundPen.overrideCoverFill    = true;
             r.style.fillTypeForegroundPen.overrideDraftingFill = true;
             if (ACAPI_GraphicalOverride_CreateOverrideRule(r, rgGuid) == NoError) {
                 *tgt = r.guid;
-                WriteExternalLog("Created rule: " + sp.nameUtf8);
+                WriteExternalLog("  " + sp.nameUtf8 + ": created" + (sp.criterionXml.empty() ? " (no criterion)" : " with criterion"));
             } else {
-                WriteExternalLog("Failed to create rule: " + sp.nameUtf8);
+                WriteExternalLog("  " + sp.nameUtf8 + ": create FAILED");
             }
         }
     }
@@ -1149,12 +1166,14 @@ void SetupBIMOverride(const std::string& /*json*/) {
           if (ACAPI_GraphicalOverride_CreateOverrideCombination(nc, rl) == NoError) comboCreated = true;
       } }
 
-    GS::UniString out = "{\"type\":\"bim_override_result\",\"status\":\"ok\",\"action\":\"setup\","
-                        "\"propCreated\":"; out.Append(propCreated ? "true" : "false");
-    out.Append(",\"combinationCreated\":"); out.Append(comboCreated ? "true" : "false");
-    out.Append(",\"combinationName\":\""); out.Append(Escape(kComboName));
-    out.Append("\",\"changeStatusGuid\":\""); out.Append(csGuidStr); out.Append("\"}");
-    EnqueueResult(std::string((const char*)out.ToCStr(CC_UTF8)));
+    if (!silent) {
+        GS::UniString out = "{\"type\":\"bim_override_result\",\"status\":\"ok\",\"action\":\"setup\","
+                            "\"propCreated\":"; out.Append(propCreated ? "true" : "false");
+        out.Append(",\"combinationCreated\":"); out.Append(comboCreated ? "true" : "false");
+        out.Append(",\"combinationName\":\""); out.Append(Escape(kComboName));
+        out.Append("\",\"changeStatusGuid\":\""); out.Append(csGuidStr); out.Append("\"}");
+        EnqueueResult(std::string((const char*)out.ToCStr(CC_UTF8)));
+    }
 }
 
 // ─── ToggleBIMOverride: Navigator 内の全ビューにコンビネーションを適用/解除 ───
@@ -1264,6 +1283,13 @@ static void LogLoadedAddOnBinary() {
 GSErrCode __stdcall MenuCommandHandler (const API_MenuParams*) { ExampleDialog::GetInstance ().Show (); ExampleDialog::GetInstance ().BringToFront (); return NoError; }
 GSErrCode EventLoopCommandHandler(GSHandle, GSPtr, bool) { ProcessOneCommand(); return NoError; }
 
+// プロジェクト開始時に ChangeStatus プロパティと BIM変更管理コンビネーションを自動確認・作成
+static GSErrCode OnProjectEvent(API_NotifyEventID notifCode, Int32 /*param*/) {
+    if (notifCode == APINotify_Open || notifCode == APINotify_New)
+        SetupBIMOverride("", true);
+    return NoError;
+}
+
 extern "C" {
     API_AddonType CheckEnvironment(API_EnvirParams* envir) { RSGetIndString(&envir->addOnInfo.name, AddOnInfoID, 1, ACAPI_GetOwnResModule()); RSGetIndString(&envir->addOnInfo.description, AddOnInfoID, 2, ACAPI_GetOwnResModule()); return APIAddon_Normal; }
     GSErrCode RegisterInterface(void) { GSErrCode err = ACAPI_MenuItem_RegisterMenu(AddOnMenuID, 0, MenuCode_UserDef, MenuFlag_Default); if (err == NoError) err = ACAPI_AddOnAddOnCommunication_RegisterSupportedService(EventLoopDispatcherCmdID, EventLoopDispatcherCmdVersion); return err; }
@@ -1272,6 +1298,12 @@ extern "C" {
         GSErrCode err = ACAPI_MenuItem_InstallMenuHandler(AddOnMenuID, MenuCommandHandler);
         if (err == NoError) err = ACAPI_AddOnIntegration_InstallModulCommandHandler(EventLoopDispatcherCmdID, EventLoopDispatcherCmdVersion, EventLoopCommandHandler);
         ACAPI_Notification_CatchSelectionChange(OnSelectionChanged);
+        ACAPI_ProjectOperation_CatchProjectEvent(APINotify_Open | APINotify_New, OnProjectEvent);
+        // AddOnマネージャーからリロード時など、プロジェクトが既に開いていれば即時セットアップ
+        { GS::Array<API_Guid> chk;
+          for (const auto& t : SupportedTypes)
+              if (ACAPI_Element_GetElemList(API_ElemType(t.id), &chk) == NoError && !chk.IsEmpty())
+                  { WriteExternalLog("Initialize: project already open, running BIM auto-setup"); SetupBIMOverride("", true); break; } }
         if (err == NoError) ACAPI_RegisterModelessWindow(ExampleDialog::PaletteRefId(), ExampleDialog::PaletteAPIControlCallBack, API_PalEnabled_FloorPlan + API_PalEnabled_Section + API_PalEnabled_Elevation + API_PalEnabled_InteriorElevation + API_PalEnabled_3D + API_PalEnabled_Detail + API_PalEnabled_Worksheet + API_PalEnabled_Layout + API_PalEnabled_DocumentFrom3D, GSGuid2APIGuid(ExampleDialog::PaletteGuid()));
         return err;
     }

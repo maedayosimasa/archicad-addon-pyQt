@@ -434,8 +434,6 @@ class MainWindow(QMainWindow):
         self.btn_clear_flags = QPushButton("競合フラグ解除")
         self.btn_clear_flags.setEnabled(False)
         self.btn_clear_flags.clicked.connect(self.clear_value_conflict_flags)
-        self.btn_bim_setup = QPushButton("BIM表現の上書き設定")
-        self.btn_bim_setup.clicked.connect(self.setup_bim_override)
         self.btn_bim_override = QPushButton("変更強調 OFF")
         self.btn_bim_override.setCheckable(True)
         self.btn_bim_override.clicked.connect(self.toggle_bim_override)
@@ -443,7 +441,7 @@ class MainWindow(QMainWindow):
         btn_row = QWidget(); btn_lay = QHBoxLayout(btn_row); btn_lay.setContentsMargins(0, 0, 0, 0)
         btn_lay.addWidget(self.btn_sync); btn_lay.addWidget(self.btn_clear_flags)
         btn_row2 = QWidget(); btn_lay2 = QHBoxLayout(btn_row2); btn_lay2.setContentsMargins(0, 0, 0, 0)
-        btn_lay2.addWidget(self.btn_bim_setup); btn_lay2.addWidget(self.btn_bim_override)
+        btn_lay2.addWidget(self.btn_bim_override)
         # ─── 確認状態管理ボタン行 ───
         self.btn_confirm = QPushButton("確認済 (2)")
         self.btn_confirm.setToolTip("選択行を ChangeStatus=2（緑）に設定")
@@ -489,10 +487,6 @@ class MainWindow(QMainWindow):
                 self.status_label.setText("ArchiCADフラグ解除完了")
         else:
             self.status_label.setText(f"ArchiCADフラグエラー: {data.get('reason', '')}")
-
-    def setup_bim_override(self):
-        self.status_label.setText("BIM表現の上書き設定中...")
-        self.send_to_ac_async({"command": "setup_bim_override"})
 
     def toggle_bim_override(self):
         if self.btn_bim_override.isChecked():
