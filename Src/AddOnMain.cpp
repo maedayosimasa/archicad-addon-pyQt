@@ -99,6 +99,7 @@ static const ElementTypeInfo SupportedTypes[] = {
 };
 
 // --- 関数前方宣言 ---
+static API_AttributeIndex FindBuildingMaterialIdx(const GS::UniString& name);
 void ProcessOneCommand();
 void ExecuteBatch(const CommandBatch& batch);
 void DoSearch(const std::string& json);
@@ -359,6 +360,7 @@ static ElementSyncResult ApplyElementChanges_Internal(const std::string& guidStr
         }
     }
     API_Element updateElem = element; API_Element mask = {}; ACAPI_ELEMENT_MASK_CLEAR(mask); bool elementChanged = false;
+    std::vector<std::pair<std::string,std::string>> colMemoReqs, beamMemoReqs;
     GS::Array<API_PropertyDefinition> propDefsToUpdate; GS::HashTable<API_Guid, ChangeData> propValueMap;
     GS::Array<API_Guid> classItemsToAdd; bool hasElementIdChange = false; GS::UniString newElementId;
     API_RenovationStatusType newRenovationStatus = API_DefaultStatus;
@@ -372,6 +374,48 @@ static ElementSyncResult ApplyElementChanges_Internal(const std::string& guidStr
         }
         if (data.propId == "builtin:StructuralFunction") { categoryChanges.Push({ API_ElemCategory_StructuralFunction, GS::UniString(data.value.c_str(), CC_UTF8) }); continue; }
         if (data.propId == "builtin:Position") { categoryChanges.Push({ API_ElemCategory_Position, GS::UniString(data.value.c_str(), CC_UTF8) }); continue; }
+        if (data.propId.size() > 5 && data.propId.substr(0, 5) == "elem:") {
+            const std::string& key = data.propId;
+            const std::string& val = data.value;
+            switch (updateElem.header.type.typeID) {
+                case API_WallID:
+                    if (key == "elem:height" && IsValidNumber(val)) { updateElem.wall.height = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_WallType, height); elementChanged = true; }
+                    else if (key == "elem:thickness" && IsValidNumber(val)) { updateElem.wall.thickness = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_WallType, thickness); elementChanged = true; }
+                    else if (key == "elem:bottomOffset" && IsValidNumber(val)) { updateElem.wall.bottomOffset = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_WallType, bottomOffset); elementChanged = true; }
+                    else if (key == "elem:topOffset" && IsValidNumber(val)) { updateElem.wall.topOffset = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_WallType, topOffset); elementChanged = true; }
+                    else if (key == "elem:offset" && IsValidNumber(val)) { updateElem.wall.offset = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_WallType, offset); elementChanged = true; }
+                    else if (key == "elem:slantAlpha" && IsValidNumber(val)) { updateElem.wall.slantAlpha = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_WallType, slantAlpha); elementChanged = true; }
+                    else if (key == "elem:buildingMaterial") { API_AttributeIndex bm = FindBuildingMaterialIdx(GS::UniString(val.c_str(), CC_UTF8)); if (bm.IsPositive()) { updateElem.wall.buildingMaterial = bm; ACAPI_ELEMENT_MASK_SET(mask, API_WallType, buildingMaterial); elementChanged = true; } }
+                    else if (key == "elem:flipped") { updateElem.wall.flipped = (val == "True" || val == "true" || val == "1"); ACAPI_ELEMENT_MASK_SET(mask, API_WallType, flipped); elementChanged = true; }
+                    break;
+                case API_ColumnID:
+                    if (key == "elem:height" && IsValidNumber(val)) { updateElem.column.height = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_ColumnType, height); elementChanged = true; }
+                    else if (key == "elem:bottomOffset" && IsValidNumber(val)) { updateElem.column.bottomOffset = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_ColumnType, bottomOffset); elementChanged = true; }
+                    else if (key == "elem:topOffset" && IsValidNumber(val)) { updateElem.column.topOffset = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_ColumnType, topOffset); elementChanged = true; }
+                    else if (key == "elem:axisRotationAngle" && IsValidNumber(val)) { updateElem.column.axisRotationAngle = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_ColumnType, axisRotationAngle); elementChanged = true; }
+                    else if (key == "elem:slantAngle" && IsValidNumber(val)) { updateElem.column.slantAngle = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_ColumnType, slantAngle); elementChanged = true; }
+                    else if (key == "elem:slantDirectionAngle" && IsValidNumber(val)) { updateElem.column.slantDirectionAngle = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_ColumnType, slantDirectionAngle); elementChanged = true; }
+                    else if (key == "elem:isFlipped") { updateElem.column.isFlipped = (val == "True" || val == "true" || val == "1"); ACAPI_ELEMENT_MASK_SET(mask, API_ColumnType, isFlipped); elementChanged = true; }
+                    else if (key == "elem:crossSectionWidth" || key == "elem:crossSectionHeight" || key == "elem:buildingMaterial" || key == "elem:venThick" || key == "elem:venBuildingMaterial") { colMemoReqs.emplace_back(key, val); }
+                    break;
+                case API_BeamID:
+                    if (key == "elem:level" && IsValidNumber(val)) { updateElem.beam.level = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_BeamType, level); elementChanged = true; }
+                    else if (key == "elem:offset" && IsValidNumber(val)) { updateElem.beam.offset = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_BeamType, offset); elementChanged = true; }
+                    else if (key == "elem:slantAngle" && IsValidNumber(val)) { updateElem.beam.slantAngle = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_BeamType, slantAngle); elementChanged = true; }
+                    else if (key == "elem:curveAngle" && IsValidNumber(val)) { updateElem.beam.curveAngle = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_BeamType, curveAngle); elementChanged = true; }
+                    else if (key == "elem:anchorPoint" && IsValidNumber(val)) { updateElem.beam.anchorPoint = (short)std::stoi(val); ACAPI_ELEMENT_MASK_SET(mask, API_BeamType, anchorPoint); elementChanged = true; }
+                    else if (key == "elem:isFlipped") { updateElem.beam.isFlipped = (val == "True" || val == "true" || val == "1"); ACAPI_ELEMENT_MASK_SET(mask, API_BeamType, isFlipped); elementChanged = true; }
+                    else if (key == "elem:height" || key == "elem:width" || key == "elem:buildingMaterial") { beamMemoReqs.emplace_back(key, val); }
+                    break;
+                case API_SlabID:
+                    if (key == "elem:thickness" && IsValidNumber(val)) { updateElem.slab.thickness = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_SlabType, thickness); elementChanged = true; }
+                    else if (key == "elem:level" && IsValidNumber(val)) { updateElem.slab.level = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_SlabType, level); elementChanged = true; }
+                    else if (key == "elem:buildingMaterial") { API_AttributeIndex bm = FindBuildingMaterialIdx(GS::UniString(val.c_str(), CC_UTF8)); if (bm.IsPositive()) { updateElem.slab.buildingMaterial = bm; ACAPI_ELEMENT_MASK_SET(mask, API_SlabType, buildingMaterial); elementChanged = true; } }
+                    break;
+                default: break;
+            }
+            continue;
+        }
         if (data.group == "element" || data.group == "parameter") {
             if (data.propId == "builtin:Layer") { updateElem.header.layer = ACAPI_CreateAttributeIndex((Int32)std::stoi(data.value)); ACAPI_ELEMENT_MASK_SET(mask, API_Elem_Head, layer); elementChanged = true; }
             else {
@@ -390,8 +434,40 @@ static ElementSyncResult ApplyElementChanges_Internal(const std::string& guidStr
             if (ACAPI_Property_GetPropertyDefinition(pDef) == NoError) { propDefsToUpdate.Push(pDef); propValueMap.Add(apiGuid, data); }
         } catch(...) {}
     }
+    API_ElementMemo pendingMemo = {};
+    UInt64 pendingMemoMask = 0;
+    if (!colMemoReqs.empty()) {
+        if (ACAPI_Element_GetMemo(eg, &pendingMemo, APIMemoMask_ColumnSegment) == NoError && pendingMemo.columnSegments != nullptr) {
+            pendingMemoMask |= APIMemoMask_ColumnSegment;
+            for (const auto& r : colMemoReqs) {
+                if      (r.first == "elem:crossSectionWidth"  && IsValidNumber(r.second)) pendingMemo.columnSegments[0].assemblySegmentData.nominalWidth  = std::stod(r.second);
+                else if (r.first == "elem:crossSectionHeight" && IsValidNumber(r.second)) pendingMemo.columnSegments[0].assemblySegmentData.nominalHeight = std::stod(r.second);
+                else if (r.first == "elem:buildingMaterial")  { API_AttributeIndex bm = FindBuildingMaterialIdx(GS::UniString(r.second.c_str(), CC_UTF8)); if (bm.IsPositive()) pendingMemo.columnSegments[0].assemblySegmentData.buildingMaterial = bm; }
+                else if (r.first == "elem:venThick"           && IsValidNumber(r.second)) pendingMemo.columnSegments[0].venThick = std::stod(r.second);
+                else if (r.first == "elem:venBuildingMaterial") { API_AttributeIndex bm = FindBuildingMaterialIdx(GS::UniString(r.second.c_str(), CC_UTF8)); if (bm.IsPositive()) pendingMemo.columnSegments[0].venBuildingMaterial = bm; }
+            }
+        }
+    }
+    if (!beamMemoReqs.empty()) {
+        if (ACAPI_Element_GetMemo(eg, &pendingMemo, APIMemoMask_BeamSegment) == NoError && pendingMemo.beamSegments != nullptr) {
+            pendingMemoMask |= APIMemoMask_BeamSegment;
+            for (const auto& r : beamMemoReqs) {
+                if      (r.first == "elem:height"         && IsValidNumber(r.second)) pendingMemo.beamSegments[0].assemblySegmentData.nominalHeight = std::stod(r.second);
+                else if (r.first == "elem:width"          && IsValidNumber(r.second)) pendingMemo.beamSegments[0].assemblySegmentData.nominalWidth  = std::stod(r.second);
+                else if (r.first == "elem:buildingMaterial") { API_AttributeIndex bm = FindBuildingMaterialIdx(GS::UniString(r.second.c_str(), CC_UTF8)); if (bm.IsPositive()) pendingMemo.beamSegments[0].assemblySegmentData.buildingMaterial = bm; }
+            }
+        }
+    }
     bool anyApplied = false, opError = false;
-    if (elementChanged && ACAPI_Element_Change(&updateElem, &mask, nullptr, 0, true) != NoError) opError = true; else if (elementChanged) anyApplied = true;
+    {
+        API_ElementMemo* memoPtr = (pendingMemoMask != 0) ? &pendingMemo : nullptr;
+        bool doChange = elementChanged || (pendingMemoMask != 0);
+        if (doChange) {
+            if (ACAPI_Element_Change(&updateElem, &mask, memoPtr, pendingMemoMask, true) != NoError) opError = true;
+            else anyApplied = true;
+        }
+        if (pendingMemoMask != 0) ACAPI_DisposeElemMemoHdls(&pendingMemo);
+    }
     if (hasElementIdChange && ACAPI_Element_ChangeElementInfoString(&eg, &newElementId) != NoError) opError = true; else if (hasElementIdChange) anyApplied = true;
     if (!classItemsToAdd.IsEmpty()) {
         GS::Array<GS::Pair<API_Guid, API_Guid>> existing; ACAPI_Element_GetClassificationItems(eg, existing);
@@ -416,20 +492,64 @@ static ElementSyncResult ApplyElementChanges_Internal(const std::string& guidStr
             for (auto& prop : properties) {
                 ChangeData* dPtr = propValueMap.GetPtr(prop.definition.guid); if (dPtr == nullptr) continue;
                 API_PropertyDefinition def = {}; def.guid = prop.definition.guid; ACAPI_Property_GetPropertyDefinition(def);
-                if (prop.status == API_Property_NotAvailable || def.defaultValue.hasExpression || !def.canValueBeEditable) continue;
-                prop.isDefault = false; prop.status = API_Property_HasValue; bool valueSet = false;
-                if (def.valueType == API_PropertyStringValueType) { prop.value.singleVariant.variant.type = API_PropertyStringValueType; prop.value.singleVariant.variant.uniStringValue = GS::UniString(dPtr->value.c_str(), CC_UTF8); valueSet = true; }
-                else if (def.valueType == API_PropertyIntegerValueType) {
-                    if (IsValidNumber(dPtr->value)) { prop.value.singleVariant.variant.type = API_PropertyIntegerValueType; prop.value.singleVariant.variant.intValue = (Int32)std::stol(dPtr->value); valueSet = true; }
-                    else if (def.collectionType == API_PropertySingleChoiceEnumerationCollectionType) {
-                        GS::UniString target(dPtr->value.c_str(), CC_UTF8);
-                        for (const auto& ev : def.possibleEnumValues) if (ev.displayVariant.uniStringValue == target) { prop.value.singleVariant.variant = ev.keyVariant; valueSet = true; break; }
+                std::string propGuidLog = std::string((const char*)APIGuid2GSGuid(prop.definition.guid).ToUniString().ToCStr(CC_UTF8));
+                if (prop.status == API_Property_NotAvailable || def.defaultValue.hasExpression || !def.canValueBeEditable) {
+                    WriteExternalLog("APPLY SKIP guid=" + propGuidLog + " (NotAvailable or expression or !editable)");
+                    continue;
+                }
+                WriteExternalLog("APPLY prop=" + propGuidLog + " status=" + std::to_string((int)prop.status) + " collType=" + std::to_string((int)def.collectionType) + " value=" + dPtr->value);
+                bool valueSet = false;
+                const bool isEnumProp = (def.collectionType == API_PropertySingleChoiceEnumerationCollectionType ||
+                                         def.collectionType == API_PropertyMultipleChoiceEnumerationCollectionType);
+                if (isEnumProp) {
+                    GS::UniString target(dPtr->value.c_str(), CC_UTF8);
+                    for (const auto& ev : def.possibleEnumValues) {
+                        if (ev.displayVariant.uniStringValue == target) {
+                            API_Property freshProp = {};
+                            freshProp.definition.guid = prop.definition.guid;
+                            freshProp.status = API_Property_HasValue;
+                            freshProp.isDefault = false;
+                            freshProp.value.singleVariant.variant = ev.keyVariant;
+                            WriteExternalLog("APPLY Enum freshProp guid=" + propGuidLog + " value=" + dPtr->value);
+                            propsToSet.Push(freshProp);
+                            valueSet = true;
+                            break;
+                        }
                     }
-                } else if (def.valueType == API_PropertyRealValueType && IsValidNumber(dPtr->value)) { prop.value.singleVariant.variant.type = API_PropertyRealValueType; prop.value.singleVariant.variant.doubleValue = std::stod(dPtr->value); valueSet = true; }
-                else if (def.valueType == API_PropertyBooleanValueType) { prop.value.singleVariant.variant.type = API_PropertyBooleanValueType; prop.value.singleVariant.variant.boolValue = (dPtr->value == "True" || dPtr->value == "true" || dPtr->value == "1"); valueSet = true; }
-                if (valueSet) propsToSet.Push(prop);
+                    if (!valueSet) { WriteExternalLog("WARN: Enum match failed guid=" + propGuidLog + " value=" + dPtr->value); continue; }
+                    continue;
+                } else {
+                    API_Property freshProp = {};
+                    freshProp.definition.guid = prop.definition.guid;
+                    freshProp.status = API_Property_HasValue;
+                    freshProp.isDefault = false;
+                    if (def.valueType == API_PropertyStringValueType) {
+                        freshProp.value.singleVariant.variant.type = API_PropertyStringValueType;
+                        freshProp.value.singleVariant.variant.uniStringValue = GS::UniString(dPtr->value.c_str(), CC_UTF8);
+                        valueSet = true;
+                    } else if (def.valueType == API_PropertyIntegerValueType && IsValidNumber(dPtr->value)) {
+                        freshProp.value.singleVariant.variant.type = API_PropertyIntegerValueType;
+                        freshProp.value.singleVariant.variant.intValue = (Int32)std::stol(dPtr->value);
+                        valueSet = true;
+                    } else if (def.valueType == API_PropertyRealValueType && IsValidNumber(dPtr->value)) {
+                        freshProp.value.singleVariant.variant.type = API_PropertyRealValueType;
+                        freshProp.value.singleVariant.variant.doubleValue = std::stod(dPtr->value);
+                        valueSet = true;
+                    } else if (def.valueType == API_PropertyBooleanValueType) {
+                        freshProp.value.singleVariant.variant.type = API_PropertyBooleanValueType;
+                        freshProp.value.singleVariant.variant.boolValue = (dPtr->value == "True" || dPtr->value == "true" || dPtr->value == "1");
+                        valueSet = true;
+                    }
+                    if (valueSet) {
+                        WriteExternalLog("APPLY freshProp (non-Enum) guid=" + propGuidLog + " valueType=" + std::to_string((int)def.valueType) + " value=" + dPtr->value);
+                        propsToSet.Push(freshProp);
+                    }
+                    continue;
+                }
             }
-            if (!propsToSet.IsEmpty() && ACAPI_Element_SetProperties(eg, propsToSet) != NoError) opError = true; else if (!propsToSet.IsEmpty()) anyApplied = true;
+            GSErrCode setErr = NoError;
+            if (!propsToSet.IsEmpty()) { setErr = ACAPI_Element_SetProperties(eg, propsToSet); WriteExternalLog("APPLY SetProperties count=" + std::to_string(propsToSet.GetSize()) + " err=" + std::to_string((int)setErr)); }
+            if (!propsToSet.IsEmpty() && setErr != NoError) opError = true; else if (!propsToSet.IsEmpty()) anyApplied = true;
         }
     }
     if (opError) { res.status = "error"; res.reason = "API error"; }
@@ -625,31 +745,224 @@ void DoSearch(const std::string& json) {
     out.Append("]}"); EnqueueResult(std::string((const char*)out.ToCStr(CC_UTF8)));
 }
 
+// ─── elem: パラメータ補助関数 ────────────────────────────────────────────────
+
+static std::string FmtReal(double v) { char buf[48]; snprintf(buf, sizeof(buf), "%.6g", v); return std::string(buf); }
+
+static GS::UniString GetLayerName(API_AttributeIndex idx) {
+    API_Attribute a = {}; a.header.typeID = API_LayerID; a.header.index = idx;
+    return (ACAPI_Attribute_Get(&a) == NoError) ? a.header.name : GS::UniString("---", CC_UTF8);
+}
+static GS::UniString GetBuildingMaterialName(API_AttributeIndex idx) {
+    API_Attribute a = {}; a.header.typeID = API_BuildingMaterialID; a.header.index = idx;
+    return (ACAPI_Attribute_Get(&a) == NoError) ? a.header.name : GS::UniString("---", CC_UTF8);
+}
+static API_AttributeIndex FindBuildingMaterialIdx(const GS::UniString& name) {
+    for (short i = 1; i <= 4096; i++) {
+        API_Attribute a = {}; a.header.typeID = API_BuildingMaterialID; a.header.index = ACAPI_CreateAttributeIndex(i);
+        if (ACAPI_Attribute_Get(&a) != NoError) break;
+        if (a.header.name == name) return ACAPI_CreateAttributeIndex(i);
+    }
+    return ACAPI_CreateAttributeIndex(0);
+}
+static std::string ElemTypeName(API_ElemTypeID id) {
+    switch (id) {
+        case API_WallID:   return "壁";   case API_ColumnID: return "柱";
+        case API_BeamID:   return "梁";   case API_SlabID:   return "スラブ";
+        case API_RoofID:   return "屋根"; case API_DoorID:   return "ドア";
+        case API_WindowID: return "窓";   case API_ZoneID:   return "ゾーン";
+        case API_ObjectID: return "オブジェクト"; default: return "不明";
+    }
+}
+
+// ExportDefs 用: 要素タイプ別 elem: 疑似プロパティ定義を出力
+static void AppendElemParamDefs(GS::UniString& out, const API_Element& elem) {
+    const char* grp = "要素設定パラメータ";
+    auto addP = [&](const char* key, const char* name, int vt, bool editable, bool isBool = false) {
+        out.Append(",{\"guid\":\""); out.Append(GS::UniString(key, CC_UTF8));
+        out.Append("\",\"name\":\""); out.Append(GS::UniString(name, CC_UTF8));
+        out.Append("\",\"group\":\""); out.Append(GS::UniString(grp, CC_UTF8));
+        out.Append("\",\"editable\":"); out.Append(editable ? "true" : "false");
+        out.Append(",\"valueType\":"); out.Append(GS::UniString::Printf("%d", vt));
+        out.Append(",\"collectionType\":0");
+        if (isBool) out.Append(",\"enums\":[\"True\",\"False\"]");
+        out.Append("}");
+    };
+    addP("elem:type",  "要素タイプ", 3, false);
+    addP("elem:layer", "レイヤ名",   3, false);
+    switch (elem.header.type.typeID) {
+        case API_WallID:
+            addP("elem:height",          "高さ",                  2, true);
+            addP("elem:thickness",       "壁厚",                  2, true);
+            addP("elem:bottomOffset",    "下部オフセット",         2, true);
+            addP("elem:topOffset",       "上部オフセット",         2, true);
+            addP("elem:offset",          "参照線オフセット",       2, true);
+            addP("elem:slantAlpha",      "傾き角度(rad)",          2, true);
+            addP("elem:buildingMaterial","ビルディングマテリアル", 3, true);
+            addP("elem:flipped",         "反転",                   4, true, true);
+            break;
+        case API_ColumnID:
+            addP("elem:crossSectionWidth",   "断面幅(m)",              2, true);
+            addP("elem:crossSectionHeight",  "断面高さ(m)",             2, true);
+            addP("elem:buildingMaterial",    "ビルディングマテリアル",  3, true);
+            addP("elem:venThick",            "仕上げ厚(m)",             2, true);
+            addP("elem:venBuildingMaterial", "仕上げマテリアル",        3, true);
+            addP("elem:height",              "高さ",                   2, true);
+            addP("elem:bottomOffset",        "底面オフセット",          2, true);
+            addP("elem:topOffset",           "頂面オフセット",          2, true);
+            addP("elem:axisRotationAngle",   "軸回転角度(rad)",         2, true);
+            addP("elem:slantAngle",          "傾き角度(rad)",           2, true);
+            addP("elem:slantDirectionAngle", "傾き方向(rad)",           2, true);
+            addP("elem:isFlipped",           "反転",                   4, true, true);
+            break;
+        case API_BeamID:
+            addP("elem:height",          "梁成(m)",                2, true);
+            addP("elem:width",           "梁幅(m)",                2, true);
+            addP("elem:buildingMaterial","ビルディングマテリアル", 3, true);
+            addP("elem:level",           "レベル",                 2, true);
+            addP("elem:offset",          "参照軸オフセット",       2, true);
+            addP("elem:slantAngle",      "傾き角度(rad)",          2, true);
+            addP("elem:curveAngle",      "曲げ角度(rad)",          2, true);
+            addP("elem:anchorPoint",     "参照軸位置",             1, true);
+            addP("elem:isFlipped",       "反転",                   4, true, true);
+            break;
+        case API_SlabID:
+            addP("elem:thickness",       "スラブ厚",              2, true);
+            addP("elem:level",           "レベル",                2, true);
+            addP("elem:buildingMaterial","ビルディングマテリアル", 3, true);
+            break;
+        default:
+            addP("elem:height", "高さ", 2, false);
+            break;
+    }
+}
+
+// ExportValues 用: elem: キーから要素値を取得
+static std::string GetElemParamValue(const API_Element& elem, const std::string& key) {
+    if (key == "elem:type")  return ElemTypeName(elem.header.type.typeID);
+    if (key == "elem:layer") return std::string((const char*)GetLayerName(elem.header.layer).ToCStr(CC_UTF8));
+    switch (elem.header.type.typeID) {
+        case API_WallID:
+            if (key == "elem:height")          return FmtReal(elem.wall.height);
+            if (key == "elem:thickness")       return FmtReal(elem.wall.thickness);
+            if (key == "elem:bottomOffset")    return FmtReal(elem.wall.bottomOffset);
+            if (key == "elem:topOffset")       return FmtReal(elem.wall.topOffset);
+            if (key == "elem:offset")          return FmtReal(elem.wall.offset);
+            if (key == "elem:slantAlpha")      return FmtReal(elem.wall.slantAlpha);
+            if (key == "elem:buildingMaterial") return std::string((const char*)GetBuildingMaterialName(elem.wall.buildingMaterial).ToCStr(CC_UTF8));
+            if (key == "elem:flipped")         return (elem.wall.flipped ? "True" : "False");
+            break;
+        case API_ColumnID:
+            if (key == "elem:height")              return FmtReal(elem.column.height);
+            if (key == "elem:bottomOffset")        return FmtReal(elem.column.bottomOffset);
+            if (key == "elem:topOffset")           return FmtReal(elem.column.topOffset);
+            if (key == "elem:slantAngle")          return FmtReal(elem.column.slantAngle);
+            if (key == "elem:slantDirectionAngle") return FmtReal(elem.column.slantDirectionAngle);
+            if (key == "elem:isFlipped")           return (elem.column.isFlipped ? "True" : "False");
+            break;
+        case API_BeamID:
+            if (key == "elem:level")       return FmtReal(elem.beam.level);
+            if (key == "elem:offset")      return FmtReal(elem.beam.offset);
+            if (key == "elem:slantAngle")  return FmtReal(elem.beam.slantAngle);
+            if (key == "elem:curveAngle")  return FmtReal(elem.beam.curveAngle);
+            if (key == "elem:anchorPoint") return std::to_string((int)elem.beam.anchorPoint);
+            if (key == "elem:isFlipped")   return (elem.beam.isFlipped ? "True" : "False");
+            break;
+        case API_SlabID:
+            if (key == "elem:thickness")       return FmtReal(elem.slab.thickness);
+            if (key == "elem:level")           return FmtReal(elem.slab.level);
+            if (key == "elem:buildingMaterial") return std::string((const char*)GetBuildingMaterialName(elem.slab.buildingMaterial).ToCStr(CC_UTF8));
+            break;
+        default: break;
+    }
+    return "---";
+}
+
+static std::string GetElemParamValueMemo(const API_Guid& eg, API_ElemTypeID typeID, const std::string& key) {
+    std::string result = "---";
+    API_ElementMemo memo = {};
+    if (typeID == API_ColumnID) {
+        if (ACAPI_Element_GetMemo(eg, &memo, APIMemoMask_ColumnSegment) == NoError && memo.columnSegments != nullptr) {
+            const auto& asd = memo.columnSegments[0].assemblySegmentData;
+            if      (key == "elem:crossSectionWidth")    result = FmtReal(asd.nominalWidth);
+            else if (key == "elem:crossSectionHeight")   result = FmtReal(asd.nominalHeight);
+            else if (key == "elem:buildingMaterial")     result = std::string((const char*)GetBuildingMaterialName(asd.buildingMaterial).ToCStr(CC_UTF8));
+            else if (key == "elem:venThick")             result = FmtReal(memo.columnSegments[0].venThick);
+            else if (key == "elem:venBuildingMaterial")  result = std::string((const char*)GetBuildingMaterialName(memo.columnSegments[0].venBuildingMaterial).ToCStr(CC_UTF8));
+        }
+    } else if (typeID == API_BeamID) {
+        if (ACAPI_Element_GetMemo(eg, &memo, APIMemoMask_BeamSegment) == NoError && memo.beamSegments != nullptr) {
+            const auto& asd = memo.beamSegments[0].assemblySegmentData;
+            if      (key == "elem:height")           result = FmtReal(asd.nominalHeight);
+            else if (key == "elem:width")            result = FmtReal(asd.nominalWidth);
+            else if (key == "elem:buildingMaterial") result = std::string((const char*)GetBuildingMaterialName(asd.buildingMaterial).ToCStr(CC_UTF8));
+        }
+    }
+    ACAPI_DisposeElemMemoHdls(&memo);
+    return result;
+}
+
 void ExportDefs(const std::string& json) {
     GS::Array<API_Guid> guids = ExtractGuids(json, "guids"); if (guids.IsEmpty()) return;
     GS::Array<API_PropertyDefinition> defs; ACAPI_Element_GetPropertyDefinitions(guids[0], API_PropertyDefinitionFilter_All, defs);
     GS::UniString out = "{\"type\":\"property_definitions\",\"definitions\":[";
     out.Append("{\"guid\":\"builtin:element_id\",\"name\":\"ID\",\"group\":\"IDとカテゴリ\",\"editable\":true,\"valueType\":1,\"collectionType\":0}");
     out.Append(",{\"guid\":\"builtin:RenovationStatus\",\"name\":\"リノベーションステータス\",\"group\":\"IDとカテゴリ\",\"editable\":true,\"valueType\":2,\"collectionType\":1,\"enums\":[\"既存\",\"新設\",\"解体\"]}");
-    out.Append(",{\"guid\":\"builtin:StructuralFunction\",\"name\":\"構造機能\",\"group\":\"IDとカテゴリ\",\"editable\":true,\"valueType\":2,\"collectionType\":1,\"enums\":[\"耐力要素\",\"非耐力要素\",\"未定義\"]}");
-    out.Append(",{\"guid\":\"builtin:Position\",\"name\":\"位置\",\"group\":\"IDとカテゴリ\",\"editable\":true,\"valueType\":2,\"collectionType\":1,\"enums\":[\"外部\",\"内部\",\"未定義\"]}");
+    {
+        API_ElemCategory sfCat = {}; sfCat.categoryID = API_ElemCategory_StructuralFunction;
+        GS::Array<API_ElemCategoryValue> sfVals;
+        out.Append(",{\"guid\":\"builtin:StructuralFunction\",\"name\":\"構造機能\",\"group\":\"IDとカテゴリ\",\"editable\":true,\"valueType\":2,\"collectionType\":1,\"enums\":[");
+        if (ACAPI_Category_GetElementCategoryValues(&sfCat, &sfVals) == NoError) {
+            for (UInt32 k = 0; k < sfVals.GetSize(); k++) { if (k > 0) out.Append(","); out.Append("\""); out.Append(Escape(sfVals[k].name)); out.Append("\""); }
+        }
+        out.Append("]}");
+    }
+    {
+        API_ElemCategory posCat = {}; posCat.categoryID = API_ElemCategory_Position;
+        GS::Array<API_ElemCategoryValue> posVals;
+        out.Append(",{\"guid\":\"builtin:Position\",\"name\":\"位置\",\"group\":\"IDとカテゴリ\",\"editable\":true,\"valueType\":2,\"collectionType\":1,\"enums\":[");
+        if (ACAPI_Category_GetElementCategoryValues(&posCat, &posVals) == NoError) {
+            for (UInt32 k = 0; k < posVals.GetSize(); k++) { if (k > 0) out.Append(","); out.Append("\""); out.Append(Escape(posVals[k].name)); out.Append("\""); }
+        }
+        out.Append("]}");
+    }
     for (UInt32 i = 0; i < defs.GetSize(); i++) {
         API_PropertyGroup grp = {}; grp.guid = defs[i].groupGuid; ACAPI_Property_GetPropertyGroup(grp);
         if (IsElementIdDefinition(defs[i].name, grp.name)) continue;
+        std::string defGuidLog = std::string((const char*)APIGuid2GSGuid(defs[i].guid).ToUniString().ToCStr(CC_UTF8));
+        std::string defNameLog = std::string((const char*)defs[i].name.ToCStr(CC_UTF8));
+        bool isEnumType = (defs[i].collectionType == API_PropertySingleChoiceEnumerationCollectionType ||
+                           defs[i].collectionType == API_PropertyMultipleChoiceEnumerationCollectionType);
+        UInt32 enumCnt = defs[i].possibleEnumValues.GetSize();
+        WriteExternalLog("DEF guid=" + defGuidLog + " name=" + defNameLog +
+            " collType=" + std::to_string((int)defs[i].collectionType) +
+            " valType=" + std::to_string((int)defs[i].valueType) +
+            " enumCnt=" + std::to_string(enumCnt) +
+            " editable=" + (defs[i].canValueBeEditable ? "1" : "0"));
         out.Append(","); out.Append("{\"guid\":\""); out.Append(APIGuid2GSGuid(defs[i].guid).ToUniString()); out.Append("\",");
         out.Append("\"name\":\""); out.Append(Escape(defs[i].name)); out.Append("\",");
         out.Append("\"group\":\""); out.Append(Escape(grp.name)); out.Append("\",");
         out.Append("\"editable\":"); out.Append(defs[i].canValueBeEditable ? "true" : "false"); out.Append(",");
         out.Append("\"valueType\":"); out.Append(GS::UniString::Printf("%d", (int)defs[i].valueType)); out.Append(",");
         out.Append("\"collectionType\":"); out.Append(GS::UniString::Printf("%d", (int)defs[i].collectionType));
-        if (defs[i].collectionType == API_PropertySingleChoiceEnumerationCollectionType || defs[i].collectionType == API_PropertyMultipleChoiceEnumerationCollectionType) {
+        if (isEnumType || enumCnt > 0) {
             out.Append(",\"enums\":[");
-            for (UInt32 j = 0; j < defs[i].possibleEnumValues.GetSize(); j++) {
+            for (UInt32 j = 0; j < enumCnt; j++) {
                 if (j > 0) out.Append(","); out.Append("\""); out.Append(Escape(defs[i].possibleEnumValues[j].displayVariant.uniStringValue)); out.Append("\"");
             }
             out.Append("]");
+        } else if (defs[i].valueType == API_PropertyBooleanValueType &&
+                   defs[i].collectionType == API_PropertySingleCollectionType) {
+            out.Append(",\"enums\":[\"True\",\"False\"]");
         }
         out.Append("}");
+    }
+    {
+        API_Element firstElem = {}; BNZeroMemory(&firstElem, sizeof(API_Element));
+        firstElem.header.guid = guids[0];
+        if (ACAPI_Element_Get(&firstElem) == NoError) {
+            AppendElemParamDefs(out, firstElem);
+        }
     }
     out.Append("]}"); EnqueueResult(std::string((const char*)out.ToCStr(CC_UTF8)));
 }
@@ -658,8 +971,10 @@ void ExportValues(const std::string& json) {
     GS::Array<API_Guid> guids = ExtractGuids(json, "guids"); std::vector<std::string> pgs = ExtractStringArray(json, "propGuids");
     if (guids.IsEmpty() || pgs.empty()) return;
     GS::Array<API_PropertyDefinition> pDefs; bool incID = false, incRen = false, incSF = false, incPos = false;
+    std::vector<std::string> elemKeys;
     for (const auto& s : pgs) {
         if (s == "builtin:element_id") incID = true; else if (s == "builtin:RenovationStatus") incRen = true; else if (s == "builtin:StructuralFunction") incSF = true; else if (s == "builtin:Position") incPos = true;
+        else if (s.size() > 5 && s.substr(0, 5) == "elem:") { elemKeys.push_back(s); }
         else { try { API_PropertyDefinition d = {}; d.guid = GSGuid2APIGuid(GS::Guid(s.c_str())); if (ACAPI_Property_GetPropertyDefinition(d) == NoError) pDefs.Push(d); } catch (...) {} }
     }
     GS::UniString out = "{\"type\":\"property_values\",\"values\":[";
@@ -671,13 +986,44 @@ void ExportValues(const std::string& json) {
         auto add = [&](const std::string& id, const GS::UniString& val) { if (!first) out.Append(","); out.Append("\"" + GS::UniString(id.c_str()) + "\":\""); out.Append(Escape(val)); out.Append("\""); first = false; };
         if (incID) { GS::UniString v; if (ACAPI_Element_GetElementInfoString(&guids[i], &v) == NoError) add("builtin:element_id", v); }
         if (incRen) { GS::UniString v = (h.renovationStatus == API_ExistingStatus ? "既存" : (h.renovationStatus == API_NewStatus ? "新設" : "解体")); add("builtin:RenovationStatus", v); }
-        if (incSF) { API_ElemCategory c = {API_ElemCategory_StructuralFunction}; API_ElemCategoryValue v = {}; if (ACAPI_Category_GetCategoryValue(guids[i], c, &v) == NoError) add("builtin:StructuralFunction", v.name); }
-        if (incPos) { API_ElemCategory c = {API_ElemCategory_Position}; API_ElemCategoryValue v = {}; if (ACAPI_Category_GetCategoryValue(guids[i], c, &v) == NoError) add("builtin:Position", v.name); }
+        if (incSF) { API_ElemCategory c = {}; c.categoryID = API_ElemCategory_StructuralFunction; API_ElemCategoryValue v = {}; if (ACAPI_Category_GetCategoryValue(guids[i], c, &v) == NoError && v.name[0] != 0) add("builtin:StructuralFunction", v.name); else add("builtin:StructuralFunction", GS::UniString("---", CC_UTF8)); }
+        if (incPos) { API_ElemCategory c = {}; c.categoryID = API_ElemCategory_Position; API_ElemCategoryValue v = {}; if (ACAPI_Category_GetCategoryValue(guids[i], c, &v) == NoError && v.name[0] != 0) add("builtin:Position", v.name); else add("builtin:Position", GS::UniString("---", CC_UTF8)); }
+        if (!elemKeys.empty()) {
+            API_Element el = {}; BNZeroMemory(&el, sizeof(API_Element)); el.header.guid = guids[i];
+            if (ACAPI_Element_Get(&el) == NoError) {
+                for (const auto& k : elemKeys) {
+                    std::string val = GetElemParamValue(el, k);
+                    if (val == "---") val = GetElemParamValueMemo(guids[i], el.header.type.typeID, k);
+                    add(k, GS::UniString(val.c_str(), CC_UTF8));
+                }
+            }
+        }
         GS::Array<API_Property> ps; if (!pDefs.IsEmpty() && ACAPI_Element_GetPropertyValues(guids[i], pDefs, ps) == NoError) {
             for (UInt32 j = 0; j < ps.GetSize(); j++) {
                 GS::UniString v;
-                if (ACAPI_Property_GetPropertyValueString(ps[j], &v) != NoError) v = "---";
-                add(std::string((const char*)APIGuid2GSGuid(ps[j].definition.guid).ToUniString().ToCStr(CC_UTF8)), v);
+                API_PropertyDefinition defFull = {}; defFull.guid = ps[j].definition.guid;
+                bool isEnum = false;
+                if (ACAPI_Property_GetPropertyDefinition(defFull) == NoError) {
+                    isEnum = (defFull.collectionType == API_PropertySingleChoiceEnumerationCollectionType ||
+                              defFull.collectionType == API_PropertyMultipleChoiceEnumerationCollectionType);
+                }
+                std::string propGuidStr = std::string((const char*)APIGuid2GSGuid(ps[j].definition.guid).ToUniString().ToCStr(CC_UTF8));
+                {
+                    GS::UniString tmp;
+                    GSErrCode gErr = ACAPI_Property_GetPropertyValueString(ps[j], &tmp);
+                    if (gErr == NoError && !tmp.IsEmpty() && tmp[0] != '<') v = tmp;
+                }
+                if (v.IsEmpty() && isEnum && ps[j].status == API_Property_HasValue) {
+                    const auto& key = ps[j].value.singleVariant.variant;
+                    for (const auto& ev : defFull.possibleEnumValues) {
+                        bool match = (ev.keyVariant.type == API_PropertyGuidValueType && key.type == API_PropertyGuidValueType)
+                                     ? (ev.keyVariant.guidValue == key.guidValue)
+                                     : (ev.keyVariant.intValue == key.intValue);
+                        if (match) { v = ev.displayVariant.uniStringValue; break; }
+                    }
+                }
+                if (v.IsEmpty()) v = "---";
+                add(propGuidStr, v);
             }
         }
         out.Append("}}");
