@@ -85,6 +85,18 @@ class DbManager:
                 cleared       INTEGER DEFAULT 0,
                 PRIMARY KEY (element_guid, property_guid)
             );
+
+            -- パフォーマンス用インデックス
+            CREATE INDEX IF NOT EXISTS idx_edit_history_element
+                ON edit_history(element_guid);
+            CREATE INDEX IF NOT EXISTS idx_edit_history_session
+                ON edit_history(session_id);
+            CREATE INDEX IF NOT EXISTS idx_edit_history_timestamp
+                ON edit_history(timestamp);
+            CREATE INDEX IF NOT EXISTS idx_element_values_element
+                ON element_values(element_guid);
+            CREATE INDEX IF NOT EXISTS idx_elements_condition
+                ON elements(condition_id);
         """)
         conn.commit()
 
@@ -105,7 +117,7 @@ class DbManager:
         conn.commit()
         return cur.lastrowid
 
-    def get_conditions(self, limit: int = 50) -> list[dict]:
+    def get_conditions(self, limit: int = 50) -> list:
         rows = self._conn().execute(
             "SELECT * FROM conditions ORDER BY id DESC LIMIT ?", (limit,)
         ).fetchall()
@@ -196,7 +208,8 @@ class DbManager:
         if element_guids:
             ph = ",".join("?" * len(element_guids))
             rows = conn.execute(
-                f"SELECT element_guid, property_guid, value FROM element_values WHERE element_guid IN ({ph})",
+                f"SELECT element_guid, property_guid, value FROM element_values"
+                f" WHERE element_guid IN ({ph})",
                 element_guids,
             ).fetchall()
         else:
@@ -222,26 +235,52 @@ class DbManager:
         )
         conn.commit()
 
-    def get_history(self, element_guid: str = None, limit: int = 300) -> list[dict]:
+    def get_history(self, element_guid: str = None, limit: int = 300,
+                    ascending: bool = False) -> list:
+        """編集履歴を取得。ascending=True で古い順。"""
+        order = "ASC" if ascending else "DESC"
         conn = self._conn()
         if element_guid:
             rows = conn.execute(
-                """SELECT h.*, p.name AS prop_name
-                   FROM edit_history h
-                   LEFT JOIN properties p ON h.property_guid = p.guid
-                   WHERE h.element_guid = ?
-                   ORDER BY h.history_id DESC LIMIT ?""",
+                f"""SELECT h.*, p.name AS prop_name
+                    FROM edit_history h
+                    LEFT JOIN properties p ON h.property_guid = p.guid
+                    WHERE h.element_guid = ?
+                    ORDER BY h.history_id {order} LIMIT ?""",
                 (element_guid, limit),
             ).fetchall()
         else:
             rows = conn.execute(
-                """SELECT h.*, p.name AS prop_name
-                   FROM edit_history h
-                   LEFT JOIN properties p ON h.property_guid = p.guid
-                   ORDER BY h.history_id DESC LIMIT ?""",
+                f"""SELECT h.*, p.name AS prop_name
+                    FROM edit_history h
+                    LEFT JOIN properties p ON h.property_guid = p.guid
+                    ORDER BY h.history_id {order} LIMIT ?""",
                 (limit,),
             ).fetchall()
         return [dict(r) for r in rows]
+
+    def get_history_count(self, element_guid: str = None) -> int:
+        """履歴レコード件数を返す（DiffDialog のヘッダー表示用）。"""
+        conn = self._conn()
+        if element_guid:
+            return conn.execute(
+                "SELECT COUNT(*) FROM edit_history WHERE element_guid=?",
+                (element_guid,),
+            ).fetchone()[0]
+        return conn.execute("SELECT COUNT(*) FROM edit_history").fetchone()[0]
+
+    def purge_old_history(self, keep_rows: int = 5000):
+        """edit_history が keep_rows を超えたら古い行を削除する。"""
+        conn = self._conn()
+        total = conn.execute("SELECT COUNT(*) FROM edit_history").fetchone()[0]
+        if total > keep_rows:
+            delete_count = total - keep_rows
+            conn.execute(
+                "DELETE FROM edit_history WHERE history_id IN "
+                "(SELECT history_id FROM edit_history ORDER BY history_id ASC LIMIT ?)",
+                (delete_count,),
+            )
+            conn.commit()
 
     # ── ConflictFlags ────────────────────────────────────────────────
 
@@ -273,7 +312,7 @@ class DbManager:
         )
         conn.commit()
 
-    def load_uncleared_flags(self) -> list[dict]:
+    def load_uncleared_flags(self) -> list:
         rows = self._conn().execute(
             "SELECT * FROM conflict_flags WHERE cleared=0"
         ).fetchall()

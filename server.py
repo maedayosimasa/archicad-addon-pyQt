@@ -5,28 +5,10 @@ import threading
 import traceback
 import faulthandler
 import uuid
-
-from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QTableView, QVBoxLayout,
-    QWidget, QHBoxLayout, QPushButton, QGroupBox, QLabel,
-    QTreeWidget, QTreeWidgetItem, QSplitter, QMessageBox, QHeaderView,
-    QTreeWidgetItemIterator, QMenu, QInputDialog, QAbstractItemView,
-    QStyledItemDelegate, QComboBox, QDialog, QTableWidget, QTableWidgetItem,
-    QDialogButtonBox, QFrame,
-)
-from PyQt6.QtCore import Qt, QAbstractTableModel, pyqtSignal, QObject, QSortFilterProxyModel
-from PyQt6.QtGui import QColor, QAction, QFont
 from pathlib import Path
 
-try:
-    from PyQt6.QtGui import QUndoStack
-except ImportError:
-    from PyQt6.QtWidgets import QUndoStack  # フォールバック
-
-from db_manager import DbManager
-from undo_commands import EditValueCommand
-
-LOG_PATH   = Path(__file__).resolve().parent / "server_log.txt"
+# ── ロギングをインポート前に有効化（クラッシュ原因を必ず記録する）────────────
+LOG_PATH       = Path(__file__).resolve().parent / "server_log.txt"
 FAULT_LOG_PATH = Path(__file__).resolve().parent / "fault_log.txt"
 
 
@@ -36,6 +18,85 @@ def append_log(message: str):
             fp.write(f"[PY] {message}\n")
     except Exception:
         pass
+
+
+append_log("--- Python startup begin ---")
+append_log(f"Python {sys.version}")
+append_log(f"Executable: {sys.executable}")
+append_log(f"Path[0]: {sys.path[0] if sys.path else '(empty)'}")
+
+# ── PyQt6 インポート（エラーを必ずログに記録）────────────────────────────────
+try:
+    from PyQt6.QtWidgets import (
+        QApplication, QMainWindow, QTableView, QVBoxLayout,
+        QWidget, QHBoxLayout, QPushButton, QGroupBox, QLabel,
+        QTreeWidget, QTreeWidgetItem, QSplitter, QMessageBox, QHeaderView,
+        QTreeWidgetItemIterator, QMenu, QInputDialog, QAbstractItemView,
+        QStyledItemDelegate, QComboBox, QDialog, QTableWidget, QTableWidgetItem,
+        QDialogButtonBox, QFrame, QCheckBox, QSlider,
+    )
+    append_log("PyQt6.QtWidgets OK")
+except Exception as _e:
+    append_log(f"IMPORT FATAL QtWidgets: {_e}\n{traceback.format_exc()}")
+    sys.exit(1)
+
+try:
+    from PyQt6.QtCore import (
+        Qt, QAbstractTableModel, pyqtSignal, QObject,
+        QSortFilterProxyModel,
+    )
+    append_log("PyQt6.QtCore OK")
+except Exception as _e:
+    append_log(f"IMPORT FATAL QtCore: {_e}\n{traceback.format_exc()}")
+    sys.exit(1)
+
+try:
+    # QKeySequence / QShortcut は PyQt5/6 いずれも QtGui に属する
+    from PyQt6.QtGui import QColor, QAction, QFont, QKeySequence
+    append_log("PyQt6.QtGui OK")
+except Exception as _e:
+    append_log(f"IMPORT FATAL QtGui: {_e}\n{traceback.format_exc()}")
+    sys.exit(1)
+
+# QShortcut は QtGui にある（なければキーボードショートカットを無効化）
+QShortcut = None
+for _mod in ("PyQt6.QtGui", "PyQt6.QtWidgets"):
+    try:
+        import importlib as _il
+        QShortcut = getattr(_il.import_module(_mod), "QShortcut")
+        append_log(f"QShortcut found in {_mod}")
+        break
+    except Exception:
+        pass
+if QShortcut is None:
+    append_log("QShortcut not available — keyboard shortcuts disabled")
+
+try:
+    from PyQt6.QtGui import QUndoStack
+    append_log("QUndoStack from QtGui OK")
+except ImportError:
+    try:
+        from PyQt6.QtWidgets import QUndoStack
+        append_log("QUndoStack from QtWidgets OK (fallback)")
+    except ImportError as _e:
+        append_log(f"IMPORT FATAL QUndoStack: {_e}")
+        sys.exit(1)
+
+try:
+    from db_manager import DbManager
+    append_log("db_manager OK")
+except Exception as _e:
+    append_log(f"IMPORT FATAL db_manager: {_e}\n{traceback.format_exc()}")
+    sys.exit(1)
+
+try:
+    from undo_commands import EditValueCommand
+    append_log("undo_commands OK")
+except Exception as _e:
+    append_log(f"IMPORT FATAL undo_commands: {_e}\n{traceback.format_exc()}")
+    sys.exit(1)
+
+append_log("--- All imports OK ---")
 
 
 def _install_exception_hooks():
@@ -343,6 +404,7 @@ class CommunicationSignals(QObject):
     flag_result_received         = pyqtSignal(dict)
     bim_override_result_received = pyqtSignal(dict)
     change_status_result_received= pyqtSignal(dict)
+    current_floor_received       = pyqtSignal(dict)
     selection_changed            = pyqtSignal(dict)
     show_window                  = pyqtSignal()
     error_occurred               = pyqtSignal(str)
@@ -423,6 +485,7 @@ class TcpServerThread(threading.Thread):
                     elif t == "bim_override_result":   self.signals.bim_override_result_received.emit(payload)
                     elif t == "change_status_result":  self.signals.change_status_result_received.emit(payload)
                     elif t == "selection_changed":     self.signals.selection_changed.emit(payload)
+                    elif t == "current_floor":        self.signals.current_floor_received.emit(payload)
                     else:
                         append_log(f"[UNKNOWN TYPE] {t}")
                 except Exception as e:
@@ -482,7 +545,14 @@ class PlaceholderClearDelegate(QStyledItemDelegate):
 # ─────────────────────────────────────────────────────────────────────
 
 class DiffDialog(QDialog):
-    """選択要素の編集履歴（差分）を一覧表示するダイアログ"""
+    """選択要素の編集履歴（差分）を一覧表示するダイアログ。
+
+    ソース別カラーコーディング:
+      user  → 青背景（ユーザー直接編集）
+      undo  → グレー背景（取消操作）
+      redo  → 緑背景（やり直し操作）
+      archicad → 黄背景（ArchiCAD 側の変更）
+    """
 
     _SOURCE_LABELS = {
         "user":     "ユーザー編集",
@@ -490,49 +560,125 @@ class DiffDialog(QDialog):
         "redo":     "やり直し(Redo)",
         "archicad": "ArchiCAD",
     }
+    _SOURCE_BG = {
+        "user":     QColor("#DBEEFF"),
+        "undo":     QColor("#EEEEEE"),
+        "redo":     QColor("#D6F5D6"),
+        "archicad": QColor("#FFFACD"),
+    }
 
-    def __init__(self, history: list, element_guid: str = "", parent=None):
+    def __init__(self, history: list, element_guid: str = "",
+                 db=None, parent=None):
         super().__init__(parent)
+        self._db            = db
+        self._element_guid  = element_guid
+        self._all_history   = list(history)   # 降順（最新が先頭）
+        self._ascending     = False           # 表示順: False=新→古, True=古→新
+
         short = f"[{element_guid[:8]}]" if element_guid else "[全件]"
         self.setWindowTitle(f"編集履歴・差分  {short}")
-        self.resize(950, 520)
+        self.resize(1000, 560)
+
         layout = QVBoxLayout(self)
+        layout.setSpacing(4)
 
-        if not history:
-            layout.addWidget(QLabel("編集履歴はありません。"))
-        else:
-            tbl = QTableWidget(len(history), 5, self)
-            tbl.setHorizontalHeaderLabels(["日時", "プロパティ名", "変更前", "変更後", "操作"])
-            tbl.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-            tbl.setAlternatingRowColors(True)
-            tbl.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-            hdr = tbl.horizontalHeader()
-            hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-            hdr.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-            hdr.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-            hdr.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
-            hdr.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        # ── ヘッダ行（件数 + ソート切替）──────────────────────────────
+        hdr_row = QWidget()
+        hdr_lay = QHBoxLayout(hdr_row)
+        hdr_lay.setContentsMargins(0, 0, 0, 0)
+        total = len(self._all_history)
+        self._count_label = QLabel(f"履歴: {total} 件")
+        self._count_label.setStyleSheet("font-weight: bold;")
+        self._chk_asc = QCheckBox("古い順に表示")
+        self._chk_asc.setChecked(self._ascending)
+        self._chk_asc.stateChanged.connect(self._on_sort_changed)
+        hdr_lay.addWidget(self._count_label)
+        hdr_lay.addStretch()
+        hdr_lay.addWidget(self._chk_asc)
+        layout.addWidget(hdr_row)
 
-            for row, h in enumerate(history):
-                ts        = h.get("timestamp", "")[:19].replace("T", " ")
-                prop_name = h.get("prop_name") or h.get("property_guid", "")[:8]
-                old_v     = h.get("old_value", "")
-                new_v     = h.get("new_value", "")
-                src       = self._SOURCE_LABELS.get(h.get("source", ""), h.get("source", ""))
+        # ── テーブル ────────────────────────────────────────────────
+        self._tbl = QTableWidget(0, 5, self)
+        self._tbl.setHorizontalHeaderLabels(["日時", "プロパティ名", "変更前", "変更後", "操作"])
+        self._tbl.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self._tbl.setAlternatingRowColors(False)
+        self._tbl.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        hdr = self._tbl.horizontalHeader()
+        hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        hdr.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        hdr.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        hdr.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
+        hdr.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        layout.addWidget(self._tbl)
 
-                for col, val in enumerate([ts, prop_name, old_v, new_v, src]):
-                    item = QTableWidgetItem(str(val))
-                    if col == 3 and new_v != old_v:
-                        item.setForeground(QColor("red"))
-                    if h.get("source") == "undo":
-                        item.setBackground(QColor("#F0F0F0"))
-                    tbl.setItem(row, col, item)
+        # ── 凡例 ────────────────────────────────────────────────────
+        legend_row = QWidget()
+        leg_lay = QHBoxLayout(legend_row)
+        leg_lay.setContentsMargins(0, 0, 0, 0)
+        for src, label in self._SOURCE_LABELS.items():
+            lbl = QLabel(f"  {label}  ")
+            bg  = self._SOURCE_BG.get(src, QColor("white"))
+            lbl.setStyleSheet(
+                f"background:{bg.name()}; border:1px solid #aaa;"
+                f" padding:1px 4px; border-radius:3px;"
+            )
+            leg_lay.addWidget(lbl)
+        leg_lay.addStretch()
+        layout.addWidget(legend_row)
 
-            layout.addWidget(tbl)
-
+        # ── ボタン ──────────────────────────────────────────────────
         btn_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         btn_box.rejected.connect(self.accept)
         layout.addWidget(btn_box)
+
+        self._refresh_table()
+
+    # ── ソート切替 ───────────────────────────────────────────────────
+
+    def _on_sort_changed(self, state):
+        self._ascending = (state == Qt.CheckState.Checked.value)
+        self._refresh_table()
+
+    # ── テーブル再描画 ───────────────────────────────────────────────
+
+    def _refresh_table(self):
+        rows = list(self._all_history)
+        if self._ascending:
+            rows = list(reversed(rows))
+
+        self._tbl.setRowCount(len(rows))
+        if not rows:
+            self._tbl.setRowCount(1)
+            self._tbl.setItem(0, 0, QTableWidgetItem("編集履歴はありません。"))
+            return
+
+        for row_i, h in enumerate(rows):
+            ts        = h.get("timestamp", "")[:19].replace("T", " ")
+            prop_name = h.get("prop_name") or h.get("property_guid", "")[:8]
+            old_v     = str(h.get("old_value", ""))
+            new_v     = str(h.get("new_value", ""))
+            src_key   = h.get("source", "user")
+            src_label = self._SOURCE_LABELS.get(src_key, src_key)
+            row_bg    = self._SOURCE_BG.get(src_key)
+
+            for col_i, val in enumerate([ts, prop_name, old_v, new_v, src_label]):
+                item = QTableWidgetItem(str(val))
+                item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+                if row_bg:
+                    item.setBackground(row_bg)
+                # 変更後セルの差分を赤字で強調
+                if col_i == 3 and new_v != old_v:
+                    item.setForeground(QColor("#C0392B"))
+                    f = QFont(); f.setBold(True)
+                    item.setFont(f)
+                # undo 行の変更前はグレー文字
+                if col_i == 2 and src_key == "undo":
+                    item.setForeground(QColor("#888888"))
+                self._tbl.setItem(row_i, col_i, item)
+
+        # 最新行（降順時は先頭、昇順時は末尾）へスクロール
+        scroll_row = len(rows) - 1 if self._ascending else 0
+        self._tbl.scrollToItem(self._tbl.item(scroll_row, 0))
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -551,7 +697,7 @@ class MainWindow(QMainWindow):
         self.current_condition_id = None
 
         self.setWindowTitle("Archicad BIM - 条件設定")
-        self.resize(620, 700)
+        self.resize(620, 420)
 
         # ② UI 構築
         self.setup_ui()
@@ -564,8 +710,21 @@ class MainWindow(QMainWindow):
         # ⑤ Undo/Redo ボタン ←→ Undo スタック 自動連動
         self.undo_stack.canUndoChanged.connect(self.btn_undo.setEnabled)
         self.undo_stack.canRedoChanged.connect(self.btn_redo.setEnabled)
+        self.undo_stack.undoTextChanged.connect(
+            lambda t: self.btn_undo.setText(f"戻る: {t}" if t else "戻る (Undo)")
+        )
+        self.undo_stack.redoTextChanged.connect(
+            lambda t: self.btn_redo.setText(f"進む: {t}" if t else "進む (Redo)")
+        )
         self.btn_undo.clicked.connect(self.undo_stack.undo)
         self.btn_redo.clicked.connect(self.undo_stack.redo)
+
+        # Ctrl+Z / Ctrl+Y キーボードショートカット（QShortcut が利用可能な場合のみ）
+        if QShortcut is not None:
+            _sc_undo = QShortcut(QKeySequence.StandardKey.Undo, self.data_panel)
+            _sc_undo.activated.connect(self.undo_stack.undo)
+            _sc_redo = QShortcut(QKeySequence.StandardKey.Redo, self.data_panel)
+            _sc_redo.activated.connect(self.undo_stack.redo)
 
         # シグナル接続
         self.signals = CommunicationSignals()
@@ -580,6 +739,7 @@ class MainWindow(QMainWindow):
         self.signals.show_window.connect(self._show_all_windows)
         self.signals.error_occurred.connect(self.on_error)
         self.signals.selection_changed.connect(self.on_archicad_selection_changed)
+        self.signals.current_floor_received.connect(self.on_current_floor)
         self.server_thread = None
 
         # 内部状態
@@ -593,6 +753,10 @@ class MainWindow(QMainWindow):
         self._click_prev_guid        = None
         self._click_prev_status      = 0
         self._current_element_type   = ""
+        self._pending_bim_restore    = False
+        self._last_archicad_floor    = 0
+        self._pyqt_active            = False
+        self._start_floor_polling()
 
         # dialog_order.json
         _order_file = Path(__file__).resolve().parent / "dialog_order.json"
@@ -683,19 +847,24 @@ class MainWindow(QMainWindow):
         self.prop_tree = QTreeWidget()
         self.prop_tree.setHeaderLabel("プロパティ")
         self.prop_tree.itemChanged.connect(self.on_prop_item_changed)
-        self.btn_get_defs   = QPushButton("プロパティ一覧を取得")
-        self.btn_get_defs.clicked.connect(self.request_definitions)
         self.btn_get_values = QPushButton("データ取得")
         self.btn_get_values.clicked.connect(self.get_values)
         sp_lay.addWidget(lbl_prop)
         sp_lay.addWidget(self.prop_tree)
-        sp_lay.addWidget(self.btn_get_defs)
         sp_lay.addWidget(self.btn_get_values)
 
         h_split.addWidget(sect_extract)
         h_split.addWidget(sect_prop)
         h_split.setSizes([1, 1])   # 等分で初期表示
         c_lay.addWidget(h_split)
+
+        # 条件設定パネル下部：データ取得状態ラベル（1行・固定高さ）
+        self.condition_status_label = QLabel("待機中")
+        self.condition_status_label.setStyleSheet(
+            "color: #1a5276; background: #eaf4fb; padding: 2px 6px; border-radius: 3px;"
+        )
+        self.condition_status_label.setFixedHeight(22)
+        c_lay.addWidget(self.condition_status_label, 0)  # stretch=0 で伸びない
 
         # ════════════════════════════════════════════════════════════
         # 右：データ表示・編集パネル（独立ウィンドウ）
@@ -774,10 +943,45 @@ class MainWindow(QMainWindow):
         brl4.addWidget(self.btn_undo)
         brl4.addWidget(self.btn_redo)
 
+        # 行5: ズーム ON/OFF + 余白調整スライダー
+        btn_row5 = QWidget()
+        brl5 = QHBoxLayout(btn_row5); brl5.setContentsMargins(0, 0, 0, 0)
+        self.btn_zoom_toggle = QPushButton("ズーム OFF")
+        self.btn_zoom_toggle.setCheckable(True)
+        self.btn_zoom_toggle.setFixedWidth(90)
+        self.btn_zoom_toggle.setToolTip("ONにすると行クリック時にArchiCADでズーム表示します")
+        self.btn_zoom_toggle.toggled.connect(self._on_zoom_toggle)
+        lbl_zoom = QLabel("余白:")
+        self.zoom_slider = QSlider(Qt.Orientation.Horizontal)
+        # 値 50～500 → 5.0x～50.0x（÷10）
+        self.zoom_slider.setRange(50, 500)
+        self.zoom_slider.setValue(300)       # デフォルト 30.0x
+        self.zoom_slider.setTickInterval(50)
+        self.zoom_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.zoom_slider.setFixedWidth(180)
+        self.zoom_factor_label = QLabel("30.0x")
+        self.zoom_factor_label.setFixedWidth(40)
+        self.zoom_slider.valueChanged.connect(
+            lambda v: self.zoom_factor_label.setText(f"{v / 10.0:.1f}x")
+        )
+        self.btn_zoom_fit = QPushButton("全体表示")
+        self.btn_zoom_fit.setToolTip("ArchiCADのビューを全体表示（フィット）します")
+        self.btn_zoom_fit.setFixedWidth(80)
+        self.btn_zoom_fit.clicked.connect(self.zoom_fit_all)
+        brl5.addWidget(self.btn_zoom_toggle)
+        brl5.addSpacing(8)
+        brl5.addWidget(lbl_zoom)
+        brl5.addWidget(self.zoom_slider)
+        brl5.addWidget(self.zoom_factor_label)
+        brl5.addSpacing(8)
+        brl5.addWidget(self.btn_zoom_fit)
+        brl5.addStretch()
+
         dp_lay.addWidget(btn_row1)
         dp_lay.addWidget(btn_row2)
         dp_lay.addWidget(btn_row3)
         dp_lay.addWidget(btn_row4)
+        dp_lay.addWidget(btn_row5)
 
         self.table.clicked.connect(self.on_table_clicked)
 
@@ -827,7 +1031,7 @@ class MainWindow(QMainWindow):
             append_log(f"[DB] condition saved: id={self.current_condition_id}")
         except Exception as e:
             append_log(f"[DB ERROR] save_condition: {e}")
-        self.status_label.setText("要素抽出中...")
+        self.condition_status_label.setText("要素抽出中...")
         self.send_to_ac_async({"command": "get_elements", "stories": stories, **types})
 
     def on_config(self, data):
@@ -849,9 +1053,10 @@ class MainWindow(QMainWindow):
         types = {e.get("type", "") for e in self.current_elements if e.get("type")}
         self._current_element_type = next(iter(types), "") if len(types) == 1 else ""
         cnt = len(self.current_elements)
-        self.status_label.setText(
-            f"要素: {cnt}件 抽出完了 → 次: プロパティ一覧を取得 してください" if cnt else "該当なし。条件を変えて再試行してください"
-        )
+        if cnt:
+            self.condition_status_label.setText(f"要素: {cnt}件 抽出完了 → プロパティ一覧を取得中...")
+        else:
+            self.condition_status_label.setText("該当なし。条件を変えて再試行してください")
         # ③ DB に要素を保存
         try:
             if self.current_elements and self.current_condition_id:
@@ -859,6 +1064,9 @@ class MainWindow(QMainWindow):
                 append_log(f"[DB] elements saved: {len(self.current_elements)}")
         except Exception as e:
             append_log(f"[DB ERROR] on_elements: {e}")
+        # 要素が取得できたら自動的にプロパティ一覧を取得
+        if self.current_elements:
+            self.request_definitions()
 
     # ── プロパティ定義 ───────────────────────────────────────────────
 
@@ -885,7 +1093,9 @@ class MainWindow(QMainWindow):
             c = QTreeWidgetItem(groups[gn], [d["name"]])
             c.setData(0, Qt.ItemDataRole.UserRole, d)
             c.setCheckState(0, Qt.CheckState.Unchecked)
-        self.prop_tree.expandAll()
+        self.prop_tree.collapseAll()
+        cnt = len(self.current_elements) if hasattr(self, "current_elements") else 0
+        self.condition_status_label.setText(f"要素: {cnt}件 抽出完了 / プロパティ一覧取得完了")
         # ③ DB にプロパティ定義を保存
         try:
             defs = data.get("definitions", [])
@@ -946,6 +1156,11 @@ class MainWindow(QMainWindow):
         self.status_label.setText(
             f"データ取得完了:  要素 {elem_cnt}件  ×  プロパティ {prop_cnt}列  （セルをダブルクリックで編集）"
         )
+        # 条件設定パネルにデータ取得結果を表示
+        self.condition_status_label.setText(
+            f"データ取得完了:  要素 {elem_cnt}件  ×  プロパティ {prop_cnt}列"
+        )
+        self.status_label.setText("セルをダブルクリックで編集")
         # [データ取得] で初めてデータパネルを開く（以後は既に開いているので raise のみ）
         self.data_panel.show()
         self.data_panel.raise_()
@@ -970,8 +1185,9 @@ class MainWindow(QMainWindow):
     def show_diff_dialog(self):
         try:
             guid    = self._selected_guids[0] if self._selected_guids else None
-            history = self.db.get_history(element_guid=guid)
-            dlg     = DiffDialog(history, element_guid=guid or "", parent=self)
+            # 最新 500 件を降順（新→古）で取得
+            history = self.db.get_history(element_guid=guid, limit=500, ascending=False)
+            dlg     = DiffDialog(history, element_guid=guid or "", db=self.db, parent=self)
             dlg.exec()
         except Exception as e:
             QMessageBox.warning(self, "エラー", f"差分取得失敗: {e}")
@@ -1004,6 +1220,9 @@ class MainWindow(QMainWindow):
             self.btn_diff.setEnabled(True)
 
             self.send_to_ac_async({"command": "select_elements", "guids": [guid]})
+            if self.btn_zoom_toggle.isChecked():
+                zoom_factor = self.zoom_slider.value() / 10.0
+                self.send_to_ac_async({"command": "zoom_to_element", "guids": [guid], "zoomFactor": zoom_factor})
         except Exception as e:
             append_log(f"on_table_clicked ERROR: {e}\n{traceback.format_exc()}")
 
@@ -1034,6 +1253,17 @@ class MainWindow(QMainWindow):
             self.btn_diff.setEnabled(True)
         except Exception as e:
             append_log(f"on_archicad_selection_changed ERROR: {e}\n{traceback.format_exc()}")
+
+    # ── ズーム ON/OFF ────────────────────────────────────────────────
+
+    def _on_zoom_toggle(self, checked: bool):
+        self.btn_zoom_toggle.setText("ズーム ON" if checked else "ズーム OFF")
+        self.zoom_slider.setEnabled(checked)
+        self.zoom_factor_label.setEnabled(checked)
+
+    def zoom_fit_all(self):
+        self.send_to_ac_async({"command": "zoom_fit_all"})
+        append_log("zoom_fit_all sent")
 
     # ── フィルタメニュー ────────────────────────────────────────────
 
@@ -1130,14 +1360,16 @@ class MainWindow(QMainWindow):
     # ── BIM 表現の上書き ─────────────────────────────────────────────
 
     def toggle_bim_override(self):
+        floor = self._last_archicad_floor
+        append_log(f"[OVERRIDE] floor={floor} active={self._pyqt_active}")
         if self.btn_bim_override.isChecked():
             self.btn_bim_override.setText("変更強調 ON")
             self.status_label.setText("変更強調適用中...")
-            self.send_to_ac_async({"command": "apply_bim_override"})
+            self.send_to_ac_async({"command": "apply_bim_override", "floor": floor})
         else:
             self.btn_bim_override.setText("変更強調 OFF")
             self.status_label.setText("変更強調解除中...")
-            self.send_to_ac_async({"command": "remove_bim_override"})
+            self.send_to_ac_async({"command": "remove_bim_override", "floor": floor})
 
     def on_bim_override_result(self, data):
         action = data.get("action", "")
@@ -1200,6 +1432,7 @@ class MainWindow(QMainWindow):
         ) != QMessageBox.StandardButton.Yes:
             return
         self._pending_status_change = {"guids": list(guids), "value": 0}
+        self._pending_bim_restore   = True   # 完了後に表現の上書きセットを解除
         self.send_to_ac_async({"command": "set_change_status", "guids": guids, "status": 0})
         self.status_label.setText(f"全件リセット中: {len(guids)}件...")
 
@@ -1218,8 +1451,17 @@ class MainWindow(QMainWindow):
                     )
                     self._pending_status_change = None
                 self.status_label.setText(f"ChangeStatus={label}: {count}件 設定完了")
+                # 全件リセット完了 → 表現の上書きセットを解除
+                if self._pending_bim_restore:
+                    self._pending_bim_restore = False
+                    floor = self._last_archicad_floor
+                    self.send_to_ac_async({"command": "remove_bim_override", "floor": floor})
+                    self.btn_bim_override.setChecked(False)
+                    self.btn_bim_override.setText("変更強調 OFF")
+                    append_log(f"[RESET-ALL] BIM override removed floor={floor}")
             else:
                 self._pending_status_change = None
+                self._pending_bim_restore   = False
                 self.status_label.setText(f"ChangeStatusエラー: {data.get('reason', '')}")
         except Exception as e:
             append_log(f"on_change_status_result ERROR: {e}\n{traceback.format_exc()}")
@@ -1485,9 +1727,60 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "一部競合/スキップ", f"{msg}\n\n{d_txt}" if d_txt else msg)
             else:
                 QMessageBox.critical(self, "エラー", f"{msg}\n\n{d_txt}")
+
+            # 成功件数があれば BIM変更管理（表現の上書き）を自動適用
+            if sc > 0:
+                self.send_to_ac_async({"command": "apply_bim_override"})
+                self.btn_bim_override.setChecked(True)
+                self.btn_bim_override.setText("変更強調 ON")
+                append_log(f"[SYNC] BIM override auto-applied (sc={sc})")
         except Exception as e:
             append_log(f"SYNC ERROR: {e}\n{traceback.format_exc()}")
             QMessageBox.critical(self, "内部エラー", str(e))
+
+    # ── フロアポーリング ──────────────────────────────────────────────
+
+    def changeEvent(self, event):
+        from PyQt6.QtCore import QEvent
+        if event.type() == QEvent.Type.ActivationChange:
+            self._pyqt_active = self.isActiveWindow()
+        super().changeEvent(event)
+
+    def _start_floor_polling(self):
+        import time
+        append_log("[FLOOR POLL] polling thread starting")
+        def _loop():
+            append_log("[FLOOR POLL] thread running")
+            while True:
+                try:
+                    time.sleep(3.0)
+                    self._query_and_store_floor()
+                except Exception as e:
+                    append_log(f"[FLOOR POLL ERROR] {e}")
+        t = threading.Thread(target=_loop, daemon=True)
+        t.start()
+        append_log(f"[FLOOR POLL] thread started name={t.name}")
+
+    def _query_and_store_floor(self):
+        # 送信のみ。応答は C++ SenderThread → Python port5000 経由で on_current_floor に来る
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(2.0)
+                s.connect(("127.0.0.1", 5001))
+                msg = json.dumps({"command": "get_current_floor"}, separators=(",", ":"), ensure_ascii=False) + "\n"
+                s.sendall(msg.encode("utf-8"))
+            append_log("[FLOOR POLL] sent get_current_floor")
+        except Exception as e:
+            append_log(f"[FLOOR POLL FAIL] {e}")
+
+    def on_current_floor(self, data):
+        floor = data.get("floor", 0)
+        append_log(f"[FLOOR UPDATE] raw={floor} stored={self._last_archicad_floor}")
+        # 非ゼロ優先スティッキー: 0はArchiCADがfocusを失った際の誤値の可能性があるため
+        # 非ゼロの値が来たときのみ更新し、最後に確認した有効フロアを保持する
+        if floor > 0:
+            self._last_archicad_floor = floor
+            append_log(f"[FLOOR STORED] floor={floor}")
 
     # ── TCP 送信 ─────────────────────────────────────────────────────
 
@@ -1517,6 +1810,7 @@ class MainWindow(QMainWindow):
         if self.server_thread:
             self.server_thread.stop()
         try:
+            self.db.purge_old_history(keep_rows=5000)
             self.db.close()
         except Exception:
             pass
