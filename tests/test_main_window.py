@@ -1160,14 +1160,14 @@ def test_window_size_is_restored_next_time(main_window, monkeypatch, tmp_path):
     w.resize(640, 420)
     w.move(40, 60)
     w.data_panel.show()
-    w.data_panel.resize(720, 480)
+    w.data_panel.resize(770, 480)
     w.h_split.setSizes([400, 200])
     w.close()                                           # 閉じる時に保存
 
     w2 = _new_window(monkeypatch, tmp_path)
     try:
         assert (w2.width(), w2.height()) == (640, 420)
-        assert (w2.data_panel.width(), w2.data_panel.height()) == (720, 480)
+        assert (w2.data_panel.width(), w2.data_panel.height()) == (770, 480)
         a, b = w2.h_split.sizes()
         assert a > b                                    # 左右分割の比率も復元
     finally:
@@ -1178,7 +1178,7 @@ def test_unshown_window_keeps_previous_size(main_window, monkeypatch, tmp_path):
     w = main_window
     w.show()
     w.data_panel.show()
-    w.data_panel.resize(611, 466)
+    w.data_panel.resize(761, 466)
     w.save_window_state()
     w.data_panel.hide()
 
@@ -1189,7 +1189,7 @@ def test_unshown_window_keeps_previous_size(main_window, monkeypatch, tmp_path):
         w2.close()
     w3 = _new_window(monkeypatch, tmp_path)
     try:
-        assert (w3.data_panel.width(), w3.data_panel.height()) == (611, 466)
+        assert (w3.data_panel.width(), w3.data_panel.height()) == (761, 466)
     finally:
         w3.close()
 

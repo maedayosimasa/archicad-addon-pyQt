@@ -141,6 +141,13 @@ SIMPLE_KEYS = [
     "builtin:element_id", "elem:type", "elem:layer", "elem:libPart",
     "elem:W", "elem:L", "elem:H", "elem:elevation", "elem:story", "elem:classification",
 ]
+# 入力元（自動計算 W/L/H/レベル の元になる、編集できる値）。基本情報の自動計算の後ろに並べる。
+# 全要素タイプ共通の列で、その要素タイプに無い項目のセルは "(対象外)"（編集不可）。
+INPUT_KEYS = [
+    "elem:in:width", "elem:in:depth", "elem:in:height", "elem:in:length",
+    "elem:in:baseOffset", "elem:in:topLink", "elem:in:topOffset", "elem:in:sill",
+]
+SIMPLE_KEYS = SIMPLE_KEYS + INPUT_KEYS
 
 # 要素タイプのキー → 条件設定ツリーの表示名（無いものはキーをそのまま表示）
 ELEMENT_TYPE_LABELS = {
@@ -167,6 +174,9 @@ def is_element_id_property(prop_def, prop_guid=""):
 
 
 def get_group_type(p_def, p_guid):
+    # 要素の形状・設定（elem:）は要素そのものの変更 → modiStamp 不一致なら中止（厳密）
+    if p_guid.startswith("elem:"):
+        return "parameter"
     if p_guid.startswith("builtin:"):
         if "element_id"       in p_guid: return "element_id"
         if "Renovation"       in p_guid: return "parameter"
@@ -314,8 +324,10 @@ class PropertyTableModel(QAbstractTableModel):
                 return QColor("red")
             if guid in self._conflicts:
                 return QColor("darkRed")
-            # 編集不可プロパティ（PropertyDefinition.editable=False）はグレー表示
-            return QColor("black") if table_tools.is_editable(self._properties[col - 1]) else QColor("gray")
+            # 編集不可プロパティ（PropertyDefinition.editable=False）と対象外セルはグレー表示
+            if not self.is_cell_editable(guid, self._properties[col - 1]):
+                return QColor("gray")
+            return QColor("black")
 
         if role == Qt.ItemDataRole.BackgroundRole:
             if guid == self._selected_guid:
@@ -400,7 +412,12 @@ class PropertyTableModel(QAbstractTableModel):
         g       = self._elements[row]["guid"]
         pg      = self._properties[col - 1]["guid"]
         old_val = str(self._values.get((g, pg), ""))
-        new_val = str(value)
+        prop    = self._properties[col - 1]
+        ok, reason = table_tools.validate_value(prop, value, old_val)
+        if not ok:
+            append_log(f"[SETDATA] rejected: {reason}")
+            return False
+        new_val = table_tools.normalize_value(prop, value)   # 入力元: 600mm → 0.600 など
         append_log(f"[SETDATA] g={g[:8]} pg={pg[:8]} old={old_val!r} new={new_val!r} stack={self._undo_stack is not None}")
         if new_val == old_val:
             append_log("[SETDATA] no change → skip")
@@ -451,9 +468,32 @@ class PropertyTableModel(QAbstractTableModel):
         base = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable  # コピー用に ID 列も選択可
         if index.column() == 0 or index.column() > len(self._properties):
             return base
-        if not table_tools.is_editable(self._properties[index.column() - 1]):
+        guid = self._elements[index.row()]["guid"] if index.row() < len(self._elements) else None
+        if not self.is_cell_editable(guid, self._properties[index.column() - 1]):
             return base
         return base | Qt.ItemFlag.ItemIsEditable
+
+    def is_cell_editable(self, element_guid, prop):
+        """編集可能なプロパティで、かつその要素で対象外（入力元が無いタイプ）でないセル。"""
+        if not table_tools.is_editable(prop):
+            return False
+        return str(self._values.get((element_guid, prop["guid"]), "")) != table_tools.NOT_APPLICABLE
+
+    def merge_values(self, values, stamps):
+        """反映後に取り直した値で、その要素の行だけを更新する（自動計算の結果を最新にする）。
+        取り直した値は「取得時の値」にもなる（＝未反映の変更なし）。"""
+        for key, val in values.items():
+            self._values[key] = val
+            self._original_values[key] = val
+            self._value_conflict_cells.pop(key, None)
+        for g, st in stamps.items():
+            if st:
+                self._stamps[g] = st
+                self._stamp_flags[g] = self.STAMP_OK
+        guids = set(stamps) | {g for g, _ in values}
+        for row, elem in enumerate(self._elements):
+            if elem["guid"] in guids:
+                self.dataChanged.emit(self.index(row, 0), self.index(row, len(self._properties)))
 
     def prop_at(self, col):
         """表の列番号 → プロパティ定義（ID 列は None）。"""
@@ -1157,6 +1197,10 @@ class DataPanel(QWidget):
         self.closed.emit(self)
 
 
+# Excel 出力の設定キー（QSettings）
+EXCEL_LOCK_GUID_KEY = "excel/lock_guid"   # GUID 列を編集不可（シート保護）
+EXCEL_HIDE_GUID_KEY = "excel/hide_guid"   # GUID 列を非表示
+
 # 条件設定ウィンドウのグループ枠（① 条件を指定して取得 / ② 別の方法で取得）
 GROUP_BOX_STYLE = (
     "QGroupBox { font-weight: bold; color: #1a5276; border: 1px solid #9FB0C2; border-radius: 4px;"
@@ -1212,6 +1256,7 @@ class MainWindow(QMainWindow):
         self._panel_seq       = 0
         self._active_panel    = None
         self._value_requests  = {}   # reqId -> DataPanel（get_values の応答先）
+        self._refresh_requests = {}  # reqId -> DataPanel（反映後の取り直し。自動計算の結果を最新にする）
         self._owners          = {k: deque() for k in ("sync", "status", "flag", "override")}
         try:
             self.db.clear_windows()
@@ -1365,10 +1410,22 @@ class MainWindow(QMainWindow):
         p.btn_import_excel = QPushButton("Excel取込")
         p.btn_import_excel.setToolTip("編集した .xlsx を読み込み、差分のみ表に反映（Undo 可）")
         p.btn_import_excel.clicked.connect(b(self.import_excel))
+        # Excel 出力の設定（GUID 列の編集不可・非表示）。設定はウィンドウ共通で記憶
+        p.btn_excel_opts = QPushButton("Excel出力設定")
+        p.btn_excel_opts.setToolTip("GUID 列を編集不可にする / 非表示にする（出力時の設定）")
+        opts_menu = QMenu(p.btn_excel_opts)
+        p.act_lock_guid = opts_menu.addAction("GUID列を編集不可にする（シート保護）")
+        p.act_hide_guid = opts_menu.addAction("GUID列を非表示にする")
+        for act, key in ((p.act_lock_guid, EXCEL_LOCK_GUID_KEY), (p.act_hide_guid, EXCEL_HIDE_GUID_KEY)):
+            act.setCheckable(True)
+            act.toggled.connect(lambda on, k=key: self.set_excel_option(k, on))
+        opts_menu.aboutToShow.connect(lambda: self._sync_excel_option_actions(p))
+        self._sync_excel_option_actions(p)
+        p.btn_excel_opts.setMenu(opts_menu)
         trl.addWidget(QLabel("検索:"))
         trl.addWidget(p.search_edit, 1)
         trl.addWidget(p.row_count_label)
-        for w in (p.btn_clear_sort, p.btn_replace, p.btn_export_excel, p.btn_import_excel):
+        for w in (p.btn_clear_sort, p.btn_replace, p.btn_export_excel, p.btn_import_excel, p.btn_excel_opts):
             trl.addWidget(w)
         dp_lay.addWidget(tool_row)
 
@@ -2070,6 +2127,10 @@ class MainWindow(QMainWindow):
         return self._active_panel
 
     def on_values(self, data):
+        refresh_panel = self._refresh_requests.pop(data.get("reqId"), None) if data.get("reqId") else None
+        if refresh_panel is not None:            # 反映後の取り直し
+            self._on_refreshed_values(refresh_panel, data)
+            return
         job = self._schedule_jobs.get(data.get("reqId"))
         if job is not None:                      # 一覧表の取得途中
             self._schedule_values(job, data)
@@ -2122,6 +2183,41 @@ class MainWindow(QMainWindow):
             append_log(f"[DB] values saved: {len(v)} cells")
         except Exception as e:
             append_log(f"[DB ERROR] on_values: {e}")
+
+    def _refresh_after_sync(self, guids):
+        """反映に成功した要素の値を取り直す。入力元を変えると Archicad が W/L/H/レベル 等を
+        再計算するので、その結果（自動計算の列）を表に反映する。"""
+        panel = self.data_panel
+        prop_guids = [p["guid"] for p in self.model._properties]
+        if not (guids and prop_guids):
+            return
+        rid = f"refresh:{panel.window_id}"
+        self._refresh_requests[rid] = panel
+        append_log(f"[REFRESH] request {len(guids)} elements x {len(prop_guids)} props")
+        self.send_to_ac_async({"command": "get_values", "reqId": rid,
+                               "guids": list(guids), "propGuids": prop_guids})
+
+    def _on_refreshed_values(self, panel, data):
+        if panel not in self._panels.values():   # 応答前にウィンドウが閉じられた
+            return
+        self.activate_panel(panel)
+        v, s = {}, {}
+        known = {e["guid"] for e in self.model._elements}
+        for item in data.get("values", []):
+            g = item.get("guid")
+            if g not in known:
+                continue
+            s[g] = item.get("modiStamp", 0)
+            for pg, val in item.get("props", {}).items():
+                v[(g, pg)] = val
+        self.model.merge_values(v, s)
+        self.table.viewport().update()
+        self.status_label.setText(f"反映後の最新値を取得しました（自動計算の列を更新: {len(s)} 要素）")
+        append_log(f"[REFRESH] merged {len(v)} cells / {len(s)} elements")
+        try:
+            self.db.upsert_values(v, s)
+        except Exception as e:
+            append_log(f"[DB ERROR] refresh upsert_values: {e}")
 
     def _apply_enum_delegates(self):
         for col_idx, prop in enumerate(getattr(self, "current_props", [])):
@@ -2333,13 +2429,15 @@ class MainWindow(QMainWindow):
             if prop is None:
                 skipped.append("ID 列は編集できません")
                 continue
-            ok, reason = table_tools.validate_value(prop, value)
+            guid = self.model._elements[row]["guid"]
+            current = str(self.model._values.get((guid, prop["guid"]), ""))
+            ok, reason = table_tools.validate_value(prop, value, current)
             if not ok:
                 skipped.append(reason)
                 continue
-            guid = self.model._elements[row]["guid"]
-            if str(self.model._values.get((guid, prop["guid"]), "")) != str(value):
-                valid.append((row, col, str(value)))
+            value = table_tools.normalize_value(prop, value)   # 入力元: 600mm → 0.600 など
+            if current != value:
+                valid.append((row, col, value))
 
         if valid:
             self.undo_stack.beginMacro(f"{label} ({len(valid)} セル)")
@@ -2677,6 +2775,23 @@ class MainWindow(QMainWindow):
 
     # ── Excel 入出力 ─────────────────────────────────────────────────
 
+    # ── Excel 出力の設定（GUID 列を編集不可 / 非表示。既定はどちらも ON）──────
+
+    def excel_option(self, key):
+        val = self._settings().value(key, True)
+        return val if isinstance(val, bool) else str(val).lower() in ("true", "1")
+
+    def set_excel_option(self, key, on):
+        s = self._settings()
+        s.setValue(key, bool(on))
+        s.sync()
+
+    def _sync_excel_option_actions(self, panel):
+        for act, key in ((panel.act_lock_guid, EXCEL_LOCK_GUID_KEY), (panel.act_hide_guid, EXCEL_HIDE_GUID_KEY)):
+            act.blockSignals(True)
+            act.setChecked(self.excel_option(key))
+            act.blockSignals(False)
+
     # ── Excel 共通（保存先の記憶・エラーの分かりやすい表示）──────────────
 
     def excel_save_path(self, parent, title, default_name):
@@ -2723,8 +2838,10 @@ class MainWindow(QMainWindow):
             rows.append((g, [self.model._values.get((g, p["guid"]), "") for p in props]))
         changed = {k for k, v in self.model._values.items()
                    if str(v) != str(self.model._original_values.get(k))}
+        lock_guid = self.excel_option(EXCEL_LOCK_GUID_KEY)
+        hide_guid = self.excel_option(EXCEL_HIDE_GUID_KEY)
         try:
-            table_tools.export_xlsx(path, props, rows, changed)
+            table_tools.export_xlsx(path, props, rows, changed, lock_guid=lock_guid, hide_guid=hide_guid)
             written = table_tools.count_data_rows(path)   # 書いたファイルを読み直して確認
         except Exception as e:
             append_log(f"[EXCEL EXPORT ERROR] {e}\n{traceback.format_exc()}")
@@ -2736,6 +2853,13 @@ class MainWindow(QMainWindow):
             return
         hidden = len(self.model._elements) - len(rows)
         note = f"（検索・フィルタで非表示の {hidden} 行は出力していません）" if hidden else ""
+        guid_notes = []
+        if lock_guid:
+            guid_notes.append("GUID 列と見出し行は編集不可（シート保護・パスワードなし）")
+        if hide_guid:
+            guid_notes.append("GUID 列は非表示")
+        if guid_notes:
+            note += "\n" + "・".join(guid_notes) + "（［Excel出力設定］で変更できます）"
         self.status_label.setText(f"Excel出力: {len(rows)} 行 × {len(props)} 列 → {path}")
         QMessageBox.information(self.data_panel, "Excel出力",
                                 f"{len(rows)} 行 × {len(props)} 列を書き出しました。{note}\n{path}\n\n"
@@ -2768,12 +2892,16 @@ class MainWindow(QMainWindow):
             if g not in row_of:
                 missing.add(g)
                 continue
-            if table_tools.values_equal(self.model._values.get((g, pg), ""), v):
+            current = self.model._values.get((g, pg), "")
+            if table_tools.values_equal(current, v):
                 continue
             prop = self.model.prop_at(col_of[pg])
-            ok, reason = table_tools.validate_value(prop, v)
+            ok, reason = table_tools.validate_value(prop, v, current)
             if not ok:
                 skipped.append(reason)
+                continue
+            v = table_tools.normalize_value(prop, v)
+            if table_tools.values_equal(current, v):
                 continue
             valid.append((row_of[g], col_of[pg], v))
             per_column[prop.get("name", pg)] = per_column.get(prop.get("name", pg), 0) + 1
@@ -2781,7 +2909,7 @@ class MainWindow(QMainWindow):
         notes = []
         if skipped:
             uniq = list(dict.fromkeys(skipped))
-            notes.append(f"取り込めないセル: {len(skipped)}（編集不可・候補外）\n  " + "\n  ".join(uniq[:8])
+            notes.append(f"取り込めないセル: {len(skipped)}（編集不可・候補外・対象外・値の形式）\n  " + "\n  ".join(uniq[:8])
                          + (f"\n  … 他 {len(uniq) - 8} 種類" if len(uniq) > 8 else ""))
         if missing:
             notes.append(f"表に無い要素: {len(missing)} 行（無視します）")
@@ -3249,6 +3377,7 @@ class MainWindow(QMainWindow):
 
             results = data.get("results", [])
             sc, cc, ec, stamp_stale_cnt, details = 0, 0, 0, 0, []
+            ok_guids = []
             self.model._conflicts.clear()
 
             for res in results:
@@ -3261,6 +3390,9 @@ class MainWindow(QMainWindow):
 
                 if s == "success":
                     sc += 1
+                    ok_guids.append(g)
+                    if r:   # 一部の入力元が対象外などで反映されなかった
+                        details.append(f"{g[:8]}: {r}")
                     for pg in [p["guid"] for p in self.model._properties]:
                         if (g, pg) in self.model._values:
                             self.model._original_values[(g, pg)] = self.model._values[(g, pg)]
@@ -3291,6 +3423,8 @@ class MainWindow(QMainWindow):
                         details.append(f"{g[:8]}: ERROR ({r})")
 
             self.model.refresh_view()
+            # 反映した要素の値を取り直し、自動計算（W/L/H/レベル・式のプロパティ等）を最新にする
+            self._refresh_after_sync(ok_guids)
 
             py_skip     = self._pending_skip_count
             self._pending_skip_count = 0
@@ -3302,7 +3436,7 @@ class MainWindow(QMainWindow):
             has_issue = ec > 0 or cc > 0 or py_skip > 0
 
             if not has_issue:
-                QMessageBox.information(self, "同期完了", msg)
+                QMessageBox.information(self, "同期完了", f"{msg}\n\n{d_txt}" if d_txt else msg)
             elif ec == 0:
                 QMessageBox.warning(self, "一部競合/スキップ", f"{msg}\n\n{d_txt}" if d_txt else msg)
             else:

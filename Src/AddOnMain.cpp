@@ -401,6 +401,234 @@ void ProcessOneCommand() {
     }
 }
 
+// ─── 入力元（自動計算 W / L / H / レベル の元になる、編集できる値） ─────────────
+// キーは全要素タイプ共通（elem:in:*）。その要素タイプに無い入力は "(対象外)"。
+// 長さ系はメートル、上部リンクは「何階上か」（0 = リンクなし）。
+static const char* kNotApplicable = "(対象外)";
+
+static bool IsInputKey(const std::string& k) { return k.compare(0, 8, "elem:in:") == 0; }
+
+static std::string FmtInput(double v) {
+    char buf[48]; snprintf(buf, sizeof(buf), "%.3f", v); return std::string(buf);
+}
+
+// 直線の壁・梁だけ長さを入力できる（円弧・ポリゴン壁は対象外）
+static bool IsStraightLinear(const API_Element& el) {
+    if (el.header.type.typeID == API_WallID) return el.wall.type != APIWtyp_Poly && std::abs(el.wall.angle) < 1e-9;
+    if (el.header.type.typeID == API_BeamID) return std::abs(el.beam.curveAngle) < 1e-9;
+    return false;
+}
+
+// オブジェクトの高さ（GDL の ZZYZX）。無ければ -1
+static Int32 FindAddPar(const API_ElementMemo& memo, const char* name) {
+    if (memo.params == nullptr) return -1;
+    const Int32 n = (Int32)(BMGetHandleSize(reinterpret_cast<GSHandle>(memo.params)) / sizeof(API_AddParType));
+    for (Int32 k = 0; k < n; k++)
+        if (CHEqualCStrings((*memo.params)[k].name, name)) return k;
+    return -1;
+}
+
+// 要素の入力元を一括取得（その要素タイプに無いキーは含めない）
+static std::map<std::string, std::string> GetInputValues(const API_Element& el) {
+    std::map<std::string, std::string> v;
+    API_ElementMemo memo; BNZeroMemory(&memo, sizeof(memo));
+    auto len2 = [](const API_Coord& a, const API_Coord& b) { return std::hypot(b.x - a.x, b.y - a.y); };
+    switch (el.header.type.typeID) {
+        case API_WallID:
+            v["elem:in:width"]      = FmtInput(el.wall.thickness);
+            v["elem:in:height"]     = FmtInput(el.wall.height);
+            if (IsStraightLinear(el)) v["elem:in:length"] = FmtInput(len2(el.wall.begC, el.wall.endC));
+            v["elem:in:baseOffset"] = FmtInput(el.wall.bottomOffset);
+            v["elem:in:topLink"]    = std::to_string((int)el.wall.relativeTopStory);
+            v["elem:in:topOffset"]  = FmtInput(el.wall.topOffset);
+            break;
+        case API_ColumnID:
+            if (ACAPI_Element_GetMemo(el.header.guid, &memo, APIMemoMask_ColumnSegment) == NoError && memo.columnSegments != nullptr) {
+                v["elem:in:width"] = FmtInput(memo.columnSegments[0].assemblySegmentData.nominalWidth);
+                v["elem:in:depth"] = FmtInput(memo.columnSegments[0].assemblySegmentData.nominalHeight);
+            }
+            v["elem:in:height"]     = FmtInput(el.column.height);
+            v["elem:in:baseOffset"] = FmtInput(el.column.bottomOffset);
+            v["elem:in:topLink"]    = std::to_string((int)el.column.relativeTopStory);
+            v["elem:in:topOffset"]  = FmtInput(el.column.topOffset);
+            break;
+        case API_BeamID:
+            if (ACAPI_Element_GetMemo(el.header.guid, &memo, APIMemoMask_BeamSegment) == NoError && memo.beamSegments != nullptr) {
+                v["elem:in:width"]  = FmtInput(memo.beamSegments[0].assemblySegmentData.nominalWidth);
+                v["elem:in:height"] = FmtInput(memo.beamSegments[0].assemblySegmentData.nominalHeight);
+            }
+            if (IsStraightLinear(el)) v["elem:in:length"] = FmtInput(len2(el.beam.begC, el.beam.endC));
+            v["elem:in:baseOffset"] = FmtInput(el.beam.level);
+            break;
+        case API_SlabID:
+            v["elem:in:height"]     = FmtInput(el.slab.thickness);
+            v["elem:in:baseOffset"] = FmtInput(el.slab.level);
+            break;
+        case API_RoofID:
+            v["elem:in:height"]     = FmtInput(el.roof.shellBase.thickness);
+            v["elem:in:baseOffset"] = FmtInput(el.roof.shellBase.level);
+            break;
+        case API_ShellID:
+            v["elem:in:height"]     = FmtInput(el.shell.shellBase.thickness);
+            v["elem:in:baseOffset"] = FmtInput(el.shell.shellBase.level);
+            break;
+        case API_WindowID:
+            v["elem:in:width"]  = FmtInput(el.window.openingBase.width);
+            v["elem:in:height"] = FmtInput(el.window.openingBase.height);
+            v["elem:in:sill"]   = FmtInput(el.window.lower);
+            break;
+        case API_DoorID:
+            v["elem:in:width"]  = FmtInput(el.door.openingBase.width);
+            v["elem:in:height"] = FmtInput(el.door.openingBase.height);
+            v["elem:in:sill"]   = FmtInput(el.door.lower);
+            break;
+        case API_ObjectID:
+            v["elem:in:width"]      = FmtInput(el.object.xRatio);
+            v["elem:in:depth"]      = FmtInput(el.object.yRatio);
+            v["elem:in:baseOffset"] = FmtInput(el.object.level);
+            if (ACAPI_Element_GetMemo(el.header.guid, &memo, APIMemoMask_AddPars) == NoError) {
+                const Int32 k = FindAddPar(memo, "ZZYZX");
+                if (k >= 0) v["elem:in:height"] = FmtInput((*memo.params)[k].value.real);
+            }
+            break;
+        case API_ZoneID:
+            v["elem:in:height"]     = FmtInput(el.zone.roomHeight);
+            v["elem:in:baseOffset"] = FmtInput(el.zone.roomBaseLev);
+            v["elem:in:topLink"]    = std::to_string((int)el.zone.relativeTopStory);
+            v["elem:in:topOffset"]  = FmtInput(el.zone.roomTopOffset);
+            break;
+        case API_MorphID: v["elem:in:baseOffset"] = FmtInput(el.morph.level); break;
+        case API_MeshID:  v["elem:in:baseOffset"] = FmtInput(el.mesh.level);  break;
+        default: break;
+    }
+    ACAPI_DisposeElemMemoHdls(&memo);
+    return v;
+}
+
+// 入力元の変更を要素（と必要ならメモ）に反映する。
+// 戻り値: 反映できなかった項目の説明（空なら全部反映）
+static std::string ApplyInputChanges(const API_Guid& eg, API_Element& el, API_Element& mask, bool& elementChanged,
+                                     const std::vector<std::pair<std::string, std::string>>& reqs,
+                                     API_ElementMemo& memo, UInt64& memoMask) {
+    std::string notApplied;
+    std::map<std::string, double> num;
+    for (const auto& r : reqs) {
+        if (!IsValidNumber(r.second)) { notApplied += r.first + "(数値でない) "; continue; }
+        num[r.first] = std::stod(r.second);
+    }
+    auto has = [&](const char* k) { return num.count(k) > 0; };
+    const API_ElemTypeID t = el.header.type.typeID;
+    std::map<std::string, bool> used;
+    auto use = [&](const char* k) { used[k] = true; elementChanged = true; };
+    auto ensureMemo = [&](UInt64 m) -> bool {
+        if (memoMask & m) return true;
+        if (memoMask != 0) return false;   // 別のメモを保持中（要素タイプが違うので通常は起きない）
+        if (ACAPI_Element_GetMemo(eg, &memo, m) != NoError) return false;
+        memoMask |= m;
+        return true;
+    };
+    // 長さ: 始点はそのまま、終点を同じ方向に動かす
+    auto setLength = [&](API_Coord& beg, API_Coord& end, double L) -> bool {
+        const double cur = std::hypot(end.x - beg.x, end.y - beg.y);
+        if (cur < 1e-9 || L <= 0) return false;
+        end.x = beg.x + (end.x - beg.x) * L / cur;
+        end.y = beg.y + (end.y - beg.y) * L / cur;
+        return true;
+    };
+    // 上部リンク中に高さを入力したら、リンクを外して入力した高さにする（Archicad の画面と同じ考え方）
+    const bool unlinkForHeight = has("elem:in:height") && !has("elem:in:topLink");
+
+    switch (t) {
+        case API_WallID:
+            if (has("elem:in:width"))      { el.wall.thickness = num["elem:in:width"]; ACAPI_ELEMENT_MASK_SET(mask, API_WallType, thickness); use("elem:in:width"); }
+            if (has("elem:in:height"))     { el.wall.height = num["elem:in:height"]; ACAPI_ELEMENT_MASK_SET(mask, API_WallType, height); use("elem:in:height");
+                                             if (unlinkForHeight && el.wall.relativeTopStory != 0) { el.wall.relativeTopStory = 0; ACAPI_ELEMENT_MASK_SET(mask, API_WallType, relativeTopStory); } }
+            if (has("elem:in:length") && IsStraightLinear(el) && setLength(el.wall.begC, el.wall.endC, num["elem:in:length"])) {
+                ACAPI_ELEMENT_MASK_SET(mask, API_WallType, endC); use("elem:in:length"); }
+            if (has("elem:in:baseOffset")) { el.wall.bottomOffset = num["elem:in:baseOffset"]; ACAPI_ELEMENT_MASK_SET(mask, API_WallType, bottomOffset); use("elem:in:baseOffset"); }
+            if (has("elem:in:topLink") && num["elem:in:topLink"] >= 0) { el.wall.relativeTopStory = (short)num["elem:in:topLink"]; ACAPI_ELEMENT_MASK_SET(mask, API_WallType, relativeTopStory); use("elem:in:topLink"); }
+            if (has("elem:in:topOffset"))  { el.wall.topOffset = num["elem:in:topOffset"]; ACAPI_ELEMENT_MASK_SET(mask, API_WallType, topOffset); use("elem:in:topOffset"); }
+            break;
+        case API_ColumnID:
+            if ((has("elem:in:width") || has("elem:in:depth")) && ensureMemo(APIMemoMask_ColumnSegment) && memo.columnSegments != nullptr) {
+                // 全セグメントの断面寸法をそろえて変更
+                for (UInt32 s = 0; s < std::max<UInt32>(1, el.column.nSegments); s++) {
+                    if (has("elem:in:width")) memo.columnSegments[s].assemblySegmentData.nominalWidth  = num["elem:in:width"];
+                    if (has("elem:in:depth")) memo.columnSegments[s].assemblySegmentData.nominalHeight = num["elem:in:depth"];
+                }
+                if (has("elem:in:width")) used["elem:in:width"] = true;
+                if (has("elem:in:depth")) used["elem:in:depth"] = true;
+            }
+            if (has("elem:in:height"))     { el.column.height = num["elem:in:height"]; ACAPI_ELEMENT_MASK_SET(mask, API_ColumnType, height); use("elem:in:height");
+                                             if (unlinkForHeight && el.column.relativeTopStory != 0) { el.column.relativeTopStory = 0; ACAPI_ELEMENT_MASK_SET(mask, API_ColumnType, relativeTopStory); } }
+            if (has("elem:in:baseOffset")) { el.column.bottomOffset = num["elem:in:baseOffset"]; ACAPI_ELEMENT_MASK_SET(mask, API_ColumnType, bottomOffset); use("elem:in:baseOffset"); }
+            if (has("elem:in:topLink") && num["elem:in:topLink"] >= 0) { el.column.relativeTopStory = (short)num["elem:in:topLink"]; ACAPI_ELEMENT_MASK_SET(mask, API_ColumnType, relativeTopStory); use("elem:in:topLink"); }
+            if (has("elem:in:topOffset"))  { el.column.topOffset = num["elem:in:topOffset"]; ACAPI_ELEMENT_MASK_SET(mask, API_ColumnType, topOffset); use("elem:in:topOffset"); }
+            break;
+        case API_BeamID:
+            if ((has("elem:in:width") || has("elem:in:height")) && ensureMemo(APIMemoMask_BeamSegment) && memo.beamSegments != nullptr) {
+                for (UInt32 s = 0; s < std::max<UInt32>(1, el.beam.nSegments); s++) {
+                    if (has("elem:in:width"))  memo.beamSegments[s].assemblySegmentData.nominalWidth  = num["elem:in:width"];
+                    if (has("elem:in:height")) memo.beamSegments[s].assemblySegmentData.nominalHeight = num["elem:in:height"];
+                }
+                if (has("elem:in:width"))  used["elem:in:width"] = true;
+                if (has("elem:in:height")) used["elem:in:height"] = true;
+            }
+            if (has("elem:in:length") && IsStraightLinear(el) && setLength(el.beam.begC, el.beam.endC, num["elem:in:length"])) {
+                ACAPI_ELEMENT_MASK_SET(mask, API_BeamType, endC); use("elem:in:length"); }
+            if (has("elem:in:baseOffset")) { el.beam.level = num["elem:in:baseOffset"]; ACAPI_ELEMENT_MASK_SET(mask, API_BeamType, level); use("elem:in:baseOffset"); }
+            break;
+        case API_SlabID:
+            if (has("elem:in:height"))     { el.slab.thickness = num["elem:in:height"]; ACAPI_ELEMENT_MASK_SET(mask, API_SlabType, thickness); use("elem:in:height"); }
+            if (has("elem:in:baseOffset")) { el.slab.level = num["elem:in:baseOffset"]; ACAPI_ELEMENT_MASK_SET(mask, API_SlabType, level); use("elem:in:baseOffset"); }
+            break;
+        case API_RoofID:
+            if (has("elem:in:height"))     { el.roof.shellBase.thickness = num["elem:in:height"]; ACAPI_ELEMENT_MASK_SET(mask, API_RoofType, shellBase.thickness); use("elem:in:height"); }
+            if (has("elem:in:baseOffset")) { el.roof.shellBase.level = num["elem:in:baseOffset"]; ACAPI_ELEMENT_MASK_SET(mask, API_RoofType, shellBase.level); use("elem:in:baseOffset"); }
+            break;
+        case API_ShellID:
+            if (has("elem:in:height"))     { el.shell.shellBase.thickness = num["elem:in:height"]; ACAPI_ELEMENT_MASK_SET(mask, API_ShellType, shellBase.thickness); use("elem:in:height"); }
+            if (has("elem:in:baseOffset")) { el.shell.shellBase.level = num["elem:in:baseOffset"]; ACAPI_ELEMENT_MASK_SET(mask, API_ShellType, shellBase.level); use("elem:in:baseOffset"); }
+            break;
+        case API_WindowID:
+            if (has("elem:in:width"))  { el.window.openingBase.width = num["elem:in:width"]; ACAPI_ELEMENT_MASK_SET(mask, API_WindowType, openingBase.width); use("elem:in:width"); }
+            if (has("elem:in:height")) { el.window.openingBase.height = num["elem:in:height"]; ACAPI_ELEMENT_MASK_SET(mask, API_WindowType, openingBase.height); use("elem:in:height"); }
+            if (has("elem:in:sill"))   { el.window.lower = num["elem:in:sill"]; ACAPI_ELEMENT_MASK_SET(mask, API_WindowType, lower); use("elem:in:sill"); }
+            break;
+        case API_DoorID:
+            if (has("elem:in:width"))  { el.door.openingBase.width = num["elem:in:width"]; ACAPI_ELEMENT_MASK_SET(mask, API_DoorType, openingBase.width); use("elem:in:width"); }
+            if (has("elem:in:height")) { el.door.openingBase.height = num["elem:in:height"]; ACAPI_ELEMENT_MASK_SET(mask, API_DoorType, openingBase.height); use("elem:in:height"); }
+            if (has("elem:in:sill"))   { el.door.lower = num["elem:in:sill"]; ACAPI_ELEMENT_MASK_SET(mask, API_DoorType, lower); use("elem:in:sill"); }
+            break;
+        case API_ObjectID:
+            if (has("elem:in:width"))      { el.object.xRatio = num["elem:in:width"]; ACAPI_ELEMENT_MASK_SET(mask, API_ObjectType, xRatio); use("elem:in:width"); }
+            if (has("elem:in:depth"))      { el.object.yRatio = num["elem:in:depth"]; ACAPI_ELEMENT_MASK_SET(mask, API_ObjectType, yRatio); use("elem:in:depth"); }
+            if (has("elem:in:baseOffset")) { el.object.level = num["elem:in:baseOffset"]; ACAPI_ELEMENT_MASK_SET(mask, API_ObjectType, level); use("elem:in:baseOffset"); }
+            if (has("elem:in:height") && ensureMemo(APIMemoMask_AddPars)) {
+                const Int32 k = FindAddPar(memo, "ZZYZX");
+                if (k >= 0) { (*memo.params)[k].value.real = num["elem:in:height"]; used["elem:in:height"] = true; }
+            }
+            break;
+        case API_ZoneID:
+            if (has("elem:in:height"))     { el.zone.roomHeight = num["elem:in:height"]; ACAPI_ELEMENT_MASK_SET(mask, API_ZoneType, roomHeight); use("elem:in:height");
+                                             if (unlinkForHeight && el.zone.relativeTopStory != 0) { el.zone.relativeTopStory = 0; ACAPI_ELEMENT_MASK_SET(mask, API_ZoneType, relativeTopStory); } }
+            if (has("elem:in:baseOffset")) { el.zone.roomBaseLev = num["elem:in:baseOffset"]; ACAPI_ELEMENT_MASK_SET(mask, API_ZoneType, roomBaseLev); use("elem:in:baseOffset"); }
+            if (has("elem:in:topLink") && num["elem:in:topLink"] >= 0) { el.zone.relativeTopStory = (short)num["elem:in:topLink"]; ACAPI_ELEMENT_MASK_SET(mask, API_ZoneType, relativeTopStory); use("elem:in:topLink"); }
+            if (has("elem:in:topOffset"))  { el.zone.roomTopOffset = num["elem:in:topOffset"]; ACAPI_ELEMENT_MASK_SET(mask, API_ZoneType, roomTopOffset); use("elem:in:topOffset"); }
+            break;
+        case API_MorphID:
+            if (has("elem:in:baseOffset")) { el.morph.level = num["elem:in:baseOffset"]; ACAPI_ELEMENT_MASK_SET(mask, API_MorphType, level); use("elem:in:baseOffset"); }
+            break;
+        case API_MeshID:
+            if (has("elem:in:baseOffset")) { el.mesh.level = num["elem:in:baseOffset"]; ACAPI_ELEMENT_MASK_SET(mask, API_MeshType, level); use("elem:in:baseOffset"); }
+            break;
+        default: break;
+    }
+    for (const auto& kv : num)
+        if (!used.count(kv.first)) notApplied += kv.first + "(この要素では対象外) ";
+    return notApplied;
+}
+
 enum class ConflictPolicy { AbortAll, SkipConflicts, ForceOverwrite };
 struct ElementSyncResult { std::string guid; std::string status; std::string reason; UInt32 currentStamp = 0; };
 
@@ -425,7 +653,7 @@ static ElementSyncResult ApplyElementChanges_Internal(const std::string& guidStr
         }
     }
     API_Element updateElem = element; API_Element mask = {}; ACAPI_ELEMENT_MASK_CLEAR(mask); bool elementChanged = false;
-    std::vector<std::pair<std::string,std::string>> colMemoReqs, beamMemoReqs;
+    std::vector<std::pair<std::string,std::string>> colMemoReqs, beamMemoReqs, inputReqs;
     GS::Array<API_PropertyDefinition> propDefsToUpdate; GS::HashTable<API_Guid, ChangeData> propValueMap;
     GS::Array<API_Guid> classItemsToAdd; bool hasElementIdChange = false; GS::UniString newElementId;
     API_RenovationStatusType newRenovationStatus = API_DefaultStatus;
@@ -442,6 +670,7 @@ static ElementSyncResult ApplyElementChanges_Internal(const std::string& guidStr
         if (data.propId.size() > 5 && data.propId.substr(0, 5) == "elem:") {
             const std::string& key = data.propId;
             const std::string& val = data.value;
+            if (IsInputKey(key)) { inputReqs.emplace_back(key, val); continue; }
             switch (updateElem.header.type.typeID) {
                 case API_WallID:
                     if (key == "elem:height" && IsValidNumber(val)) { updateElem.wall.height = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_WallType, height); elementChanged = true; }
@@ -523,6 +752,10 @@ static ElementSyncResult ApplyElementChanges_Internal(const std::string& guidStr
             }
         }
     }
+    std::string inputNotApplied;
+    if (!inputReqs.empty())
+        inputNotApplied = ApplyInputChanges(eg, updateElem, mask, elementChanged, inputReqs, pendingMemo, pendingMemoMask);
+    if (!inputNotApplied.empty()) WriteExternalLog("APPLY INPUT not applied: " + inputNotApplied);
     bool anyApplied = false, opError = false;
     {
         API_ElementMemo* memoPtr = (pendingMemoMask != 0) ? &pendingMemo : nullptr;
@@ -618,7 +851,8 @@ static ElementSyncResult ApplyElementChanges_Internal(const std::string& guidStr
         }
     }
     if (opError) { res.status = "error"; res.reason = "API error"; }
-    else if (!anyApplied) { res.status = "skipped"; res.reason = "No changes"; }
+    else if (!anyApplied) { res.status = "skipped"; res.reason = inputNotApplied.empty() ? "No changes" : "未反映: " + inputNotApplied; }
+    else if (!inputNotApplied.empty()) res.reason = "一部未反映: " + inputNotApplied;
     ACAPI_Element_GetHeader(&element.header); res.currentStamp = (UInt32)element.header.modiStamp; return res;
 }
 
@@ -1510,6 +1744,22 @@ static void AppendElemParamDefs(GS::UniString& out, const API_Element& elem) {
     addInfo("elem:elevation",      "レベル 底面 (m)",   2);
     addInfo("elem:story",          "フロア",            3);
     addInfo("elem:classification", "分類",              3);
+    // 入力元（上の自動計算の元になる値）。全要素タイプ共通の列で、無いタイプのセルは "(対象外)"
+    auto addInput = [&](const char* key, const char* name, int vt, const char* unit) {
+        out.Append(",{\"guid\":\""); out.Append(GS::UniString(key, CC_UTF8));
+        out.Append("\",\"name\":\""); out.Append(GS::UniString(name, CC_UTF8));
+        out.Append("\",\"group\":\""); out.Append(GS::UniString(grp, CC_UTF8));
+        out.Append("\",\"editable\":true,\"valueType\":"); out.Append(GS::UniString::Printf("%d", vt));
+        out.Append(",\"collectionType\":0,\"simple\":true,\"input\":true,\"unit\":\""); out.Append(unit); out.Append("\"}");
+    };
+    addInput("elem:in:width",      "入力 幅・厚さ (m)",              2, "m");
+    addInput("elem:in:depth",      "入力 奥行・断面せい (m)",        2, "m");
+    addInput("elem:in:height",     "入力 高さ・厚さ・梁成 (m)",      2, "m");
+    addInput("elem:in:length",     "入力 長さ (m)",                  2, "m");
+    addInput("elem:in:baseOffset", "入力 底面レベル フロアから (m)", 2, "m");
+    addInput("elem:in:topLink",    "入力 上部リンク (階数上 0=なし)", 1, "story");
+    addInput("elem:in:topOffset",  "入力 上部オフセット (m)",        2, "m");
+    addInput("elem:in:sill",       "入力 窓台・下端高さ (m)",        2, "m");
     grp = "要素設定パラメータ";
     auto addP = [&](const char* key, const char* name, int vt, bool editable, bool isBool = false) {
         out.Append(",{\"guid\":\""); out.Append(GS::UniString(key, CC_UTF8));
@@ -1757,9 +2007,14 @@ void ExportValues(const std::string& json) {
             API_Element el = {}; BNZeroMemory(&el, sizeof(API_Element)); el.header.guid = guids[i];
             if (ACAPI_Element_Get(&el) == NoError) {
                 SimpleDims dims; bool dimsDone = false;   // 基本情報は要素ごとに 1 回だけ計算
+                std::map<std::string, std::string> inputs; bool inputsDone = false;
                 for (const auto& k : elemKeys) {
                     std::string val;
-                    if (IsSimpleInfoKey(k)) {
+                    if (IsInputKey(k)) {
+                        if (!inputsDone) { inputs = GetInputValues(el); inputsDone = true; }
+                        auto it = inputs.find(k);
+                        val = (it != inputs.end()) ? it->second : std::string(kNotApplicable);
+                    } else if (IsSimpleInfoKey(k)) {
                         if (!dimsDone) { dims = CalcSimpleDims(el); dimsDone = true; }
                         if (storyNames.empty()) storyNames = GetStoryNameMap();
                         val = GetSimpleInfoValue(el, dims, k, storyNames);

@@ -237,3 +237,58 @@ def test_site_export_locked_and_unverified(main_window, monkeypatch, tmp_path):
     monkeypatch.setattr(table_tools, "export_sheets", lambda *a: (_ for _ in ()).throw(PermissionError("x")))
     dlg.export_excel()
     assert "閉じてから" in w.msgbox.calls[-1][2]
+
+
+# ── Excel 出力設定: GUID 列を編集不可 / 非表示 ──────────────────────
+
+def test_export_locks_and_hides_guid_by_default(win, monkeypatch, tmp_path):
+    path = tmp_path / "g.xlsx"
+    _save_to(monkeypatch, path)
+    win.export_excel()
+    ws = load_workbook(path)[table_tools.DATA_SHEET]
+    assert ws.column_dimensions["A"].hidden is True                  # GUID 列は非表示
+    assert ws.protection.sheet is True                               # シート保護
+    assert ws["A2"].protection.locked is True and ws["A1"].protection.locked is True   # GUID・見出しは編集不可
+    assert ws["B2"].protection.locked is False and ws["C3"].protection.locked is False  # 値は編集できる
+    assert ws.protection.autoFilter is False                         # 保護中もフィルターは使える
+    assert ws.protection.password is None                            # パスワードなし（必要なら解除できる）
+    text = win.msgbox.calls[-1][2]
+    assert "GUID 列と見出し行は編集不可" in text and "GUID 列は非表示" in text
+
+    # 非表示・保護のまま値を編集して取り込める
+    wb = load_workbook(path); wb[table_tools.DATA_SHEET]["B2"] = 175; wb.save(path)
+    _open(monkeypatch, path)
+    win.import_excel()
+    assert win.model._values[(G[0], "P-W")] == "175"
+
+
+def test_export_options_can_be_turned_off_and_are_remembered(win, monkeypatch, tmp_path):
+    p = win.data_panel
+    assert p.act_lock_guid.isChecked() and p.act_hide_guid.isChecked()   # 既定は ON
+    p.act_lock_guid.setChecked(False)
+    p.act_hide_guid.setChecked(False)
+    assert win.excel_option(server.EXCEL_LOCK_GUID_KEY) is False
+    path = tmp_path / "plain.xlsx"
+    _save_to(monkeypatch, path)
+    win.export_excel()
+    ws = load_workbook(path)[table_tools.DATA_SHEET]
+    assert ws.column_dimensions["A"].hidden is False and ws.protection.sheet is False
+    text = win.msgbox.calls[-1][2]
+    assert "編集不可（シート保護" not in text and "GUID 列は非表示" not in text   # 設定 OFF なら注記も出ない
+
+    other = win._create_data_panel()                                 # 別のウィンドウも同じ設定
+    assert not other.act_lock_guid.isChecked() and not other.act_hide_guid.isChecked()
+    p.act_hide_guid.setChecked(True)
+    other.btn_excel_opts.menu().aboutToShow.emit()                   # メニューを開くと最新の設定を反映
+    assert other.act_hide_guid.isChecked()
+
+
+def test_table_tools_export_options(tmp_path):
+    props = [{"guid": "P", "name": "幅"}]
+    path = tmp_path / "t.xlsx"
+    table_tools.export_xlsx(path, props, [("G1", ["1"])], lock_guid=True, hide_guid=False)
+    ws = load_workbook(path)[table_tools.DATA_SHEET]
+    assert ws.protection.sheet and not ws.column_dimensions["A"].hidden
+    table_tools.export_xlsx(path, props, [("G1", ["1"])])            # 既定（関数としては OFF）
+    ws = load_workbook(path)[table_tools.DATA_SHEET]
+    assert not ws.protection.sheet and ws["B2"].protection.locked is True

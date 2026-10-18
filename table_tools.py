@@ -9,7 +9,7 @@ import io
 import re
 
 from openpyxl import Workbook, load_workbook
-from openpyxl.styles import Font, PatternFill
+from openpyxl.styles import Font, PatternFill, Protection
 from openpyxl.utils import get_column_letter
 
 # Excel 上の構成: 1 列目 = 要素 GUID、2 列目以降 = プロパティ。
@@ -21,6 +21,7 @@ GUID_HEADER  = "GUID"
 CHANGED_FILL = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
 CHANGED_FONT = Font(color="9C0006", bold=True)
 HEADER_FONT  = Font(bold=True)
+UNLOCKED     = Protection(locked=False)
 
 _NUMBER_RE = re.compile(r"^-?(0|[1-9]\d*)(\.\d+)?$")
 
@@ -57,19 +58,60 @@ def is_editable(prop):
     return bool(prop.get("editable", True))
 
 
-def validate_value(prop, value):
+# 入力元の列で、その要素タイプには無い項目のセル（Archicad 側が返す目印）
+NOT_APPLICABLE = "(対象外)"
+
+_LENGTH_RE = re.compile(r"^([-+]?(?:\d+(?:\.\d*)?|\.\d+))\s*(mm|cm|m)?$", re.IGNORECASE)
+_UNIT_SCALE = {"": 1.0, "m": 1.0, "cm": 0.01, "mm": 0.001}
+
+
+def normalize_value(prop, value):
+    """入力元の列（unit を持つ定義）の入力を Archicad に送る形にそろえる。
+
+    - unit="m":     "600mm" / "60cm" / "0.6m" / "0.6" → "0.600"（単位なしはメートル）
+    - unit="story": 0 以上の整数（上部リンク: 何階上か、0 = リンクなし）
+    それ以外の列は文字列をそのまま返す。解釈できない値は ValueError。
+    """
+    s = "" if value is None else str(value).strip()
+    unit = prop.get("unit")
+    if unit == "m":
+        m = _LENGTH_RE.match(s.replace(",", ""))
+        if not m:
+            raise ValueError(f"「{s}」は長さとして解釈できません（例: 0.6 / 600mm）")
+        return f"{float(m.group(1)) * _UNIT_SCALE[(m.group(2) or '').lower()]:.3f}"
+    if unit == "story":
+        try:
+            f = float(s)
+        except ValueError:
+            raise ValueError(f"「{s}」は階数として解釈できません（0 = リンクなし）") from None
+        if f < 0 or not f.is_integer():
+            raise ValueError(f"「{s}」: 上部リンクは 0 以上の整数です（0 = リンクなし）")
+        return str(int(f))
+    return "" if value is None else str(value)
+
+
+def validate_value(prop, value, current=None):
     """プロパティ定義に照らして値を検証する。(ok, 理由) を返す。
 
     - editable=False のプロパティは変更不可
+    - 現在値が "(対象外)" のセル（その要素タイプに無い入力元）は変更不可
     - 列挙値 (enums) を持つプロパティは候補にある値のみ許可
-    数値型などの詳細な型検証は ArchiCAD 側 (BuildChangedProperties) が行う。
+    - 入力元（unit あり）は長さ・階数として解釈できる値のみ許可
+    その他の型検証は ArchiCAD 側 (BuildChangedProperties) が行う。
     """
     name = prop.get("name", prop.get("guid", ""))
     if not is_editable(prop):
         return False, f"{name}: 編集不可のプロパティ"
+    if current is not None and str(current) == NOT_APPLICABLE:
+        return False, f"{name}: この要素タイプには無い項目（対象外）"
     enums = prop.get("enums") or []
     if enums and str(value) not in enums:
         return False, f"{name}: 「{value}」は候補にありません"
+    if prop.get("unit"):
+        try:
+            normalize_value(prop, value)
+        except ValueError as e:
+            return False, f"{name}: {e}"
     return True, ""
 
 
@@ -148,12 +190,14 @@ def _from_excel_cell(value):
     return str(value)
 
 
-def export_xlsx(path, props, rows, changed=frozenset()):
+def export_xlsx(path, props, rows, changed=frozenset(), lock_guid=False, hide_guid=False):
     """テーブルを .xlsx に書き出す。
 
-    props:   [{"guid", "name", ...}]（列順）
-    rows:    [(element_guid, [値, ...])]（表示順）
-    changed: {(element_guid, prop_guid)} — 赤塗りするセル（未反映の変更）
+    props:     [{"guid", "name", ...}]（列順）
+    rows:      [(element_guid, [値, ...])]（表示順）
+    changed:   {(element_guid, prop_guid)} — 赤塗りするセル（未反映の変更）
+    lock_guid: GUID 列と見出し行を編集不可にする（シート保護。値のセルは編集可のまま、パスワードなし）
+    hide_guid: GUID 列を非表示にする（取込時は非表示のままでも照合に使う）
     """
     wb = Workbook()
     ws = wb.active
@@ -174,6 +218,22 @@ def export_xlsx(path, props, rows, changed=frozenset()):
     ws.column_dimensions["A"].width = 40
     for ci, p in enumerate(props):
         ws.column_dimensions[get_column_letter(ci + 2)].width = max(10, min(40, len(p.get("name", "")) * 2 + 4))
+    if hide_guid:
+        ws.column_dimensions["A"].hidden = True
+        ws.freeze_panes = "B2"
+    if lock_guid:
+        # 値のセルだけロック解除し、シートを保護 → GUID 列と見出し行だけが編集不可になる
+        for row in ws.iter_rows(min_row=2, min_col=2, max_col=len(props) + 1):
+            for cell in row:
+                cell.protection = UNLOCKED
+        prot = ws.protection
+        prot.sheet = True
+        # 保護中でもフィルター・列幅/書式の変更・行の挿入は許可（False = 許可）
+        prot.autoFilter = False
+        prot.formatColumns = False
+        prot.formatRows = False
+        prot.formatCells = False
+        prot.sort = False
 
     meta = wb.create_sheet(PROPS_SHEET)
     meta.append(["column", "property_guid", "name"])
