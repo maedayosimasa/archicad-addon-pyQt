@@ -303,3 +303,11 @@ def test_diff_dialog_empty(qapp):
     dlg = server.DiffDialog([])
     assert dlg._tbl.rowCount() == 1
     assert dlg._tbl.item(0, 0).text() == "編集履歴はありません。"
+
+
+def test_handle_client_routes_site_summary(qapp):
+    spy = SignalSpy()
+    sig = []
+    spy.signals.site_summary_received.connect(sig.append)
+    _deliver(spy, _lines({"type": "site_summary", "elements": [], "projectInfo": []}))
+    assert sig and sig[0]["type"] == "site_summary"

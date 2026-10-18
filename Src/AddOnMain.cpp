@@ -128,6 +128,7 @@ void ProcessOneCommand();
 void ExecuteBatch(const CommandBatch& batch);
 void DoSearch(const std::string& json);
 void ExportDefs(const std::string& json);
+void ExportSiteSummary();
 void ExportValues(const std::string& json);
 void MarkChangeFlags(const std::string& json, bool isClear);
 void SetChangeStatus(const std::string& json);
@@ -137,6 +138,9 @@ GSErrCode EventLoopCommandHandler(GSHandle params, GSPtr resultData, bool silent
 void StartPythonServer();
 void EnqueueProjectConfiguration();
 static void LogLoadedAddOnBinary();
+// 敷地マネージャー（SiteManager.apx）が配置する GDL オブジェクトの一覧（定義は後方）
+static GS::Array<API_Guid> GetSiteManagerElements();
+static const char* const kSiteManagerTypeKey = "SiteManager";
 
 static void ScheduleProcessOneCommand() {
     const GSErrCode err = ACAPI_AddOnAddOnCommunication_CallFromEventLoop(
@@ -313,13 +317,18 @@ void EnqueueProjectConfiguration() {
     }
     out.Append("],\"elementTypes\":{");
     bool first = true;
-    for (const auto& t : SupportedTypes) {
-        GS::Array<ElementInfo> e = ElementService::GetElementsByTypeAndStories(t.id, {});
-        if (e.IsEmpty()) continue;
+    auto appendCount = [&](const char* key, UInt32 cnt) {
+        if (cnt == 0) return;
         if (!first) out.Append(",");
-        out.Append("\""); out.Append(t.key); out.Append("\":"); out.Append(GS::UniString::Printf("%u", (UInt32)e.GetSize()));
+        out.Append("\""); out.Append(key); out.Append("\":"); out.Append(GS::UniString::Printf("%u", cnt));
         first = false;
+    };
+    // 件数は GetElemList のサイズで数える（以前は詳細取得付き＆100件で打ち切りのため不正確・低速だった）
+    for (const auto& t : SupportedTypes) {
+        GS::Array<API_Guid> all;
+        if (ACAPI_Element_GetElemList(API_ElemType(t.id), &all) == NoError) appendCount(t.key, all.GetSize());
     }
+    appendCount(kSiteManagerTypeKey, GetSiteManagerElements().GetSize());
     out.Append("}}");
     EnqueueResult(std::string((const char*)out.ToCStr(CC_UTF8)));
 }
@@ -719,6 +728,7 @@ void ExecuteBatch(const CommandBatch& batch) {
         else if (cmd.find("\"get_elements\"") != std::string::npos) DoSearch(cmd);
         else if (cmd.find("\"get_definitions\"") != std::string::npos) ExportDefs(cmd);
         else if (cmd.find("\"get_values\"") != std::string::npos) ExportValues(cmd);
+        else if (cmd.find("\"get_site_summary\"") != std::string::npos) ExportSiteSummary();
         else if (cmd.find("\"select_elements\"") != std::string::npos) {
             GS::Array<API_Guid> guids = ExtractGuids(cmd, "guids");
             WriteExternalLog("select_elements: " + std::to_string(guids.GetSize()) + " guid(s)");
@@ -887,6 +897,10 @@ void ExecuteBatch(const CommandBatch& batch) {
                 WriteExternalLog("goto_floor: invalid floor in cmd");
             }
         }
+        else {
+            // 未対応コマンドは黙って無視せずログに残す（Python 側だけ新しい場合の診断用）
+            WriteExternalLog("Unknown command (ignored): " + cmd.substr(0, 200));
+        }
     }
 }
 
@@ -900,21 +914,33 @@ void DoSearch(const std::string& json) {
             if (p < sl.length()) try { stories.Push((short)std::stoi(sl.substr(p))); } catch(...) {}
         }
     }
+    const UInt32 kMaxResults = 1000;
     GS::Array<API_Guid> results;
-    for (const auto& t : SupportedTypes) {
-        if (json.find("\"" + std::string(t.key) + "\":true") != std::string::npos) {
-            GS::Array<API_Guid> all; if (ACAPI_Element_GetElemList(API_ElemType(t.id), &all) != NoError) continue;
-            for (const auto& g : all) {
-                API_Elem_Head h = {}; h.guid = g; if (ACAPI_Element_GetHeader(&h) != NoError) continue;
-                bool m = stories.IsEmpty(); for (short s : stories) if (h.floorInd == s) { m = true; break; }
-                if (m) { results.Push(g); if (results.GetSize() >= 1000) break; }
-            }
+    GS::Array<const char*> resultTypes;
+    GS::HashTable<API_Guid, bool> seen;   // Object と 敷地マネージャー を両方選んだ時の重複除外
+    auto collect = [&](const GS::Array<API_Guid>& guids, const char* key) {
+        for (const auto& g : guids) {
+            if (results.GetSize() >= kMaxResults) return;
+            if (seen.ContainsKey(g)) continue;
+            API_Elem_Head h = {}; h.guid = g; if (ACAPI_Element_GetHeader(&h) != NoError) continue;
+            bool m = stories.IsEmpty(); for (short s : stories) if (h.floorInd == s) { m = true; break; }
+            if (m) { results.Push(g); resultTypes.Push(key); seen.Add(g, true); }
         }
-        if (results.GetSize() >= 1000) break;
+    };
+    // 敷地マネージャーを先に集める（上限 1000 件で Object に埋もれないように）
+    if (json.find("\"" + std::string(kSiteManagerTypeKey) + "\":true") != std::string::npos)
+        collect(GetSiteManagerElements(), "Object");
+    for (const auto& t : SupportedTypes) {
+        if (json.find("\"" + std::string(t.key) + "\":true") == std::string::npos) continue;
+        GS::Array<API_Guid> all; if (ACAPI_Element_GetElemList(API_ElemType(t.id), &all) != NoError) continue;
+        collect(all, t.key);
     }
+    if (results.GetSize() >= kMaxResults) WriteExternalLog("DoSearch: result capped at 1000");
     GS::UniString out = "{\"type\":\"elements\",\"elements\":[";
     for (UInt32 i = 0; i < results.GetSize(); i++) {
-        if (i > 0) out.Append(","); out.Append("{\"guid\":\""); out.Append(APIGuid2GSGuid(results[i]).ToUniString()); out.Append("\"}");
+        if (i > 0) out.Append(",");
+        out.Append("{\"guid\":\""); out.Append(APIGuid2GSGuid(results[i]).ToUniString());
+        out.Append("\",\"type\":\""); out.Append(resultTypes[i]); out.Append("\"}");
     }
     out.Append("]}"); EnqueueResult(std::string((const char*)out.ToCStr(CC_UTF8)));
 }
@@ -931,6 +957,254 @@ static GS::UniString GetBuildingMaterialName(API_AttributeIndex idx) {
     API_Attribute a = {}; a.header.typeID = API_BuildingMaterialID; a.header.index = idx;
     return (ACAPI_Attribute_Get(&a) == NoError) ? a.header.name : GS::UniString("---", CC_UTF8);
 }
+// ─── ライブラリパーツ / GDL パラメータ（敷地マネージャー等の GDL オブジェクト用）──────────
+
+static GS::UniString GetLibPartName(Int32 libInd) {
+    if (libInd <= 0) return GS::UniString();
+    API_LibPart lp; BNZeroMemory(&lp, sizeof(lp)); lp.index = libInd;
+    GSErrCode err = ACAPI_LibraryPart_Get(&lp);
+    if (lp.location != nullptr) { delete lp.location; lp.location = nullptr; }   // Get が確保 → 呼び出し側で解放
+    // APIERR_MISSINGDEF（ライブラリ未読込）でも名前は取得できる
+    if (err != NoError && err != APIERR_MISSINGDEF) return GS::UniString();
+    return GS::UniString(lp.docu_UName);
+}
+
+// SiteManager.apx に埋め込まれている配置用 GDL オブジェクト名（拡張子なし）
+static bool IsSiteManagerLibPart(const GS::UniString& libName) {
+    static const char* const kNames[] = {
+        "敷地オブジェクト", "道路境界線", "Boundary", "BoundaryPolygon", "境界線断面線",
+        "敷地境界線ラベル", "敷地境界線断面ラベル", "道路ラベル", "用途地域ラベル",
+    };
+    GS::UniString n = libName;
+    if (n.EndsWith(".gsm")) n.Delete(n.GetLength() - 4, 4);
+    for (const char* k : kNames) if (n == GS::UniString(k, CC_UTF8)) return true;
+    return false;
+}
+
+static GS::Array<API_Guid> GetSiteManagerElements() {
+    GS::Array<API_Guid> result, all;
+    if (ACAPI_Element_GetElemList(API_ObjectID, &all) != NoError) return result;
+    GS::HashTable<Int32, bool> isSite;   // libInd → 敷地マネージャーか（ライブラリ照会を 1 回に）
+    std::string siteNames, otherNames;   // 判定確認用ログ（名前一覧）
+    int otherCount = 0;
+    for (const auto& g : all) {
+        API_Element el; BNZeroMemory(&el, sizeof(el)); el.header.guid = g;
+        if (ACAPI_Element_Get(&el) != NoError) continue;
+        Int32 li = el.object.libInd;
+        if (!isSite.ContainsKey(li)) {
+            GS::UniString name = GetLibPartName(li);
+            bool site = IsSiteManagerLibPart(name);
+            isSite.Add(li, site);
+            std::string n((const char*)name.ToCStr(CC_UTF8));
+            if (site) siteNames += (siteNames.empty() ? "" : ", ") + n;
+            else if (++otherCount <= 40) otherNames += (otherNames.empty() ? "" : ", ") + n;
+        }
+        if (isSite[li]) result.Push(g);
+    }
+    WriteExternalLog("SiteManager: " + std::to_string(result.GetSize()) + " elems / libParts=[" + siteNames + "]");
+    WriteExternalLog("SiteManager: other object libParts (" + std::to_string(otherCount) + ") = [" + otherNames + "]");
+    return result;
+}
+
+static bool IsGdlValueParam(const API_AddParType& p) {
+    return p.typeID != APIParT_Separator && p.typeID != APIParT_Title && p.typeID != APIParT_Dictionary;
+}
+
+static int GdlValueType(const API_AddParType& p) {   // PropertyDefinition.valueType と同じ番号体系
+    if (p.typeMod == API_ParArray || p.typeID == APIParT_CString) return 3;   // 文字列
+    if (p.typeID == APIParT_Boolean || p.typeID == APIParT_LightSw) return 4;  // ブール
+    if (p.typeID == APIParT_Length || p.typeID == APIParT_Angle || p.typeID == APIParT_RealNum ||
+        p.typeID == APIParT_Intens || p.typeID == APIParT_ColRGB) return 2;    // 実数
+    return 1;                                                                  // 整数・ペン・線種など
+}
+
+static std::string FormatGdlParam(const API_AddParType& p) {
+    auto utf8 = [](const GS::UniString& s) { return std::string((const char*)s.ToCStr(CC_UTF8)); };
+    if (p.typeMod == API_ParArray) {
+        if (p.value.array == nullptr) return "[]";
+        const Int32 n = p.dim1 * (p.dim2 > 0 ? p.dim2 : 1);
+        const Int32 shown = n < 20 ? n : 20;
+        std::string out = "[";
+        if (p.typeID == APIParT_CString) {
+            // 文字列配列: UTF-16 の終端付き文字列が連続して格納されている
+            const GS::uchar_t* s = reinterpret_cast<const GS::uchar_t*>(*p.value.array);
+            for (Int32 i = 0; i < shown; i++) {
+                GS::UniString str(s);
+                out += (i ? ", " : "") + utf8(str);
+                s += str.GetLength() + 1;
+            }
+        } else {
+            const double* d = reinterpret_cast<const double*>(*p.value.array);
+            for (Int32 i = 0; i < shown; i++) out += (i ? ", " : "") + FmtReal(d[i]);
+        }
+        if (n > shown) out += ", …(" + std::to_string(n) + "件)";
+        return out + "]";
+    }
+    std::string v;
+    switch (p.typeID) {
+        case APIParT_CString: return utf8(GS::UniString(p.value.uStr));
+        case APIParT_Boolean:
+        case APIParT_LightSw: return p.value.real != 0.0 ? "True" : "False";
+        case APIParT_Integer: case APIParT_PenCol: case APIParT_LineTyp: case APIParT_Mater:
+        case APIParT_FillPat: case APIParT_BuildingMaterial: case APIParT_Profile:
+            v = std::to_string((Int32)p.value.real); break;
+        default:
+            v = FmtReal(p.value.real); break;
+    }
+    // VALUES{2} 等で値に説明が付いていれば「説明 (値)」（例: 道路境界線 (1)）
+    GS::UniString desc(p.valueDescription);
+    return desc.IsEmpty() ? v : utf8(desc) + " (" + v + ")";
+}
+
+// 選択要素のライブラリパーツから GDL パラメータ定義を集める（名前で重複除外、読み取り専用）
+static void AppendGdlParamDefs(GS::UniString& out, const GS::Array<API_Guid>& guids) {
+    GS::HashTable<Int32, bool> doneLib;
+    GS::HashTable<GS::UniString, bool> doneParam;
+    UInt32 defCount = 0;
+    for (const auto& g : guids) {
+        if (doneLib.GetSize() >= 50) break;   // ライブラリパーツ 50 種類まで
+        API_Element el; BNZeroMemory(&el, sizeof(el)); el.header.guid = g;
+        if (ACAPI_Element_Get(&el) != NoError || el.header.type.typeID != API_ObjectID) continue;
+        const Int32 li = el.object.libInd;
+        if (li <= 0 || doneLib.ContainsKey(li)) continue;
+        doneLib.Add(li, true);
+        double a = 0, b = 0; Int32 n = 0; API_AddParType** pars = nullptr;
+        if (ACAPI_LibraryPart_GetParams(li, &a, &b, &n, &pars) != NoError || pars == nullptr) continue;
+        for (Int32 i = 0; i < n; i++) {
+            const API_AddParType& p = (*pars)[i];
+            if (!IsGdlValueParam(p)) continue;
+            GS::UniString key("gdl:"); key.Append(GS::UniString(p.name, CC_UTF8));
+            if (doneParam.ContainsKey(key)) continue;
+            doneParam.Add(key, true);
+            GS::UniString label(p.uDescname);
+            GS::UniString pname(p.name, CC_UTF8);
+            GS::UniString name = label.IsEmpty() ? pname : label + " (" + pname + ")";
+            if (p.flags & API_ParFlg_Hidden) name.Append(GS::UniString(" [非表示]", CC_UTF8));
+            out.Append(",{\"guid\":\""); out.Append(Escape(key));
+            out.Append("\",\"name\":\""); out.Append(Escape(name));
+            out.Append("\",\"group\":\""); out.Append(GS::UniString("GDLパラメータ", CC_UTF8));
+            // GDL パラメータは閲覧のみ（敷地マネージャー等は自身のデータから再計算するため直接変更しない）
+            out.Append("\",\"editable\":false,\"valueType\":");
+            out.Append(GS::UniString::Printf("%d", GdlValueType(p)));
+            out.Append(",\"collectionType\":0}");
+            defCount++;
+        }
+        ACAPI_DisposeAddParHdl(&pars);
+    }
+    WriteExternalLog("GDL param defs: libParts=" + std::to_string(doneLib.GetSize()) + " params=" + std::to_string(defCount));
+}
+
+// 1 要素の GDL パラメータ値（名前 → 表示文字列）
+static std::map<std::string, std::string> GetGdlParamValues(const API_Guid& guid) {
+    std::map<std::string, std::string> result;
+    API_ElementMemo memo; BNZeroMemory(&memo, sizeof(memo));
+    if (ACAPI_Element_GetMemo(guid, &memo, APIMemoMask_AddPars) == NoError && memo.params != nullptr) {
+        const Int32 n = (Int32)(BMGetHandleSize(reinterpret_cast<GSHandle>(memo.params)) / sizeof(API_AddParType));
+        for (Int32 i = 0; i < n; i++) {
+            const API_AddParType& p = (*memo.params)[i];
+            if (IsGdlValueParam(p)) result["gdl:" + std::string(p.name)] = FormatGdlParam(p);
+        }
+    }
+    ACAPI_DisposeElemMemoHdls(&memo);
+    return result;
+}
+
+// ─── 敷地情報（敷地マネージャーのパレット相当のデータ一式）──────────────────────
+
+// JSON 文字列リテラル（"..."）。Escape は \ を扱わないためここで先に処理する
+static GS::UniString JsonStr(const GS::UniString& s) {
+    GS::UniString v = s;
+    v.ReplaceAll("\\", "\\\\"); v.ReplaceAll("\t", " ");
+    return GS::UniString("\"") + Escape(v) + "\"";
+}
+
+static GS::UniString JsonNum(double d) {
+    if (!std::isfinite(d)) return GS::UniString("null");   // NaN/Inf は JSON にできない
+    char buf[48]; snprintf(buf, sizeof(buf), "%.10g", d);   // 座標・面積計算用に精度を確保
+    return GS::UniString(buf);
+}
+
+// GDL パラメータ値を JSON 値で（配列は配列、数値は数値、文字列は文字列のまま）
+static GS::UniString GdlParamJson(const API_AddParType& p) {
+    if (p.typeMod == API_ParArray) {
+        GS::UniString out("[");
+        if (p.value.array != nullptr) {
+            const Int32 n = p.dim1 * (p.dim2 > 0 ? p.dim2 : 1);
+            const Int32 shown = n < 1000 ? n : 1000;
+            if (p.typeID == APIParT_CString) {
+                const GS::uchar_t* s = reinterpret_cast<const GS::uchar_t*>(*p.value.array);
+                for (Int32 i = 0; i < shown; i++) {
+                    GS::UniString str(s);
+                    if (i) out.Append(",");
+                    out.Append(JsonStr(str));
+                    s += str.GetLength() + 1;
+                }
+            } else {
+                const double* d = reinterpret_cast<const double*>(*p.value.array);
+                for (Int32 i = 0; i < shown; i++) { if (i) out.Append(","); out.Append(JsonNum(d[i])); }
+            }
+        }
+        out.Append("]");
+        return out;
+    }
+    if (p.typeID == APIParT_CString) return JsonStr(GS::UniString(p.value.uStr));
+    if (p.typeID == APIParT_Boolean || p.typeID == APIParT_LightSw) return p.value.real != 0.0 ? "true" : "false";
+    return JsonNum(p.value.real);
+}
+
+void ExportSiteSummary() {
+    GS::UniString out("{\"type\":\"site_summary\",\"elements\":[");
+    GS::Array<API_Guid> guids = GetSiteManagerElements();
+    for (UInt32 i = 0; i < guids.GetSize(); i++) {
+        API_Element el; BNZeroMemory(&el, sizeof(el)); el.header.guid = guids[i];
+        if (ACAPI_Element_Get(&el) != NoError) continue;
+        if (i > 0) out.Append(",");
+        out.Append("{\"guid\":\""); out.Append(APIGuid2GSGuid(guids[i]).ToUniString());
+        out.Append("\",\"libPart\":"); out.Append(JsonStr(GetLibPartName(el.object.libInd)));
+        out.Append(",\"floor\":"); out.Append(GS::UniString::Printf("%d", (int)el.header.floorInd));
+        GS::UniString params("{"), descs("{");
+        bool firstP = true, firstD = true;
+        API_ElementMemo memo; BNZeroMemory(&memo, sizeof(memo));
+        if (ACAPI_Element_GetMemo(guids[i], &memo, APIMemoMask_AddPars) == NoError && memo.params != nullptr) {
+            const Int32 n = (Int32)(BMGetHandleSize(reinterpret_cast<GSHandle>(memo.params)) / sizeof(API_AddParType));
+            for (Int32 k = 0; k < n; k++) {
+                const API_AddParType& p = (*memo.params)[k];
+                if (!IsGdlValueParam(p)) continue;
+                GS::UniString name(p.name, CC_UTF8);
+                if (!firstP) params.Append(",");
+                params.Append(JsonStr(name)); params.Append(":"); params.Append(GdlParamJson(p));
+                firstP = false;
+                GS::UniString desc(p.valueDescription);
+                if (p.typeMod != API_ParArray && !desc.IsEmpty()) {
+                    if (!firstD) descs.Append(",");
+                    descs.Append(JsonStr(name)); descs.Append(":"); descs.Append(JsonStr(desc));
+                    firstD = false;
+                }
+            }
+        }
+        ACAPI_DisposeElemMemoHdls(&memo);
+        out.Append(",\"params\":"); out.Append(params); out.Append("}");
+        out.Append(",\"descs\":"); out.Append(descs); out.Append("}");
+        out.Append("}");
+    }
+    // プロジェクト情報（敷地マネージャーの集計結果・許容値はここに書き込まれている）
+    out.Append("],\"projectInfo\":[");
+    GS::Array<GS::ArrayFB<GS::UniString, 3>> autotexts;
+    if (ACAPI_AutoText_GetAutoTexts(&autotexts, APIAutoText_All) == NoError) {
+        for (UInt32 i = 0; i < autotexts.GetSize(); i++) {
+            if (i > 0) out.Append(",");
+            out.Append("{\"desc\":"); out.Append(JsonStr(autotexts[i][0]));
+            out.Append(",\"key\":");  out.Append(JsonStr(autotexts[i][1]));
+            out.Append(",\"value\":"); out.Append(JsonStr(autotexts[i][2]));
+            out.Append("}");
+        }
+    }
+    out.Append("]}");
+    WriteExternalLog("site_summary: elements=" + std::to_string(guids.GetSize()) +
+                     " projectInfo=" + std::to_string(autotexts.GetSize()));
+    EnqueueResult(std::string((const char*)out.ToCStr(CC_UTF8)));
+}
+
 static API_AttributeIndex FindBuildingMaterialIdx(const GS::UniString& name) {
     for (short i = 1; i <= 4096; i++) {
         API_Attribute a = {}; a.header.typeID = API_BuildingMaterialID; a.header.index = ACAPI_CreateAttributeIndex(i);
@@ -1005,6 +1279,9 @@ static void AppendElemParamDefs(GS::UniString& out, const API_Element& elem) {
             addP("elem:level",           "レベル",                2, true);
             addP("elem:buildingMaterial","ビルディングマテリアル", 3, true);
             break;
+        case API_ObjectID:
+            addP("elem:libPart", "ライブラリパーツ名", 3, false);
+            break;
         default:
             addP("elem:height", "高さ", 2, false);
             break;
@@ -1046,6 +1323,9 @@ static std::string GetElemParamValue(const API_Element& elem, const std::string&
             if (key == "elem:thickness")       return FmtReal(elem.slab.thickness);
             if (key == "elem:level")           return FmtReal(elem.slab.level);
             if (key == "elem:buildingMaterial") return std::string((const char*)GetBuildingMaterialName(elem.slab.buildingMaterial).ToCStr(CC_UTF8));
+            break;
+        case API_ObjectID:
+            if (key == "elem:libPart") return std::string((const char*)GetLibPartName(elem.object.libInd).ToCStr(CC_UTF8));
             break;
         default: break;
     }
@@ -1138,6 +1418,8 @@ void ExportDefs(const std::string& json) {
             AppendElemParamDefs(out, firstElem);
         }
     }
+    // オブジェクト（敷地マネージャー等）の GDL パラメータ: 全要素のライブラリパーツから集める
+    AppendGdlParamDefs(out, guids);
     out.Append("]}"); EnqueueResult(std::string((const char*)out.ToCStr(CC_UTF8)));
 }
 
@@ -1145,10 +1427,11 @@ void ExportValues(const std::string& json) {
     GS::Array<API_Guid> guids = ExtractGuids(json, "guids"); std::vector<std::string> pgs = ExtractStringArray(json, "propGuids");
     if (guids.IsEmpty() || pgs.empty()) return;
     GS::Array<API_PropertyDefinition> pDefs; bool incID = false, incRen = false, incSF = false, incPos = false;
-    std::vector<std::string> elemKeys;
+    std::vector<std::string> elemKeys, gdlKeys;
     for (const auto& s : pgs) {
         if (s == "builtin:element_id") incID = true; else if (s == "builtin:RenovationStatus") incRen = true; else if (s == "builtin:StructuralFunction") incSF = true; else if (s == "builtin:Position") incPos = true;
         else if (s.size() > 5 && s.substr(0, 5) == "elem:") { elemKeys.push_back(s); }
+        else if (s.size() > 4 && s.substr(0, 4) == "gdl:") { gdlKeys.push_back(s); }
         else { try { API_PropertyDefinition d = {}; d.guid = GSGuid2APIGuid(GS::Guid(s.c_str())); if (ACAPI_Property_GetPropertyDefinition(d) == NoError) pDefs.Push(d); } catch (...) {} }
     }
     GS::UniString out = "{\"type\":\"property_values\",\"values\":[";
@@ -1170,6 +1453,14 @@ void ExportValues(const std::string& json) {
                     if (val == "---") val = GetElemParamValueMemo(guids[i], el.header.type.typeID, k);
                     add(k, GS::UniString(val.c_str(), CC_UTF8));
                 }
+            }
+        }
+        if (!gdlKeys.empty()) {
+            // GDL パラメータ（敷地マネージャー等）。そのライブラリパーツに無いパラメータは "---"
+            std::map<std::string, std::string> gp = GetGdlParamValues(guids[i]);
+            for (const auto& k : gdlKeys) {
+                auto it = gp.find(k);
+                add(k, GS::UniString((it != gp.end() ? it->second : std::string("---")).c_str(), CC_UTF8));
             }
         }
         GS::Array<API_Property> ps; if (!pDefs.IsEmpty() && ACAPI_Element_GetPropertyValues(guids[i], pDefs, ps) == NoError) {

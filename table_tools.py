@@ -183,6 +183,24 @@ def export_xlsx(path, props, rows, changed=frozenset()):
     wb.save(path)
 
 
+def export_sheets(path, sheets):
+    """複数シートの表を .xlsx に書き出す。sheets: [(シート名, 見出し, 行リスト)]"""
+    wb = Workbook()
+    wb.remove(wb.active)
+    for title, headers, rows in sheets:
+        ws = wb.create_sheet(title[:31])
+        ws.append(list(headers))
+        for c in ws[1]:
+            c.font = HEADER_FONT
+        for r in rows:
+            ws.append([_to_excel_cell(v) if isinstance(v, str) else v for v in r])
+        ws.freeze_panes = "A2"
+        for ci, h in enumerate(headers):
+            width = max([len(str(h))] + [len(str(r[ci])) for r in rows if ci < len(r)]) * 2 + 2
+            ws.column_dimensions[get_column_letter(ci + 1)].width = max(8, min(60, width))
+    wb.save(path)
+
+
 def read_xlsx(path, props):
     """export_xlsx 形式（または GUID 列 + プロパティ名ヘッダの表）を読み込む。
 

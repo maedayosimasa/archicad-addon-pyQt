@@ -37,7 +37,7 @@ try:
         QTreeWidgetItemIterator, QMenu, QInputDialog, QAbstractItemView,
         QStyledItemDelegate, QComboBox, QDialog, QTableWidget, QTableWidgetItem,
         QDialogButtonBox, QFrame, QCheckBox, QSlider,
-        QFileDialog, QLineEdit,
+        QFileDialog, QLineEdit, QTabWidget,
     )
     append_log("PyQt6.QtWidgets OK")
 except Exception as _e:
@@ -47,7 +47,7 @@ except Exception as _e:
 try:
     from PyQt6.QtCore import (
         Qt, QAbstractTableModel, pyqtSignal, QObject,
-        QSortFilterProxyModel, QItemSelection, QItemSelectionModel,
+        QSortFilterProxyModel, QItemSelection, QItemSelectionModel, QTimer,
     )
     append_log("PyQt6.QtCore OK")
 except Exception as _e:
@@ -102,6 +102,7 @@ except Exception as _e:
 
 try:
     import table_tools
+    import site_summary
     append_log("table_tools OK")
 except Exception as _e:
     append_log(f"IMPORT FATAL table_tools (openpyxl 未インストール?): {_e}\n{traceback.format_exc()}")
@@ -124,6 +125,12 @@ def _install_exception_hooks():
         msg = "".join(traceback.format_exception(args.exc_type, args.exc_value, args.exc_traceback))
         append_log(f"[THREAD EXCEPTION] thread={args.thread}\n{msg}")
     threading.excepthook = _thread_excepthook
+
+
+# 要素タイプのキー → 条件設定ツリーの表示名（無いものはキーをそのまま表示）
+ELEMENT_TYPE_LABELS = {
+    "SiteManager": "敷地マネージャー",
+}
 
 
 def normalize_label(value):
@@ -458,6 +465,7 @@ class CommunicationSignals(QObject):
     change_status_result_received= pyqtSignal(dict)
     current_floor_received       = pyqtSignal(dict)
     selection_changed            = pyqtSignal(dict)
+    site_summary_received        = pyqtSignal(dict)
     show_window                  = pyqtSignal()
     error_occurred               = pyqtSignal(str)
 
@@ -538,6 +546,7 @@ class TcpServerThread(threading.Thread):
                     elif t == "change_status_result":  self.signals.change_status_result_received.emit(payload)
                     elif t == "selection_changed":     self.signals.selection_changed.emit(payload)
                     elif t == "current_floor":        self.signals.current_floor_received.emit(payload)
+                    elif t == "site_summary":         self.signals.site_summary_received.emit(payload)
                     else:
                         append_log(f"[UNKNOWN TYPE] {t}")
                 except Exception as e:
@@ -811,6 +820,110 @@ class ReplaceDialog(QDialog):
 
 
 # ─────────────────────────────────────────────────────────────────────
+# SiteSummaryDialog  敷地マネージャーのパレット相当の情報
+# ─────────────────────────────────────────────────────────────────────
+
+class SiteSummaryDialog(QDialog):
+    """敷地情報（敷地・用途地域・道路・集計結果・プロジェクト情報）をまとめて表示する。"""
+
+    def __init__(self, window, parent=None):
+        super().__init__(parent)
+        self._win = window
+        self._summary = None
+        self.setWindowTitle("敷地情報（敷地マネージャー）")
+        self.setModal(False)
+        self.resize(760, 620)
+        lay = QVBoxLayout(self)
+        self.info_label = QLabel("")
+        self.info_label.setWordWrap(True)
+        lay.addWidget(self.info_label)
+
+        self.tabs = QTabWidget()
+        self.tbl_check     = self._table(["項目", "許容", "計画", "判定"])
+        self.tbl_totals    = self._table(["項目", "値"])
+        self.tbl_districts = self._table(["用途地域", "面積"])
+        self.tbl_bounds    = self._table(["敷地", "No", "長さ", "境界線タイプ"])
+        self.tbl_roads     = self._table(["道路名", "種別", "道路線", "境界線タイプ", "長さ"])
+        self.tbl_project   = self._table(["項目", "キー", "値"])
+
+        summary_tab = QWidget(); sl = QVBoxLayout(summary_tab)
+        for title, tbl in (("用途地域", self.tbl_districts), ("集計結果", self.tbl_totals),
+                           ("許容・計画・判定", self.tbl_check)):
+            lbl = QLabel(title); lbl.setStyleSheet("font-weight: bold;")
+            sl.addWidget(lbl); sl.addWidget(tbl)
+        self.tabs.addTab(summary_tab, "集計結果")
+        self.tabs.addTab(self.tbl_bounds, "境界線")
+        self.tabs.addTab(self.tbl_roads, "道路")
+        self.tabs.addTab(self.tbl_project, "プロジェクト情報")
+        lay.addWidget(self.tabs)
+
+        btns = QWidget(); bl = QHBoxLayout(btns); bl.setContentsMargins(0, 0, 0, 0)
+        self.btn_refresh = QPushButton("再取得")
+        self.btn_export  = QPushButton("Excel出力")
+        self.btn_close   = QPushButton("閉じる")
+        self.btn_refresh.clicked.connect(self._win.request_site_summary)
+        self.btn_export.clicked.connect(self.export_excel)
+        self.btn_close.clicked.connect(self.close)
+        bl.addStretch(); bl.addWidget(self.btn_refresh); bl.addWidget(self.btn_export); bl.addWidget(self.btn_close)
+        lay.addWidget(btns)
+
+    @staticmethod
+    def _table(headers):
+        t = QTableWidget(0, len(headers))
+        t.setHorizontalHeaderLabels(headers)
+        t.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        t.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        t.verticalHeader().setVisible(False)
+        return t
+
+    @staticmethod
+    def _fill(table, rows):
+        table.setRowCount(len(rows))
+        for r, row in enumerate(rows):
+            for c, v in enumerate(row):
+                item = QTableWidgetItem(str(v))
+                if c > 0 and (str(v).endswith("㎡") or str(v).endswith("%") or str(v).endswith("m")):
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                if str(v) == "不適合":
+                    item.setForeground(QColor("red"))
+                table.setItem(r, c, item)
+
+    def set_summary(self, summary):
+        self._summary = summary
+        self._fill(self.tbl_check, summary["check"])
+        self._fill(self.tbl_totals, summary["totals"])
+        self._fill(self.tbl_districts, summary["districts"])
+        self._fill(self.tbl_bounds, [
+            [i + 1, b["no"], site_summary.fmt_len(b["length"]), b["type"] or "---"]
+            for i, s in enumerate(summary["sites"]) for b in s["boundaries"]])
+        self._fill(self.tbl_roads, [
+            [r["name"] or "---", r["type"] or "---", r["property"] or "---",
+             r["boundaryType"] or "---", site_summary.fmt_len(r["length"])] for r in summary["roads"]])
+        self._fill(self.tbl_project, summary["project_all"])
+        notes = [f"敷地オブジェクト {len(summary['sites'])} 件 / 道路境界線 {len(summary['roads'])} 件"]
+        if summary["computed_site_area"] is not None:
+            notes.append(f"敷地形状から計算した面積: {site_summary.fmt_area(summary['computed_site_area'])}")
+        if summary["missing_totals"]:
+            notes.append("※ 建築面積・延床面積がプロジェクト情報にありません。"
+                         "敷地マネージャーの［建築面積集計］［延床面積集計］を実行してから再取得してください。")
+        self.info_label.setText("\n".join(notes))
+
+    def export_excel(self):
+        if not self._summary:
+            return
+        path, _ = QFileDialog.getSaveFileName(self, "Excel出力", "敷地情報.xlsx", "Excel ファイル (*.xlsx)")
+        if not path:
+            return
+        try:
+            table_tools.export_sheets(path, site_summary.summary_sheets(self._summary))
+        except Exception as e:
+            append_log(f"[SITE EXPORT ERROR] {e}\n{traceback.format_exc()}")
+            QMessageBox.warning(self, "Excel出力", f"書き出しに失敗しました:\n{e}")
+            return
+        self.info_label.setText(self.info_label.text() + f"\nExcel出力: {path}")
+
+
+# ─────────────────────────────────────────────────────────────────────
 # MainWindow
 # ─────────────────────────────────────────────────────────────────────
 
@@ -871,6 +984,8 @@ class MainWindow(QMainWindow):
         self.signals.error_occurred.connect(self.on_error)
         self.signals.selection_changed.connect(self.on_archicad_selection_changed)
         self.signals.current_floor_received.connect(self.on_current_floor)
+        self.signals.site_summary_received.connect(self.on_site_summary)
+        self._site_dlg = None
         self.server_thread = None
 
         # 内部状態
@@ -962,9 +1077,13 @@ class MainWindow(QMainWindow):
         self.filter_tree.setHeaderLabel("階 / タイプ")
         self.btn_search = QPushButton("要素を抽出")
         self.btn_search.clicked.connect(self.search_elements)
+        self.btn_site_summary = QPushButton("敷地情報（敷地マネージャー）")
+        self.btn_site_summary.setToolTip("用途地域・敷地面積・建蔽率・容積率などをまとめて取得")
+        self.btn_site_summary.clicked.connect(self.request_site_summary)
         se_lay.addWidget(lbl_extract)
         se_lay.addWidget(self.filter_tree)
         se_lay.addWidget(self.btn_search)
+        se_lay.addWidget(self.btn_site_summary)
 
         # ── 右半分：プロパティ設定 ──
         sect_prop = QWidget()
@@ -1228,7 +1347,7 @@ class MainWindow(QMainWindow):
             c.setCheckState(0, Qt.CheckState.Unchecked)
         tr = QTreeWidgetItem(self.filter_tree, ["要素タイプ"])
         for n, cnt in data.get("elementTypes", {}).items():
-            c = QTreeWidgetItem(tr, [f"{n} ({cnt})"])
+            c = QTreeWidgetItem(tr, [f"{ELEMENT_TYPE_LABELS.get(n, n)} ({cnt})"])
             c.setData(0, Qt.ItemDataRole.UserRole, n)
             c.setCheckState(0, Qt.CheckState.Unchecked)
         self.filter_tree.expandAll()
@@ -1256,10 +1375,12 @@ class MainWindow(QMainWindow):
     # ── プロパティ定義 ───────────────────────────────────────────────
 
     def request_definitions(self):
+        # 全要素を送る: プロパティ定義は先頭要素から、GDL パラメータ定義は
+        # 全オブジェクトのライブラリパーツから集める（敷地マネージャー等）
         if hasattr(self, "current_elements") and self.current_elements:
             self.send_to_ac_async({
                 "command": "get_definitions",
-                "guids":   [e["guid"] for e in self.current_elements[:1]],
+                "guids":   [e["guid"] for e in self.current_elements],
             })
 
     def on_definitions(self, data):
@@ -1602,6 +1723,53 @@ class MainWindow(QMainWindow):
         menu.addSeparator()
         menu.addAction("並び替え解除").triggered.connect(self.clear_sort)
         menu.exec(self.table.viewport().mapToGlobal(pos))
+
+    # ── 敷地情報（敷地マネージャー）────────────────────────────────────
+
+    SITE_SUMMARY_TIMEOUT_MS = 15000
+
+    def request_site_summary(self):
+        self.condition_status_label.setText("敷地情報を取得中...")
+        self._site_request_id = getattr(self, "_site_request_id", 0) + 1
+        req = self._site_request_id
+        self._site_pending = req
+        self.send_to_ac_async({"command": "get_site_summary"})
+        # 応答が来ないまま「取得中」で止まらないよう時間切れを設ける
+        QTimer.singleShot(self.SITE_SUMMARY_TIMEOUT_MS, lambda: self._on_site_summary_timeout(req))
+
+    def _on_site_summary_timeout(self, req):
+        if getattr(self, "_site_pending", None) != req:
+            return  # 既に応答済み、または新しい要求に置き換わった
+        self._site_pending = None
+        self.condition_status_label.setText("敷地情報: ArchiCAD から応答がありません")
+        append_log("[SITE SUMMARY] timeout (no response from add-on)")
+        QMessageBox.warning(
+            self, "敷地情報",
+            "ArchiCAD のアドオンから応答がありませんでした。\n\n"
+            "考えられる原因:\n"
+            "・ArchiCAD が古いアドオン（敷地情報に未対応）を読み込んでいる\n"
+            "  → ArchiCAD を再起動して、新しいアドオンを読み込んでください\n"
+            "・ArchiCAD がダイアログ表示中・処理中で応答できない\n"
+            "  → ArchiCAD の操作を終えてから［敷地情報］を押し直してください")
+
+    def on_site_summary(self, data):
+        self._site_pending = None
+        try:
+            summary = site_summary.build_site_summary(data)
+        except Exception as e:
+            append_log(f"[SITE SUMMARY ERROR] {e}\n{traceback.format_exc()}")
+            QMessageBox.warning(self, "敷地情報", f"敷地情報の解析に失敗しました:\n{e}")
+            return
+        if not summary["sites"] and not summary["roads"]:
+            self.condition_status_label.setText("敷地マネージャーの敷地オブジェクトが見つかりません")
+        else:
+            self.condition_status_label.setText("敷地情報 取得完了")
+        if self._site_dlg is None:
+            self._site_dlg = SiteSummaryDialog(self, parent=self)
+        self._site_dlg.set_summary(summary)
+        self._site_dlg.show()
+        self._site_dlg.raise_()
+        append_log(f"[SITE SUMMARY] sites={len(summary['sites'])} roads={len(summary['roads'])}")
 
     # ── 検索と置換 ───────────────────────────────────────────────────
 

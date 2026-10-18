@@ -132,7 +132,8 @@ def test_full_fetch_flow(main_window):
 
     w.on_elements({"elements": ELEMS})
     assert w._current_element_type == "Wall"
-    assert w.sent.last("get_definitions")["guids"] == [G1]
+    # GDL パラメータ定義を全ライブラリパーツから集めるため全要素を送る
+    assert w.sent.last("get_definitions")["guids"] == [G1, G2, G3]
 
     w.on_definitions({"definitions": PROPS})
     assert w.prop_tree.topLevelItemCount() == 3
@@ -814,3 +815,161 @@ def test_close_event_db_error_ignored(main_window, monkeypatch):
                         lambda **k: (_ for _ in ()).throw(RuntimeError("x")))
     main_window.close()
     assert not main_window.isVisible()
+
+
+# ── 敷地マネージャー（GDL オブジェクト）────────────────────────────
+
+def test_site_manager_type_label_and_search(main_window):
+    w = main_window
+    w.on_config({"stories": [], "elementTypes": {"Object": 250, "SiteManager": 3}})
+    types = w.filter_tree.topLevelItem(1)
+    assert [types.child(i).text(0) for i in range(2)] == ["Object (250)", "敷地マネージャー (3)"]
+    site = types.child(1)
+    assert site.data(0, Qt.ItemDataRole.UserRole) == "SiteManager"   # 送信キーは英字のまま
+    site.setCheckState(0, Qt.CheckState.Checked)
+    w.search_elements()
+    cmd = w.sent.last("get_elements")
+    assert cmd["SiteManager"] is True and cmd["Object"] is False
+
+
+def test_site_manager_gdl_params_flow(main_window):
+    """C++ が返す GDL パラメータ定義（gdl:*）と値を、読み取り専用列として表示できる。"""
+    w = main_window
+    road, site = "RRRRRRRR-1", "SSSSSSSS-2"
+    w.on_elements({"elements": [{"guid": road, "type": "Object"}, {"guid": site, "type": "Object"}]})
+    assert w.sent.last("get_definitions")["guids"] == [road, site]
+
+    defs = [
+        {"guid": "elem:libPart", "name": "ライブラリパーツ名", "group": "要素設定パラメータ",
+         "editable": False, "valueType": 3, "collectionType": 0},
+        {"guid": "gdl:iRoadType", "name": "道路種別 (iRoadType) [非表示]", "group": "GDLパラメータ",
+         "editable": False, "valueType": 1, "collectionType": 0},
+        {"guid": "gdl:strRoadName", "name": "道路名 (strRoadName)", "group": "GDLパラメータ",
+         "editable": False, "valueType": 3, "collectionType": 0},
+    ]
+    w.on_definitions({"definitions": defs})
+    gdl_group = next(w.prop_tree.topLevelItem(i) for i in range(w.prop_tree.topLevelItemCount())
+                     if w.prop_tree.topLevelItem(i).text(0) == "GDLパラメータ")
+    assert gdl_group.childCount() == 2
+    gdl_group.setCheckState(0, Qt.CheckState.Checked)
+    lib_group = next(w.prop_tree.topLevelItem(i) for i in range(w.prop_tree.topLevelItemCount())
+                     if w.prop_tree.topLevelItem(i).text(0) == "要素設定パラメータ")
+    lib_group.setCheckState(0, Qt.CheckState.Checked)
+    w.get_values()
+    assert set(w.sent.last("get_values")["propGuids"]) == {"elem:libPart", "gdl:iRoadType", "gdl:strRoadName"}
+
+    w.on_values({"values": [
+        {"guid": road, "modiStamp": 1, "props": {"elem:libPart": "道路境界線", "gdl:iRoadType": "公道 (1)",
+                                                 "gdl:strRoadName": "市道1号線"}},
+        {"guid": site, "modiStamp": 2, "props": {"elem:libPart": "敷地オブジェクト", "gdl:iRoadType": "---",
+                                                 "gdl:strRoadName": "---"}},
+    ]})
+    m = w.model
+    col = {p["guid"]: i + 1 for i, p in enumerate(m._properties)}
+    assert m.index(0, col["gdl:iRoadType"]).data() == "公道 (1)"
+    assert m.index(1, col["elem:libPart"]).data() == "敷地オブジェクト"
+    # GDL パラメータは閲覧のみ（敷地マネージャーのデータ整合性を守るため）
+    assert not (m.flags(m.index(0, col["gdl:strRoadName"])) & Qt.ItemFlag.ItemIsEditable)
+    changed, skipped = w._apply_source_edits([(0, col["gdl:strRoadName"], "変更")], "テスト")
+    assert changed == 0 and "編集不可" in skipped[0]
+
+
+# ── 敷地情報ダイアログ ─────────────────────────────────────────────
+
+def _site_payload():
+    from tests.test_site_summary import payload
+    return payload()
+
+
+def test_site_summary_button_and_dialog(main_window, monkeypatch, tmp_path):
+    w = main_window
+    w.btn_site_summary.click()
+    assert w.sent.commands() == ["get_site_summary"]
+    assert w.condition_status_label.text() == "敷地情報を取得中..."
+
+    w.signals.site_summary_received.emit(_site_payload())
+    dlg = w._site_dlg
+    assert dlg.isVisible() and w.condition_status_label.text() == "敷地情報 取得完了"
+    assert dlg.tbl_check.item(0, 3).text() == "適合"
+    assert dlg.tbl_districts.item(0, 0).text() == "第二種住居地域"
+    assert dlg.tbl_totals.item(0, 1).text() == "2,352.00㎡"
+    assert dlg.tbl_bounds.rowCount() == 4 and dlg.tbl_roads.item(0, 0).text() == "北側道路"
+    assert "敷地オブジェクト 1 件" in dlg.info_label.text()
+
+    dlg.btn_refresh.click()
+    assert w.sent.commands()[-1] == "get_site_summary"
+    w.on_site_summary(_site_payload())
+    assert w._site_dlg is dlg                                          # 2 回目は同じダイアログ
+
+    path = tmp_path / "site.xlsx"
+    monkeypatch.setattr(server.QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(path), "")))
+    dlg.btn_export.click()
+    assert path.exists() and "Excel出力" in dlg.info_label.text()
+
+
+def test_site_summary_without_site_and_missing_totals(main_window):
+    w = main_window
+    w.on_site_summary({"elements": [], "projectInfo": []})
+    assert w.condition_status_label.text() == "敷地マネージャーの敷地オブジェクトが見つかりません"
+    p = _site_payload(); p["projectInfo"] = []
+    w.on_site_summary(p)
+    assert "建築面積集計" in w._site_dlg.info_label.text()
+
+
+def test_site_summary_not_compliant_is_red(main_window):
+    p = _site_payload()
+    p["projectInfo"] = [dict(x) for x in p["projectInfo"]]
+    p["projectInfo"][1]["value"] = "1500"
+    main_window.on_site_summary(p)
+    item = main_window._site_dlg.tbl_check.item(0, 3)
+    assert item.text() == "不適合" and item.foreground().color().name() == "#ff0000"
+
+
+def test_site_summary_errors(main_window, monkeypatch, tmp_path):
+    w = main_window
+    monkeypatch.setattr(server.site_summary, "build_site_summary", lambda d: (_ for _ in ()).throw(KeyError("x")))
+    w.on_site_summary({})
+    assert w.msgbox.kinds() == ["warning"] and w._site_dlg is None
+    monkeypatch.undo()
+    w.msgbox.calls.clear()
+    w.on_site_summary(_site_payload())
+    dlg = w._site_dlg
+    monkeypatch.setattr(server.QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: ("", "")))
+    dlg.export_excel()                                                  # キャンセル
+    monkeypatch.setattr(server.QFileDialog, "getSaveFileName",
+                        staticmethod(lambda *a, **k: (str(tmp_path / "x.xlsx"), "")))
+    monkeypatch.setattr(server.table_tools, "export_sheets",
+                        lambda *a: (_ for _ in ()).throw(PermissionError("使用中")))
+    monkeypatch.setattr(server.QMessageBox, "warning", staticmethod(lambda *a: w.msgbox.calls.append(("warning",) + a[1:])))
+    dlg.export_excel()
+    assert w.msgbox.calls[-1][0] == "warning"
+    dlg._summary = None
+    dlg.export_excel()                                                  # 未取得なら何もしない
+
+
+def test_site_summary_timeout_when_addon_does_not_answer(main_window, monkeypatch):
+    """古いアドオン等で応答が無い場合、「取得中」で止まらず原因を案内する。"""
+    w = main_window
+    timers = []
+    monkeypatch.setattr(server.QTimer, "singleShot", staticmethod(lambda ms, fn: timers.append((ms, fn))))
+    w.request_site_summary()
+    assert timers[0][0] == 15000
+    timers[0][1]()                                    # 応答なしのまま時間切れ
+    assert w.condition_status_label.text() == "敷地情報: ArchiCAD から応答がありません"
+    kind, _, text = w.msgbox.calls[-1]
+    assert kind == "warning" and "再起動" in text
+
+
+def test_site_summary_timeout_ignored_after_response(main_window, monkeypatch):
+    w = main_window
+    timers = []
+    monkeypatch.setattr(server.QTimer, "singleShot", staticmethod(lambda ms, fn: timers.append(fn)))
+    w.request_site_summary()
+    w.on_site_summary(_site_payload())                # 時間内に応答
+    timers[0]()
+    assert w.condition_status_label.text() == "敷地情報 取得完了"
+    w.request_site_summary(); w.request_site_summary()
+    timers[1]()                                       # 古い要求の時間切れは無視
+    assert w.msgbox.calls == []
+    timers[2]()
+    assert w.msgbox.kinds() == ["warning"]
