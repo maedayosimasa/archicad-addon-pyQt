@@ -79,6 +79,8 @@ def msgbox(monkeypatch):
 @pytest.fixture
 def main_window(qapp, tmp_path, monkeypatch, msgbox):
     monkeypatch.setattr(db_manager, "DB_PATH", tmp_path / "main.db")
+    # ウィンドウ位置・大きさの保存先もテストごとに分ける
+    monkeypatch.setattr(server, "SETTINGS_PATH", tmp_path / "window.ini")
     # 3 秒ごとの実ポート 5001 へのフロア問い合わせスレッドを止める
     monkeypatch.setattr(server.MainWindow, "_start_floor_polling", lambda self: None)
     sent = SentCommands()

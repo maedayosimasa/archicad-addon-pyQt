@@ -324,12 +324,41 @@ void EnqueueProjectConfiguration() {
         first = false;
     };
     // 件数は GetElemList のサイズで数える（以前は詳細取得付き＆100件で打ち切りのため不正確・低速だった）
+    // 併せて階ごとの件数も返す（梁は支える床の階に属するため、階を選ぶと件数が変わることを画面で示す）
+    GS::UniString byStory("\"elementTypeStories\":{");
+    bool firstS = true;
+    auto appendStories = [&](const char* key, const GS::Array<API_Guid>& guids) {
+        if (guids.IsEmpty()) return;
+        std::map<short, UInt32> perStory;
+        for (const auto& g : guids) {
+            API_Elem_Head h = {}; h.guid = g;
+            if (ACAPI_Element_GetHeader(&h) == NoError) perStory[h.floorInd]++;
+        }
+        if (!firstS) byStory.Append(",");
+        byStory.Append("\""); byStory.Append(key); byStory.Append("\":{");
+        bool f = true;
+        std::string logLine;
+        for (const auto& kv : perStory) {
+            if (!f) byStory.Append(",");
+            byStory.Append(GS::UniString::Printf("\"%d\":%u", (int)kv.first, kv.second));
+            logLine += " " + std::to_string(kv.first) + ":" + std::to_string(kv.second);
+            f = false;
+        }
+        byStory.Append("}");
+        firstS = false;
+        WriteExternalLog(std::string("config per-story ") + key + ":" + logLine);
+    };
     for (const auto& t : SupportedTypes) {
         GS::Array<API_Guid> all;
-        if (ACAPI_Element_GetElemList(API_ElemType(t.id), &all) == NoError) appendCount(t.key, all.GetSize());
+        if (ACAPI_Element_GetElemList(API_ElemType(t.id), &all) == NoError) {
+            appendCount(t.key, all.GetSize());
+            appendStories(t.key, all);
+        }
     }
-    appendCount(kSiteManagerTypeKey, GetSiteManagerElements().GetSize());
-    out.Append("}}");
+    GS::Array<API_Guid> site = GetSiteManagerElements();
+    appendCount(kSiteManagerTypeKey, site.GetSize());
+    appendStories(kSiteManagerTypeKey, site);
+    out.Append("},"); out.Append(byStory); out.Append("}}");
     EnqueueResult(std::string((const char*)out.ToCStr(CC_UTF8)));
 }
 
@@ -935,8 +964,11 @@ void DoSearch(const std::string& json) {
         GS::Array<API_Guid> all; if (ACAPI_Element_GetElemList(API_ElemType(t.id), &all) != NoError) continue;
         collect(all, t.key);
     }
-    if (results.GetSize() >= kMaxResults) WriteExternalLog("DoSearch: result capped at 1000");
-    GS::UniString out = "{\"type\":\"elements\",\"elements\":[";
+    const bool capped = results.GetSize() >= kMaxResults;
+    if (capped) WriteExternalLog("DoSearch: result capped at 1000");
+    GS::UniString out = "{\"type\":\"elements\",\"capped\":";
+    out.Append(capped ? "true" : "false");
+    out.Append(",\"elements\":[");
     for (UInt32 i = 0; i < results.GetSize(); i++) {
         if (i > 0) out.Append(",");
         out.Append("{\"guid\":\""); out.Append(APIGuid2GSGuid(results[i]).ToUniString());
@@ -1223,9 +1255,117 @@ static std::string ElemTypeName(API_ElemTypeID id) {
     }
 }
 
+// ─── 簡易版（基本情報）: W / L / H / レベル / フロア / 分類 ─────────────────────
+
+static bool IsSimpleInfoKey(const std::string& k) {
+    return k == "elem:W" || k == "elem:L" || k == "elem:H" || k == "elem:elevation" ||
+           k == "elem:story" || k == "elem:classification";
+}
+
+struct SimpleDims { double W = NAN, L = NAN, H = NAN, zMin = NAN; };
+
+// 要素タイプごとに意味のある寸法を優先し、それ以外は 3D 外形ボックスから求める
+static SimpleDims CalcSimpleDims(const API_Element& el) {
+    SimpleDims d;
+    API_Box3D box; BNZeroMemory(&box, sizeof(box));
+    if (ACAPI_Element_CalcBounds(&el.header, &box) == NoError) {
+        d.W = box.xMax - box.xMin; d.L = box.yMax - box.yMin;
+        d.H = box.zMax - box.zMin; d.zMin = box.zMin;
+    }
+    auto len2 = [](const API_Coord& a, const API_Coord& b) { return std::hypot(b.x - a.x, b.y - a.y); };
+    API_ElementMemo memo; BNZeroMemory(&memo, sizeof(memo));
+    switch (el.header.type.typeID) {
+        case API_WallID:
+            d.W = el.wall.thickness; d.L = len2(el.wall.begC, el.wall.endC); d.H = el.wall.height;
+            break;
+        case API_BeamID:
+            d.L = len2(el.beam.begC, el.beam.endC);
+            if (ACAPI_Element_GetMemo(el.header.guid, &memo, APIMemoMask_BeamSegment) == NoError && memo.beamSegments != nullptr) {
+                d.W = memo.beamSegments[0].assemblySegmentData.nominalWidth;
+                d.H = memo.beamSegments[0].assemblySegmentData.nominalHeight;
+            }
+            break;
+        case API_ColumnID:
+            d.H = el.column.height;
+            if (ACAPI_Element_GetMemo(el.header.guid, &memo, APIMemoMask_ColumnSegment) == NoError && memo.columnSegments != nullptr) {
+                d.W = memo.columnSegments[0].assemblySegmentData.nominalWidth;
+                d.L = memo.columnSegments[0].assemblySegmentData.nominalHeight;
+            }
+            break;
+        case API_SlabID:   d.H = el.slab.thickness; break;
+        case API_ObjectID: d.W = el.object.xRatio; d.L = el.object.yRatio; break;
+        case API_WindowID: d.W = el.window.openingBase.width; d.H = el.window.openingBase.height; break;
+        case API_DoorID:   d.W = el.door.openingBase.width;   d.H = el.door.openingBase.height;   break;
+        default: break;
+    }
+    ACAPI_DisposeElemMemoHdls(&memo);
+    return d;
+}
+
+static std::string FmtDim(double v) {
+    if (std::isnan(v)) return "---";
+    char buf[48]; snprintf(buf, sizeof(buf), "%.3f", v); return std::string(buf);
+}
+
+// 分類: 「分類システム: ID 名前」（複数システムは "; " 区切り）
+static std::string GetClassificationText(const API_Guid& guid) {
+    std::string out;
+    GS::Array<GS::Pair<API_Guid, API_Guid>> pairs;
+    if (ACAPI_Element_GetClassificationItems(guid, pairs) != NoError) return "---";
+    for (const auto& pr : pairs) {
+        if (pr.second == APINULLGuid) continue;
+        API_ClassificationItem item; item.guid = pr.second;
+        if (ACAPI_Classification_GetClassificationItem(item) != NoError) continue;
+        API_ClassificationSystem sys; sys.guid = pr.first;
+        GS::UniString s;
+        if (ACAPI_Classification_GetClassificationSystem(sys) == NoError) { s = sys.name; s.Append(": "); }
+        s.Append(item.id);
+        if (!item.name.IsEmpty() && item.name != item.id) { s.Append(" "); s.Append(item.name); }
+        if (!out.empty()) out += "; ";
+        out += (const char*)s.ToCStr(CC_UTF8);
+    }
+    return out.empty() ? "---" : out;
+}
+
+static std::map<short, std::string> GetStoryNameMap() {
+    std::map<short, std::string> m;
+    for (const auto& s : StoryService::GetAllStories())
+        m[s.index] = (const char*)s.name.ToCStr(CC_UTF8);
+    return m;
+}
+
+static std::string GetSimpleInfoValue(const API_Element& el, const SimpleDims& d, const std::string& key,
+                                      const std::map<short, std::string>& stories) {
+    if (key == "elem:W") return FmtDim(d.W);
+    if (key == "elem:L") return FmtDim(d.L);
+    if (key == "elem:H") return FmtDim(d.H);
+    if (key == "elem:elevation") return FmtDim(d.zMin);
+    if (key == "elem:story") {
+        auto it = stories.find(el.header.floorInd);
+        return it != stories.end() ? it->second : std::to_string(el.header.floorInd);
+    }
+    if (key == "elem:classification") return GetClassificationText(el.header.guid);
+    return "---";
+}
+
 // ExportDefs 用: 要素タイプ別 elem: 疑似プロパティ定義を出力
 static void AppendElemParamDefs(GS::UniString& out, const API_Element& elem) {
-    const char* grp = "要素設定パラメータ";
+    const char* grp = "基本情報";
+    // isCustom 等と同じ形式。基本情報はすべて閲覧のみ
+    auto addInfo = [&](const char* key, const char* name, int vt) {
+        out.Append(",{\"guid\":\""); out.Append(GS::UniString(key, CC_UTF8));
+        out.Append("\",\"name\":\""); out.Append(GS::UniString(name, CC_UTF8));
+        out.Append("\",\"group\":\""); out.Append(GS::UniString(grp, CC_UTF8));
+        out.Append("\",\"editable\":false,\"valueType\":"); out.Append(GS::UniString::Printf("%d", vt));
+        out.Append(",\"collectionType\":0,\"simple\":true}");
+    };
+    addInfo("elem:W",              "幅 W (m)",          2);
+    addInfo("elem:L",              "長さ L (m)",        2);
+    addInfo("elem:H",              "高さ H (m)",        2);
+    addInfo("elem:elevation",      "レベル 底面 (m)",   2);
+    addInfo("elem:story",          "フロア",            3);
+    addInfo("elem:classification", "分類",              3);
+    grp = "要素設定パラメータ";
     auto addP = [&](const char* key, const char* name, int vt, bool editable, bool isBool = false) {
         out.Append(",{\"guid\":\""); out.Append(GS::UniString(key, CC_UTF8));
         out.Append("\",\"name\":\""); out.Append(GS::UniString(name, CC_UTF8));
@@ -1398,6 +1538,8 @@ void ExportDefs(const std::string& json) {
         out.Append("\"group\":\""); out.Append(Escape(grp.name)); out.Append("\",");
         out.Append("\"editable\":"); out.Append(defs[i].canValueBeEditable ? "true" : "false"); out.Append(",");
         out.Append("\"valueType\":"); out.Append(GS::UniString::Printf("%d", (int)defs[i].valueType)); out.Append(",");
+        // ユーザー（プロジェクト）が作成したプロパティか（簡易版の表示対象）
+        out.Append("\"isCustom\":"); out.Append(defs[i].definitionType == API_PropertyCustomDefinitionType ? "true," : "false,");
         out.Append("\"collectionType\":"); out.Append(GS::UniString::Printf("%d", (int)defs[i].collectionType));
         if (isEnumType || enumCnt > 0) {
             out.Append(",\"enums\":[");
@@ -1428,6 +1570,7 @@ void ExportValues(const std::string& json) {
     if (guids.IsEmpty() || pgs.empty()) return;
     GS::Array<API_PropertyDefinition> pDefs; bool incID = false, incRen = false, incSF = false, incPos = false;
     std::vector<std::string> elemKeys, gdlKeys;
+    std::map<short, std::string> storyNames;   // フロア名（基本情報のフロア列用、必要時に 1 回取得）
     for (const auto& s : pgs) {
         if (s == "builtin:element_id") incID = true; else if (s == "builtin:RenovationStatus") incRen = true; else if (s == "builtin:StructuralFunction") incSF = true; else if (s == "builtin:Position") incPos = true;
         else if (s.size() > 5 && s.substr(0, 5) == "elem:") { elemKeys.push_back(s); }
@@ -1448,9 +1591,17 @@ void ExportValues(const std::string& json) {
         if (!elemKeys.empty()) {
             API_Element el = {}; BNZeroMemory(&el, sizeof(API_Element)); el.header.guid = guids[i];
             if (ACAPI_Element_Get(&el) == NoError) {
+                SimpleDims dims; bool dimsDone = false;   // 基本情報は要素ごとに 1 回だけ計算
                 for (const auto& k : elemKeys) {
-                    std::string val = GetElemParamValue(el, k);
-                    if (val == "---") val = GetElemParamValueMemo(guids[i], el.header.type.typeID, k);
+                    std::string val;
+                    if (IsSimpleInfoKey(k)) {
+                        if (!dimsDone) { dims = CalcSimpleDims(el); dimsDone = true; }
+                        if (storyNames.empty()) storyNames = GetStoryNameMap();
+                        val = GetSimpleInfoValue(el, dims, k, storyNames);
+                    } else {
+                        val = GetElemParamValue(el, k);
+                        if (val == "---") val = GetElemParamValueMemo(guids[i], el.header.type.typeID, k);
+                    }
                     add(k, GS::UniString(val.c_str(), CC_UTF8));
                 }
             }

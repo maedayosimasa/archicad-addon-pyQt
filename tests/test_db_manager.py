@@ -1,4 +1,4 @@
-﻿"""db_manager.DbManager の単体テスト（一時 SQLite ファイルを使用）。"""
+"""db_manager.DbManager の単体テスト（一時 SQLite ファイルを使用）。"""
 import json
 import threading
 

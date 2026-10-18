@@ -136,9 +136,14 @@ def test_full_fetch_flow(main_window):
     assert w.sent.last("get_definitions")["guids"] == [G1, G2, G3]
 
     w.on_definitions({"definitions": PROPS})
-    assert w.prop_tree.topLevelItemCount() == 3
+    # 既定は簡易版: 基本情報（ID）だけが出てチェック済み
+    assert w.is_simple_mode()
+    assert w.prop_tree.topLevelItemCount() == 1
     assert "プロパティ一覧取得完了" in w.condition_status_label.text()
 
+    # 詳細版に切り替えると全プロパティ（チェック状態は引き継ぐ）
+    w.prop_mode_combo.setCurrentText(server.PROP_MODE_DETAIL)
+    assert w.prop_tree.topLevelItemCount() == 3
     # グループのチェックで子もまとめてチェックされる
     group = next(w.prop_tree.topLevelItem(i) for i in range(3)
                  if w.prop_tree.topLevelItem(i).text(0) == "形状")
@@ -146,10 +151,10 @@ def test_full_fetch_flow(main_window):
     assert group.child(0).checkState(0) == Qt.CheckState.Checked
     w.get_values()
     req = w.sent.last("get_values")
-    assert req["guids"] == [G1, G2, G3] and req["propGuids"] == ["P-WIDTH"]
+    assert req["guids"] == [G1, G2, G3] and set(req["propGuids"]) == {"builtin:element_id", "P-WIDTH"}
 
     w.on_values({"values": [{"guid": G1, "modiStamp": 7, "props": {"P-WIDTH": "100"}}]})
-    assert w.model.rowCount() == 3 and w.model.columnCount() == 2
+    assert w.model.rowCount() == 3 and w.model.columnCount() == 3   # ID列 + ID + 幅
     assert w.model._stamps[G1] == 7
     assert w.data_panel.isVisible()
     assert w.btn_confirm_all.isEnabled() and w.btn_diff.isEnabled()
@@ -848,6 +853,7 @@ def test_site_manager_gdl_params_flow(main_window):
          "editable": False, "valueType": 3, "collectionType": 0},
     ]
     w.on_definitions({"definitions": defs})
+    w.prop_mode_combo.setCurrentText(server.PROP_MODE_DETAIL)     # GDL パラメータは詳細版に出る
     gdl_group = next(w.prop_tree.topLevelItem(i) for i in range(w.prop_tree.topLevelItemCount())
                      if w.prop_tree.topLevelItem(i).text(0) == "GDLパラメータ")
     assert gdl_group.childCount() == 2
@@ -973,3 +979,257 @@ def test_site_summary_timeout_ignored_after_response(main_window, monkeypatch):
     assert w.msgbox.calls == []
     timers[2]()
     assert w.msgbox.kinds() == ["warning"]
+
+
+# ── プロパティ設定: 簡易版（主）/ 詳細版（サブ）────────────────────
+
+SIMPLE_DEFS = [
+    {"guid": "builtin:element_id", "name": "ID", "group": "IDとカテゴリ", "editable": True},
+    {"guid": "P-WIDTH", "name": "幅", "group": "形状", "editable": True, "isCustom": False},
+    {"guid": "P-FLAG", "name": "変更フラグ", "group": "変更フラグ", "editable": True, "isCustom": True},
+    {"guid": "P-ROAD", "name": "道路中心高さ", "group": "敷地", "editable": True, "isCustom": True},
+    {"guid": "elem:type", "name": "要素タイプ", "group": "要素設定パラメータ", "editable": False},
+    {"guid": "elem:layer", "name": "レイヤ名", "group": "要素設定パラメータ", "editable": False},
+    {"guid": "elem:height", "name": "高さ", "group": "要素設定パラメータ", "editable": True},
+    {"guid": "elem:W", "name": "幅 W (m)", "group": "基本情報", "editable": False, "simple": True},
+    {"guid": "elem:L", "name": "長さ L (m)", "group": "基本情報", "editable": False, "simple": True},
+    {"guid": "elem:H", "name": "高さ H (m)", "group": "基本情報", "editable": False, "simple": True},
+    {"guid": "elem:elevation", "name": "レベル 底面 (m)", "group": "基本情報", "editable": False, "simple": True},
+    {"guid": "elem:story", "name": "フロア", "group": "基本情報", "editable": False, "simple": True},
+    {"guid": "elem:classification", "name": "分類", "group": "基本情報", "editable": False, "simple": True},
+    {"guid": "gdl:A", "name": "寸法 1 (A)", "group": "GDLパラメータ", "editable": False},
+]
+
+
+def _tree(w):
+    out = {}
+    for i in range(w.prop_tree.topLevelItemCount()):
+        g = w.prop_tree.topLevelItem(i)
+        out[g.text(0)] = [(g.child(j).text(0), g.child(j).checkState(0) == Qt.CheckState.Checked)
+                          for j in range(g.childCount())]
+    return out
+
+
+def test_simple_mode_is_default_with_basic_info_checked(main_window):
+    w = main_window
+    assert w.prop_mode_combo.currentText() == server.PROP_MODE_SIMPLE
+    w.current_elements = [{"guid": G1, "type": "Wall"}]
+    w.on_definitions({"definitions": SIMPLE_DEFS})
+    tree = _tree(w)
+    # 基本情報は決まった順で並び、最初からチェック済み → すぐ［データ取得］できる
+    assert tree[server.SIMPLE_GROUP] == [
+        ("ID", True), ("要素タイプ", True), ("レイヤ名", True), ("幅 W (m)", True), ("長さ L (m)", True),
+        ("高さ H (m)", True), ("レベル 底面 (m)", True), ("フロア", True), ("分類", True)]
+    assert w.prop_tree.topLevelItem(0).checkState(0) == Qt.CheckState.Checked
+    # プロジェクトで作成したプロパティ（isCustom）は簡易版にも出るが未チェック
+    assert tree["変更フラグ"] == [("変更フラグ", False)] and tree["敷地"] == [("道路中心高さ", False)]
+    # Archicad 標準プロパティ・GDL・個別パラメータは詳細版のみ
+    assert "形状" not in tree and "GDLパラメータ" not in tree and "要素設定パラメータ" not in tree
+
+    w.get_values()
+    req = w.sent.last("get_values")
+    assert req["propGuids"] == [
+        "builtin:element_id", "elem:type", "elem:layer", "elem:W", "elem:L", "elem:H",
+        "elem:elevation", "elem:story", "elem:classification"]   # 列はこの順
+
+
+def test_mode_switch_keeps_checked_properties(main_window):
+    w = main_window
+    w.current_elements = [{"guid": G1, "type": "Wall"}]
+    w.on_definitions({"definitions": SIMPLE_DEFS})
+    flag = next(w.prop_tree.topLevelItem(i) for i in range(w.prop_tree.topLevelItemCount())
+                if w.prop_tree.topLevelItem(i).text(0) == "変更フラグ")
+    flag.child(0).setCheckState(0, Qt.CheckState.Checked)
+
+    w.prop_mode_combo.setCurrentText(server.PROP_MODE_DETAIL)
+    tree = _tree(w)
+    assert ("幅", False) in tree["形状"] and tree["GDLパラメータ"] == [("寸法 1 (A)", False)]
+    assert tree["変更フラグ"] == [("変更フラグ", True)]                       # チェックを引き継ぐ
+    assert ("幅 W (m)", True) in tree["基本情報"] and ("ID", True) in tree["IDとカテゴリ"]
+    shape = next(w.prop_tree.topLevelItem(i) for i in range(w.prop_tree.topLevelItemCount())
+                 if w.prop_tree.topLevelItem(i).text(0) == "形状")
+    shape.setCheckState(0, Qt.CheckState.Checked)
+
+    w.prop_mode_combo.setCurrentText(server.PROP_MODE_SIMPLE)
+    tree = _tree(w)
+    assert tree["変更フラグ"] == [("変更フラグ", True)] and "形状" not in tree
+    w.get_values()
+    # 簡易版に表示されていない詳細版のチェック（幅）は送らない
+    assert "P-WIDTH" not in w.sent.last("get_values")["propGuids"]
+
+
+def test_simple_mode_values_display(main_window):
+    w = main_window
+    w.current_elements = [{"guid": G1, "type": "Wall"}]
+    w.on_definitions({"definitions": SIMPLE_DEFS})
+    w.get_values()
+    w.on_values({"values": [{"guid": G1, "modiStamp": 1, "props": {
+        "builtin:element_id": "W-01", "elem:type": "壁", "elem:layer": "躯体", "elem:W": "0.200",
+        "elem:L": "5.400", "elem:H": "3.000", "elem:elevation": "0.000", "elem:story": "1 Floor (1FL)",
+        "elem:classification": "Archicad分類: 壁 壁"}}]})
+    m = w.model
+    assert [m.headerData(c, Qt.Orientation.Horizontal) for c in range(m.columnCount())] == [
+        "ID", "ID", "要素タイプ", "レイヤ名", "幅 W (m)", "長さ L (m)", "高さ H (m)", "レベル 底面 (m)", "フロア", "分類"]
+    assert m.index(0, 4).data() == "0.200" and m.index(0, 9).data() == "Archicad分類: 壁 壁"
+    # 基本情報は閲覧のみ
+    assert not (m.flags(m.index(0, 4)) & Qt.ItemFlag.ItemIsEditable)
+
+
+# ── 階ごとの件数（梁は支える床の階に属する）──────────────────────
+
+CONFIG = {
+    "stories": [{"index": 0, "name": "1 Floor (1FL)"}, {"index": 1, "name": "2 Floor (2FL)"},
+                {"index": 2, "name": "3 Floor (3FL)"}],
+    "elementTypes": {"Beam": 346, "Column": 200},
+    "elementTypeStories": {"Beam": {"0": 42, "1": 160, "2": 144}, "Column": {"0": 31, "1": 169}},
+}
+
+
+def _types(w):
+    root = w.filter_tree.topLevelItem(1)
+    return [root.child(i).text(0) for i in range(root.childCount())]
+
+
+def test_type_counts_follow_selected_stories(main_window):
+    w = main_window
+    w.on_config(CONFIG)
+    assert _types(w) == ["Beam (346)", "Column (200)"]              # 階未選択: 全件数
+    stories = w.filter_tree.topLevelItem(0)
+    stories.child(0).setCheckState(0, Qt.CheckState.Checked)        # 1FL のみ
+    assert _types(w) == ["Beam (42 / 全346)", "Column (31 / 全200)"]
+    stories.child(1).setCheckState(0, Qt.CheckState.Checked)        # +2FL（大梁はこちら）
+    assert _types(w) == ["Beam (202 / 全346)", "Column (200 / 全200)"]
+    stories.child(0).setCheckState(0, Qt.CheckState.Unchecked)
+    stories.child(1).setCheckState(0, Qt.CheckState.Unchecked)
+    assert _types(w) == ["Beam (346)", "Column (200)"]
+
+
+def test_story_root_toggles_all_floors(main_window):
+    w = main_window
+    w.on_config(CONFIG)
+    root = w.filter_tree.topLevelItem(0)
+    root.setCheckState(0, Qt.CheckState.Checked)                    # 「階層」で全階選択
+    assert all(root.child(i).checkState(0) == Qt.CheckState.Checked for i in range(3))
+    assert _types(w)[0] == "Beam (346 / 全346)"
+    w.filter_tree.topLevelItem(1).child(0).setCheckState(0, Qt.CheckState.Checked)
+    w.search_elements()
+    cmd = w.sent.last("get_elements")
+    assert cmd["stories"] == [0, 1, 2] and cmd["Beam"] is True
+    root.child(2).setCheckState(0, Qt.CheckState.Unchecked)         # 1 つ外すと「階層」も外れる
+    assert root.checkState(0) == Qt.CheckState.Unchecked
+    root.child(2).setCheckState(0, Qt.CheckState.Checked)           # 全部付くと「階層」も付く
+    assert root.checkState(0) == Qt.CheckState.Checked
+    root.setCheckState(0, Qt.CheckState.Unchecked)
+    assert all(root.child(i).checkState(0) == Qt.CheckState.Unchecked for i in range(3))
+
+
+def test_counts_without_per_story_data_and_before_config(main_window):
+    w = main_window
+    w.on_filter_item_changed(None, 0)                               # 構成受信前は何もしない
+    w.on_config({"stories": [{"index": 0, "name": "1FL"}], "elementTypes": {"Wall": 5}})
+    w.filter_tree.topLevelItem(0).child(0).setCheckState(0, Qt.CheckState.Checked)
+    assert _types(w) == ["Wall (0 / 全5)"]                         # 古いアドオン（階別件数なし）
+
+
+def test_elements_capped_notice(main_window):
+    w = main_window
+    w.on_elements({"capped": True, "elements": [{"guid": G1, "type": "Object"}]})
+    assert "上限1000件で打ち切り" in w.condition_status_label.text()
+    w.on_elements({"capped": False, "elements": [{"guid": G1, "type": "Object"}]})
+    assert "上限" not in w.condition_status_label.text()
+
+
+# ── ウィンドウの大きさ・位置の保存と復元 ───────────────────────────
+# ※ offscreen の仮想画面は 800x600。それより大きいサイズは復元時に画面内へ収められる
+
+def _new_window(monkeypatch, tmp_path):
+    import db_manager
+    monkeypatch.setattr(db_manager, "DB_PATH", tmp_path / "w2.db")
+    w = server.MainWindow()
+    w.sent = []
+    return w
+
+
+def test_window_size_is_restored_next_time(main_window, monkeypatch, tmp_path):
+    w = main_window
+    w.show()
+    w.resize(640, 420)
+    w.move(40, 60)
+    w.data_panel.show()
+    w.data_panel.resize(720, 480)
+    w.h_split.setSizes([400, 200])
+    w.close()                                           # 閉じる時に保存
+
+    w2 = _new_window(monkeypatch, tmp_path)
+    try:
+        assert (w2.width(), w2.height()) == (640, 420)
+        assert (w2.data_panel.width(), w2.data_panel.height()) == (720, 480)
+        a, b = w2.h_split.sizes()
+        assert a > b                                    # 左右分割の比率も復元
+    finally:
+        w2.close()
+
+
+def test_unshown_window_keeps_previous_size(main_window, monkeypatch, tmp_path):
+    w = main_window
+    w.show()
+    w.data_panel.show()
+    w.data_panel.resize(611, 466)
+    w.save_window_state()
+    w.data_panel.hide()
+
+    w2 = _new_window(monkeypatch, tmp_path)            # 今回はデータパネルを開かずに閉じる
+    try:
+        w2.show()
+    finally:
+        w2.close()
+    w3 = _new_window(monkeypatch, tmp_path)
+    try:
+        assert (w3.data_panel.width(), w3.data_panel.height()) == (611, 466)
+    finally:
+        w3.close()
+
+
+def test_resize_triggers_debounced_autosave(main_window):
+    w = main_window
+    started = []
+    w._state_timer.timeout.disconnect()
+    w._state_timer.timeout.connect(lambda: started.append(True))
+    w.resize(700, 400)                                  # 未表示ではまだ保存対象外
+    assert not w._state_timer.isActive()
+    w.show()
+    w.resize(800, 450)
+    assert w._state_timer.isActive() and w._state_timer.interval() == 500
+    w.h_split.splitterMoved.emit(100, 1)
+    assert w._state_timer.isActive()
+
+
+def test_dialog_sizes_are_restored(main_window, monkeypatch, tmp_path):
+    w = main_window
+    w.on_site_summary({"elements": [], "projectInfo": []})
+    w._site_dlg.resize(620, 500)
+    dlg = w.show_replace_dialog()
+    dlg.resize(500, 260)
+    w.save_window_state()
+
+    w2 = _new_window(monkeypatch, tmp_path)
+    try:
+        w2.on_site_summary({"elements": [], "projectInfo": []})
+        assert (w2._site_dlg.width(), w2._site_dlg.height()) == (620, 500)
+        assert (w2.show_replace_dialog().width(), w2._replace_dlg.height()) == (500, 260)
+    finally:
+        w2.close()
+
+
+def test_close_survives_settings_error(main_window, monkeypatch):
+    monkeypatch.setattr(main_window, "save_window_state", lambda: (_ for _ in ()).throw(OSError("read-only")))
+    main_window.close()                                 # 保存に失敗しても終了処理は続く
+    assert main_window.db._local.conn is None
+
+def test_close_stops_tracking(main_window):
+    w = main_window
+    w.show_replace_dialog()
+    w.close()
+    assert w._tracked_windows == {} and not w._state_timer.isActive()
+    w.data_panel.resize(300, 200)                       # 閉じた後の変更は保存処理を起動しない
+    assert not w._state_timer.isActive()

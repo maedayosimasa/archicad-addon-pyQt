@@ -13,6 +13,8 @@ from pathlib import Path
 _LOG_DIR       = Path(os.environ.get("BIM_LOG_DIR") or Path(__file__).resolve().parent)
 LOG_PATH       = _LOG_DIR / "server_log.txt"
 FAULT_LOG_PATH = _LOG_DIR / "fault_log.txt"
+# ウィンドウの大きさ・位置を次回起動時に復元するための保存先
+SETTINGS_PATH  = _LOG_DIR / "pyqt_window.ini"
 
 
 def append_log(message: str):
@@ -48,6 +50,7 @@ try:
     from PyQt6.QtCore import (
         Qt, QAbstractTableModel, pyqtSignal, QObject,
         QSortFilterProxyModel, QItemSelection, QItemSelectionModel, QTimer,
+        QSettings, QEvent,
     )
     append_log("PyQt6.QtCore OK")
 except Exception as _e:
@@ -126,6 +129,16 @@ def _install_exception_hooks():
         append_log(f"[THREAD EXCEPTION] thread={args.thread}\n{msg}")
     threading.excepthook = _thread_excepthook
 
+
+# プロパティ設定の表示モード
+PROP_MODE_SIMPLE = "簡易版（基本情報＋作成したプロパティ）"
+PROP_MODE_DETAIL = "詳細版（全プロパティ）"
+SIMPLE_GROUP     = "基本情報"
+# 簡易版「基本情報」に並べる項目（この順で表示し、初期状態でチェック済み）
+SIMPLE_KEYS = [
+    "builtin:element_id", "elem:type", "elem:layer", "elem:libPart",
+    "elem:W", "elem:L", "elem:H", "elem:elevation", "elem:story", "elem:classification",
+]
 
 # 要素タイプのキー → 条件設定ツリーの表示名（無いものはキーをそのまま表示）
 ELEMENT_TYPE_LABELS = {
@@ -1021,6 +1034,16 @@ class MainWindow(QMainWindow):
         # ⑦ 起動時に未クリア競合フラグを復元
         self._restore_conflict_flags()
 
+        # ⑧ ウィンドウの大きさ・位置を前回の状態に復元し、変更のたびに自動保存
+        self._shown_windows = set()            # 今回表示したウィンドウ（未表示のものは保存しない）
+        self._state_timer = QTimer(self)
+        self._state_timer.setSingleShot(True)
+        self._state_timer.setInterval(500)     # 連続したサイズ変更をまとめて保存
+        self._state_timer.timeout.connect(self.save_window_state)
+        self._track_window("main", self)
+        self._track_window("data_panel", self.data_panel)
+        self._restore_splitter()
+
     # ── 両ウィンドウを同時に表示 ─────────────────────────────────────
 
     def _show_all_windows(self):
@@ -1061,7 +1084,7 @@ class MainWindow(QMainWindow):
         c_lay.setSpacing(4)
 
         # 水平 QSplitter で左右に並べる
-        h_split = QSplitter(Qt.Orientation.Horizontal)
+        h_split = self.h_split = QSplitter(Qt.Orientation.Horizontal)
 
         # ── 左半分：要素抽出 ──
         sect_extract = QWidget()
@@ -1075,6 +1098,7 @@ class MainWindow(QMainWindow):
         )
         self.filter_tree = QTreeWidget()
         self.filter_tree.setHeaderLabel("階 / タイプ")
+        self.filter_tree.itemChanged.connect(self.on_filter_item_changed)
         self.btn_search = QPushButton("要素を抽出")
         self.btn_search.clicked.connect(self.search_elements)
         self.btn_site_summary = QPushButton("敷地情報（敷地マネージャー）")
@@ -1095,12 +1119,20 @@ class MainWindow(QMainWindow):
             "font-weight: bold; color: #1a5276;"
             "background: #d6eaf8; padding: 3px 6px; border-radius: 3px;"
         )
+        # 表示切替: 簡易版（主）= 基本情報＋プロジェクトで作成したプロパティ / 詳細版（サブ）= 全プロパティ
+        self.prop_mode_combo = QComboBox()
+        self.prop_mode_combo.addItems([PROP_MODE_SIMPLE, PROP_MODE_DETAIL])
+        self.prop_mode_combo.setToolTip("簡易版: W・L・H・レベル・分類など基本情報と、作成したプロパティ\n"
+                                        "詳細版: Archicad の全プロパティ")
+        self.prop_mode_combo.currentIndexChanged.connect(lambda _i: self._populate_prop_tree())
         self.prop_tree = QTreeWidget()
         self.prop_tree.setHeaderLabel("プロパティ")
         self.prop_tree.itemChanged.connect(self.on_prop_item_changed)
+        self._all_defs = []
         self.btn_get_values = QPushButton("データ取得")
         self.btn_get_values.clicked.connect(self.get_values)
         sp_lay.addWidget(lbl_prop)
+        sp_lay.addWidget(self.prop_mode_combo)
         sp_lay.addWidget(self.prop_tree)
         sp_lay.addWidget(self.btn_get_values)
 
@@ -1339,26 +1371,73 @@ class MainWindow(QMainWindow):
         self.send_to_ac_async({"command": "get_elements", "stories": stories, **types})
 
     def on_config(self, data):
+        self.filter_tree.blockSignals(True)
         self.filter_tree.clear()
         sr = QTreeWidgetItem(self.filter_tree, ["階層"])
+        sr.setCheckState(0, Qt.CheckState.Unchecked)       # チェックで全階をまとめて選択/解除
+        self._story_root = sr
         for s in data.get("stories", []):
             c = QTreeWidgetItem(sr, [s["name"]])
             c.setData(0, Qt.ItemDataRole.UserRole, s["index"])
             c.setCheckState(0, Qt.CheckState.Unchecked)
         tr = QTreeWidgetItem(self.filter_tree, ["要素タイプ"])
+        # 階ごとの件数（梁は支える床の階に属する等、選んだ階で件数が変わることを示す）
+        self._type_story_counts = data.get("elementTypeStories", {})
+        self._type_items = {}
         for n, cnt in data.get("elementTypes", {}).items():
-            c = QTreeWidgetItem(tr, [f"{ELEMENT_TYPE_LABELS.get(n, n)} ({cnt})"])
+            c = QTreeWidgetItem(tr, [""])
             c.setData(0, Qt.ItemDataRole.UserRole, n)
+            c.setData(0, Qt.ItemDataRole.UserRole + 1, cnt)
             c.setCheckState(0, Qt.CheckState.Unchecked)
+            self._type_items[n] = c
+        self._update_type_counts()
         self.filter_tree.expandAll()
+        self.filter_tree.blockSignals(False)
+
+    def _selected_story_indexes(self):
+        root = getattr(self, "_story_root", None)
+        if root is None:
+            return []
+        return [root.child(i).data(0, Qt.ItemDataRole.UserRole) for i in range(root.childCount())
+                if root.child(i).checkState(0) == Qt.CheckState.Checked]
+
+    def _update_type_counts(self):
+        """要素タイプの表示を「名前 (選択階の件数 / 全件数)」に更新する（階未選択なら全件数のみ）。"""
+        stories = self._selected_story_indexes()
+        for key, item in getattr(self, "_type_items", {}).items():
+            total = item.data(0, Qt.ItemDataRole.UserRole + 1)
+            label = ELEMENT_TYPE_LABELS.get(key, key)
+            if stories:
+                per = self._type_story_counts.get(key, {})
+                n = sum(int(per.get(str(s), 0)) for s in stories)
+                item.setText(0, f"{label} ({n} / 全{total})")
+            else:
+                item.setText(0, f"{label} ({total})")
+
+    def on_filter_item_changed(self, item, col):
+        root = getattr(self, "_story_root", None)
+        if root is None:
+            return
+        self.filter_tree.blockSignals(True)
+        try:
+            if item is root:
+                for i in range(root.childCount()):
+                    root.child(i).setCheckState(0, root.checkState(0))
+            elif item.parent() is root:
+                all_on = all(root.child(i).checkState(0) == Qt.CheckState.Checked for i in range(root.childCount()))
+                root.setCheckState(0, Qt.CheckState.Checked if all_on else Qt.CheckState.Unchecked)
+            self._update_type_counts()
+        finally:
+            self.filter_tree.blockSignals(False)
 
     def on_elements(self, data):
         self.current_elements = data.get("elements", [])
         types = {e.get("type", "") for e in self.current_elements if e.get("type")}
         self._current_element_type = next(iter(types), "") if len(types) == 1 else ""
         cnt = len(self.current_elements)
+        capped = " ※上限1000件で打ち切り（階やタイプを絞ってください）" if data.get("capped") else ""
         if cnt:
-            self.condition_status_label.setText(f"要素: {cnt}件 抽出完了 → プロパティ一覧を取得中...")
+            self.condition_status_label.setText(f"要素: {cnt}件 抽出完了{capped} → プロパティ一覧を取得中...")
         else:
             self.condition_status_label.setText("該当なし。条件を変えて再試行してください")
         # ③ DB に要素を保存
@@ -1383,23 +1462,62 @@ class MainWindow(QMainWindow):
                 "guids":   [e["guid"] for e in self.current_elements],
             })
 
-    def on_definitions(self, data):
+    def is_simple_mode(self):
+        return self.prop_mode_combo.currentText() == PROP_MODE_SIMPLE
+
+    def _checked_prop_guids(self):
+        checked = set()
+        it = QTreeWidgetItemIterator(self.prop_tree)
+        while it.value():
+            item = it.value()
+            d = item.data(0, Qt.ItemDataRole.UserRole)
+            if item.parent() and d and item.checkState(0) == Qt.CheckState.Checked:
+                checked.add(d["guid"])
+            it += 1
+        return checked
+
+    def _populate_prop_tree(self, checked=None):
+        """現在のモードでプロパティ一覧を組み直す。checked 省略時は今のチェック状態を引き継ぐ。"""
+        if checked is None:
+            checked = self._checked_prop_guids()
+        self.prop_tree.blockSignals(True)
         self.prop_tree.clear()
-        groups      = {}
-        sorted_defs = self._sort_props_by_dialog_order(
-            data.get("definitions", []),
-            element_type=self._current_element_type,
-        )
-        for d in sorted_defs:
-            gn = d.get("group", "Other")
-            if gn not in groups:
-                p = QTreeWidgetItem(self.prop_tree, [gn])
+        groups = {}
+
+        def add(group_name, d):
+            if group_name not in groups:
+                p = QTreeWidgetItem(self.prop_tree, [group_name])
                 p.setCheckState(0, Qt.CheckState.Unchecked)
-                groups[gn] = p
-            c = QTreeWidgetItem(groups[gn], [d["name"]])
+                groups[group_name] = p
+            c = QTreeWidgetItem(groups[group_name], [d["name"]])
             c.setData(0, Qt.ItemDataRole.UserRole, d)
-            c.setCheckState(0, Qt.CheckState.Unchecked)
+            c.setCheckState(0, Qt.CheckState.Checked if d["guid"] in checked else Qt.CheckState.Unchecked)
+
+        if self.is_simple_mode():
+            by_guid = {d["guid"]: d for d in self._all_defs}
+            for key in SIMPLE_KEYS:                       # 基本情報（決まった順）
+                if key in by_guid:
+                    add(SIMPLE_GROUP, by_guid[key])
+            custom = [d for d in self._all_defs if d.get("isCustom") and d["guid"] not in SIMPLE_KEYS]
+            for d in self._sort_props_by_dialog_order(custom, element_type=self._current_element_type):
+                add(d.get("group", "Other"), d)          # プロジェクトで作成したプロパティ
+        else:
+            for d in self._sort_props_by_dialog_order(self._all_defs, element_type=self._current_element_type):
+                add(d.get("group", "Other"), d)
+
+        for p in groups.values():                        # 子が全部チェック済みならグループもチェック
+            if p.childCount() and all(p.child(i).checkState(0) == Qt.CheckState.Checked
+                                      for i in range(p.childCount())):
+                p.setCheckState(0, Qt.CheckState.Checked)
         self.prop_tree.collapseAll()
+        if SIMPLE_GROUP in groups:
+            groups[SIMPLE_GROUP].setExpanded(True)
+        self.prop_tree.blockSignals(False)
+
+    def on_definitions(self, data):
+        self._all_defs = data.get("definitions", [])
+        # 簡易版の基本情報は最初からチェック → そのまま［データ取得］できる
+        self._populate_prop_tree(checked=set(SIMPLE_KEYS))
         cnt = len(self.current_elements) if hasattr(self, "current_elements") else 0
         self.condition_status_label.setText(f"要素: {cnt}件 抽出完了 / プロパティ一覧取得完了")
         # ③ DB にプロパティ定義を保存
@@ -1430,9 +1548,8 @@ class MainWindow(QMainWindow):
                     sel.append(d)
             it += 1
         if sel and hasattr(self, "current_elements"):
-            self.current_props = self._sort_props_by_dialog_order(
-                sel, element_type=self._current_element_type
-            )
+            # ツリーは既に表示順（簡易版は W→L→H…、詳細版は dialog_order 順）なのでその順で列にする
+            self.current_props = sel
             self.send_to_ac_async({
                 "command":   "get_values",
                 "guids":     [e["guid"] for e in self.current_elements],
@@ -1766,6 +1883,7 @@ class MainWindow(QMainWindow):
             self.condition_status_label.setText("敷地情報 取得完了")
         if self._site_dlg is None:
             self._site_dlg = SiteSummaryDialog(self, parent=self)
+            self._track_window("site_summary", self._site_dlg)
         self._site_dlg.set_summary(summary)
         self._site_dlg.show()
         self._site_dlg.raise_()
@@ -1776,6 +1894,7 @@ class MainWindow(QMainWindow):
     def show_replace_dialog(self):
         if getattr(self, "_replace_dlg", None) is None:
             self._replace_dlg = ReplaceDialog(self, parent=self.data_panel)
+            self._track_window("replace", self._replace_dlg)
         if self.search_edit.text() and not self._replace_dlg.find_edit.text():
             self._replace_dlg.find_edit.setText(self.search_edit.text())
         self._replace_dlg.show()
@@ -2412,6 +2531,47 @@ class MainWindow(QMainWindow):
             append_log(f"SYNC ERROR: {e}\n{traceback.format_exc()}")
             QMessageBox.critical(self, "内部エラー", str(e))
 
+    # ── ウィンドウの大きさ・位置の保存と復元 ──────────────────────────
+
+    def _settings(self):
+        return QSettings(str(SETTINGS_PATH), QSettings.Format.IniFormat)
+
+    def _track_window(self, key, widget):
+        """前回の大きさ・位置を復元し、以後の移動・サイズ変更を自動保存の対象にする。"""
+        if not hasattr(self, "_tracked_windows"):
+            self._tracked_windows = {}
+        self._tracked_windows[key] = widget
+        geom = self._settings().value(f"geometry/{key}")
+        if geom is not None:
+            widget.restoreGeometry(geom)
+        widget.installEventFilter(self)
+
+    def _restore_splitter(self):
+        state = self._settings().value("splitter/condition")
+        if state is not None:
+            self.h_split.restoreState(state)
+        self.h_split.splitterMoved.connect(lambda *_: self._state_timer.start())
+
+    def eventFilter(self, obj, event):
+        tracked = getattr(self, "_tracked_windows", {})
+        if obj in tracked.values():
+            t = event.type()
+            if t == QEvent.Type.Show:
+                self._shown_windows.add(obj)
+            if t in (QEvent.Type.Resize, QEvent.Type.Move) and obj in self._shown_windows:
+                self._state_timer.start()
+        return super().eventFilter(obj, event)
+
+    def save_window_state(self):
+        """表示したことのあるウィンドウの大きさ・位置と、条件設定の左右分割を保存する。"""
+        s = self._settings()
+        for key, widget in getattr(self, "_tracked_windows", {}).items():
+            if widget in self._shown_windows:   # 今回開いていないものは前回値を残す
+                s.setValue(f"geometry/{key}", widget.saveGeometry())
+        if self in self._shown_windows:
+            s.setValue("splitter/condition", self.h_split.saveState())
+        s.sync()
+
     # ── フロアポーリング ──────────────────────────────────────────────
 
     def changeEvent(self, event):
@@ -2488,6 +2648,18 @@ class MainWindow(QMainWindow):
     # ── ウィンドウクローズ ───────────────────────────────────────────
 
     def closeEvent(self, event):
+        try:
+            self.save_window_state()   # 閉じる直前の大きさ・位置を確実に保存
+        except Exception as e:
+            append_log(f"[WINDOW STATE ERROR] {e}")
+        # 後片付け中にイベントフィルタが呼ばれないよう監視を外す
+        self._state_timer.stop()
+        for widget in getattr(self, "_tracked_windows", {}).values():
+            try:
+                widget.removeEventFilter(self)
+            except RuntimeError:
+                pass   # 既に破棄済みのダイアログ
+        self._tracked_windows = {}
         if self.server_thread:
             self.server_thread.stop()
         try:

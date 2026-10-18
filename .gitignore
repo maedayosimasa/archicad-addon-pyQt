@@ -15,3 +15,6 @@ __pycache__/
 # Test / coverage
 .coverage
 .pytest_cache/
+
+# PyQt のウィンドウ位置・大きさ（PC ごとの設定）
+pyqt_window.ini
