@@ -107,6 +107,7 @@ except Exception as _e:
 try:
     import table_tools
     import site_summary
+    import schedules
     append_log("table_tools OK")
 except Exception as _e:
     append_log(f"IMPORT FATAL table_tools (openpyxl 未インストール?): {_e}\n{traceback.format_exc()}")
@@ -480,6 +481,7 @@ class CommunicationSignals(QObject):
     current_floor_received       = pyqtSignal(dict)
     selection_changed            = pyqtSignal(dict)
     site_summary_received        = pyqtSignal(dict)
+    schedule_resolved_received   = pyqtSignal(dict)
     show_window                  = pyqtSignal()
     error_occurred               = pyqtSignal(str)
 
@@ -561,6 +563,7 @@ class TcpServerThread(threading.Thread):
                     elif t == "selection_changed":     self.signals.selection_changed.emit(payload)
                     elif t == "current_floor":        self.signals.current_floor_received.emit(payload)
                     elif t == "site_summary":         self.signals.site_summary_received.emit(payload)
+                    elif t == "schedule_resolved":    self.signals.schedule_resolved_received.emit(payload)
                     else:
                         append_log(f"[UNKNOWN TYPE] {t}")
                 except Exception as e:
@@ -945,6 +948,106 @@ class SiteSummaryDialog(QDialog):
 
 
 # ─────────────────────────────────────────────────────────────────────
+# ScheduleListDialog  モデル内の連動一覧表を選んで開く
+# ─────────────────────────────────────────────────────────────────────
+
+class ScheduleListDialog(QDialog):
+    """連動一覧表（要素一覧）の一覧。選んだ一覧表と同じ対象・列でデータウィンドウを開く。"""
+
+    HEADERS = ["No", "一覧表", "対象要素", "列", "条件", "状態"]
+
+    def __init__(self, window, parent=None):
+        super().__init__(parent)
+        self._win = window
+        self._items = []
+        self.setWindowTitle("一覧表（連動一覧表）から取得")
+        self.setModal(False)
+        self.resize(820, 560)
+        lay = QVBoxLayout(self)
+        self.folder_label = QLabel("")
+        self.folder_label.setWordWrap(True)
+        lay.addWidget(self.folder_label)
+        self.filter_edit = QLineEdit()
+        self.filter_edit.setPlaceholderText("一覧表名で絞り込み")
+        self.filter_edit.textChanged.connect(self._apply_filter)
+        lay.addWidget(self.filter_edit)
+        self.tbl = QTableWidget(0, len(self.HEADERS))
+        self.tbl.setHorizontalHeaderLabels(self.HEADERS)
+        self.tbl.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.tbl.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.tbl.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.tbl.verticalHeader().setVisible(False)
+        hh = self.tbl.horizontalHeader()
+        hh.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        hh.setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
+        self.tbl.doubleClicked.connect(lambda _i: self.open_selected())
+        lay.addWidget(self.tbl)
+        self.info_label = QLabel("一覧表を選んで［開く］（ダブルクリックでも開けます）。"
+                                 "Archicad の一覧表と同じ対象要素・列でデータ表示・編集ウィンドウを開きます。")
+        self.info_label.setWordWrap(True)
+        lay.addWidget(self.info_label)
+        btns = QWidget(); bl = QHBoxLayout(btns); bl.setContentsMargins(0, 0, 0, 0)
+        self.btn_reload = QPushButton("再読込")
+        self.btn_open   = QPushButton("開く")
+        self.btn_close  = QPushButton("閉じる")
+        self.btn_reload.clicked.connect(self.reload)
+        self.btn_open.clicked.connect(self.open_selected)
+        self.btn_close.clicked.connect(self.close)
+        bl.addWidget(self.btn_reload); bl.addStretch(); bl.addWidget(self.btn_open); bl.addWidget(self.btn_close)
+        lay.addWidget(btns)
+        self.reload()
+
+    def reload(self):
+        folder = self._win.schedule_folder()
+        self._items = []
+        if not folder or not os.path.isdir(folder):
+            self.folder_label.setText("連動一覧表のフォルダが見つかりません。Archicad でプロジェクトを開いてから再読込してください。")
+        else:
+            from datetime import datetime
+            stamp = datetime.fromtimestamp(os.path.getmtime(folder)).strftime("%Y-%m-%d %H:%M")
+            self._items = schedules.list_schedules(folder)
+            self.folder_label.setText(f"{len(self._items)} 件（Archicad が書き出した一覧表の定義・{stamp} 更新）\n{folder}")
+        self.tbl.setRowCount(len(self._items))
+        for r, s in enumerate(self._items):
+            sm = schedules.summary(s)
+            state = "開けます" if sm["openable"] else (
+                "対象要素が未対応" if not sm["types"] else "取得できる列がありません")
+            if sm["openable"] and sm["unsupported"]:
+                state = f"一部の条件は未対応（{len(sm['unsupported'])}件）"
+            cells = [s["order"], s["display"], sm["type_labels"], sm["columns"], sm["criteria"], state]
+            for c, val in enumerate(cells):
+                item = QTableWidgetItem(str(val))
+                if not sm["openable"]:
+                    item.setForeground(QColor("gray"))
+                if c == 5 and sm["unsupported"]:
+                    item.setToolTip("未対応の条件（絞り込みに使いません）:\n" + "\n".join(sm["unsupported"]))
+                self.tbl.setItem(r, c, item)
+        self._apply_filter(self.filter_edit.text())
+
+    def _apply_filter(self, text):
+        t = (text or "").strip().casefold()
+        for r, s in enumerate(self._items):
+            self.tbl.setRowHidden(r, bool(t) and t not in s["display"].casefold())
+
+    def selected_schedule(self):
+        rows = {i.row() for i in self.tbl.selectionModel().selectedRows()}
+        if not rows:
+            return None
+        return self._items[min(rows)]
+
+    def open_selected(self):
+        s = self.selected_schedule()
+        if s is None:
+            self.info_label.setText("一覧表を選択してください。")
+            return
+        if not schedules.summary(s)["openable"]:
+            self.info_label.setText(f"「{s['name']}」はこのアドオンで扱えない要素タイプ・列のため開けません。")
+            return
+        self.info_label.setText(f"「{s['name']}」を取得中...")
+        self._win.open_schedule(s)
+
+
+# ─────────────────────────────────────────────────────────────────────
 # DataPanel  データ表示・編集ウィンドウ（複数同時に開ける）
 # ─────────────────────────────────────────────────────────────────────
 
@@ -1067,6 +1170,9 @@ class MainWindow(QMainWindow):
         self.signals.selection_changed.connect(self.on_archicad_selection_changed)
         self.signals.current_floor_received.connect(self.on_current_floor)
         self.signals.site_summary_received.connect(self.on_site_summary)
+        self.signals.schedule_resolved_received.connect(self.on_schedule_resolved)
+        self._schedule_jobs = {}     # reqId -> 一覧表の取得ジョブ（列の解決 → 要素 → 値）
+        self._schedule_dlg  = None
         self._site_dlg = None
         self.server_thread = None
 
@@ -1460,10 +1566,14 @@ class MainWindow(QMainWindow):
         self.btn_site_summary = QPushButton("敷地情報（敷地マネージャー）")
         self.btn_site_summary.setToolTip("用途地域・敷地面積・建蔽率・容積率などをまとめて取得")
         self.btn_site_summary.clicked.connect(self.request_site_summary)
+        self.btn_schedules = QPushButton("一覧表（連動一覧表）から取得...")
+        self.btn_schedules.setToolTip("モデル内の連動一覧表と同じ対象要素・列でデータ表示・編集ウィンドウを開く")
+        self.btn_schedules.clicked.connect(self.show_schedule_list)
         se_lay.addWidget(lbl_extract)
         se_lay.addWidget(self.filter_tree)
         se_lay.addWidget(self.btn_search)
         se_lay.addWidget(self.btn_site_summary)
+        se_lay.addWidget(self.btn_schedules)
 
         # ── 右半分：プロパティ設定 ──
         sect_prop = QWidget()
@@ -1582,6 +1692,9 @@ class MainWindow(QMainWindow):
 
     def on_error(self, m):
         self.clear_all_busy()
+        if self._schedule_jobs:                  # 通信エラー → 一覧表の取得は中止
+            self._schedule_jobs.clear()
+            self._schedule_status("一覧表の取得を中止しました（通信エラー）")
         # 値を待っていて、まだ一度も表示していないウィンドウは登録ごと破棄（同条件で取り直せるように）
         for rid, panel in list(self._value_requests.items()):
             del self._value_requests[rid]
@@ -1685,6 +1798,10 @@ class MainWindow(QMainWindow):
             self.filter_tree.blockSignals(False)
 
     def on_elements(self, data):
+        job = self._schedule_jobs.get(data.get("reqId"))
+        if job is not None:                      # 一覧表の取得途中（条件設定パネルとは別）
+            self._schedule_elements(job, data)
+            return
         self.current_elements = data.get("elements", [])
         types = {e.get("type", "") for e in self.current_elements if e.get("type")}
         self._current_element_type = next(iter(types), "") if len(types) == 1 else ""
@@ -1855,12 +1972,20 @@ class MainWindow(QMainWindow):
         return self._active_panel
 
     def on_values(self, data):
+        job = self._schedule_jobs.get(data.get("reqId"))
+        if job is not None:                      # 一覧表の取得途中
+            self._schedule_values(job, data)
+            return
         self.activate_panel(self._panel_for_values(data))
         if self._verifying_stamps:
             self._verifying_stamps = False
             self._on_pre_apply_verify(data)
             return
         self.clear_button_busy(self.btn_get_values)
+        self._display_values(data)
+
+    def _display_values(self, data):
+        """作業中のデータウィンドウに値を表示し、SQLite に保存する。"""
         panel = self.data_panel
         if not panel.elements:   # 旧来の 1 枚運用（直接呼ばれた場合）は条件設定側の要素を使う
             panel.elements = list(getattr(self, "current_elements", []))
@@ -2201,6 +2326,155 @@ class MainWindow(QMainWindow):
         self._site_dlg.show()
         self._site_dlg.raise_()
         append_log(f"[SITE SUMMARY] sites={len(summary['sites'])} roads={len(summary['roads'])}")
+
+    # ── 連動一覧表から取得（列の解決 → 要素 → 値 → 条件で絞り込み → 表示）────
+
+    SCHEDULE_ELEMENT_LIMIT = 20000
+
+    @staticmethod
+    def schedule_folder():
+        """Archicad が書き出した連動一覧表フォルダ（BIM_SCHEDULE_DIR で差し替え可能）。"""
+        return os.environ.get("BIM_SCHEDULE_DIR") or schedules.find_schedule_folder()
+
+    def show_schedule_list(self):
+        if self._schedule_dlg is None:
+            self._schedule_dlg = ScheduleListDialog(self, parent=self)
+            self._track_window("schedules", self._schedule_dlg)
+        else:
+            self._schedule_dlg.reload()
+        self._schedule_dlg.show()
+        self._schedule_dlg.raise_()
+        return self._schedule_dlg
+
+    def _schedule_status(self, text):
+        self.condition_status_label.setText(text)
+        if self._schedule_dlg is not None:
+            self._schedule_dlg.info_label.setText(text)
+
+    def open_schedule(self, sched):
+        key = "schedule:" + sched["file"]
+        existing = next((p for p in self._panels.values() if p.window_key == key), None)
+        if existing is not None or self.db.find_window(key) is not None:
+            QMessageBox.information(
+                self, "一覧表",
+                f"一覧表「{sched['name']}」のウィンドウは既に開いています。\n"
+                "そのウィンドウを前面に表示します。\n\n"
+                "最新の値を取り直す場合は、そのウィンドウを閉じてから開き直してください。")
+            if existing is not None:
+                self.activate_panel(existing)
+                existing.show(); existing.raise_(); existing.activateWindow()
+            return None
+        if any(j["key"] == key for j in self._schedule_jobs.values()):
+            self._schedule_status(f"一覧表「{sched['name']}」は取得中です")
+            return None
+        refs, layers = schedules.required_refs(sched)
+        job = {"id": "sched:" + str(uuid.uuid4()), "key": key, "sched": sched, "stage": "resolve"}
+        self._schedule_jobs[job["id"]] = job
+        guids = [r for r in refs if "||" not in r]
+        names = [schedules.to_hex(r) for r in refs if "||" in r]
+        self._schedule_status(f"一覧表「{sched['name']}」: 列の定義を取得中...")
+        self.set_button_busy(self.btn_schedules)
+        append_log(f"[SCHEDULE] open {sched['name']} refs={len(refs)} layers={layers}")
+        self.send_to_ac_async({"command": "resolve_schedule", "reqId": job["id"],
+                               "propGuids": guids, "propNamesHex": names, "layers": layers})
+        return job
+
+    def on_schedule_resolved(self, data):
+        job = self._schedule_jobs.get(data.get("reqId"))
+        if job is None:
+            return
+        sched = job["sched"]
+        resolved = {d["ref"].upper() if "||" not in d["ref"] else d["ref"]: d for d in data.get("definitions", [])}
+        job["columns"], job["missing"] = schedules.build_columns(sched, resolved)
+        job["ctx"] = {"layers": data.get("layers", {}),
+                      "ref_to_key": {ref: d["guid"] for ref, d in resolved.items()}}
+        if not job["columns"]:
+            del self._schedule_jobs[job["id"]]
+            self.clear_button_busy(self.btn_schedules)
+            self._schedule_status(f"一覧表「{sched['name']}」: 取得できる列がありません")
+            return
+        types, _unknown = schedules.schedule_types(sched)
+        job["stage"] = "elements"
+        self._schedule_status(f"一覧表「{sched['name']}」: 対象要素を取得中...")
+        self.send_to_ac_async({"command": "get_elements", "reqId": job["id"], "stories": [],
+                               "limit": self.SCHEDULE_ELEMENT_LIMIT, **{t: True for t in types}})
+
+    def _schedule_elements(self, job, data):
+        sched = job["sched"]
+        job["elements"] = data.get("elements", [])
+        job["capped"] = bool(data.get("capped"))
+        if not job["elements"]:
+            del self._schedule_jobs[job["id"]]
+            self.clear_button_busy(self.btn_schedules)
+            self._schedule_status(f"一覧表「{sched['name']}」: 対象の要素がありません")
+            return
+        # 列の値 ＋ 条件の判定に使う値（プロパティ / GDL / 配置フロア番号）
+        keys = [c["guid"] for c in job["columns"]]
+        for c in sched["criteria"]:
+            if not schedules.criterion_supported(c):
+                continue
+            if c["param_type"] == schedules.PT_GDL:
+                k = "gdl:" + c["gdl_var"]
+            elif c["param_type"] == schedules.PT_PROPERTY:
+                ref = schedules.prop_ref(c)
+                k = "elem:floorIndex" if ref == schedules.HOME_STORY_PROP else job["ctx"]["ref_to_key"].get(ref)
+            else:
+                k = None
+            if k and k not in keys:
+                keys.append(k)
+        job["stage"] = "values"
+        self._schedule_status(f"一覧表「{sched['name']}」: {len(job['elements'])} 件の値を取得中...")
+        self.send_to_ac_async({"command": "get_values", "reqId": job["id"],
+                               "guids": [e["guid"] for e in job["elements"]], "propGuids": keys})
+
+    def _schedule_values(self, job, data):
+        del self._schedule_jobs[job["id"]]
+        self.clear_button_busy(self.btn_schedules)
+        sched = job["sched"]
+        by_guid = {item["guid"]: item for item in data.get("values", [])}
+        elements, rows = [], []
+        for e in job["elements"]:
+            item = by_guid.get(e["guid"])
+            if item is None:
+                continue
+            if schedules.evaluate(sched["criteria"], e, item.get("props", {}), job["ctx"]):
+                elements.append(e)
+                col_keys = {c["guid"] for c in job["columns"]}
+                rows.append({"guid": e["guid"], "modiStamp": item.get("modiStamp", 0),
+                             "props": {k: v for k, v in item.get("props", {}).items() if k in col_keys}})
+        if not elements:
+            self._schedule_status(f"一覧表「{sched['name']}」: 条件に合う要素がありません")
+            return
+        # Archicad と同じ行の並び（列を左から順に昇順/降順）
+        rows = schedules.sort_rows(rows, schedules.sort_specs(sched, job["columns"]), table_tools.sort_key)
+        order = {r["guid"]: i for i, r in enumerate(rows)}
+        elements.sort(key=lambda e: order[e["guid"]])
+
+        panel = self._acquire_panel()
+        panel.elements      = elements
+        panel.condition_id  = None
+        panel.current_props = job["columns"]
+        panel.window_key    = job["key"]
+        title = (f"一覧表: {sched['name']}  #{panel.seq}  "
+                 f"({len(elements)}件 × {len(job['columns'])}列)")
+        panel.setWindowTitle(title)
+        self.db.open_window(panel.window_id, job["key"], title, None, [], {},
+                            [e["guid"] for e in elements], [c["guid"] for c in job["columns"]])
+        self.activate_panel(panel)
+        self._display_values({"values": rows})
+        notes = []
+        unsupported = schedules.summary(sched)["unsupported"]
+        if unsupported:
+            notes.append("未対応の条件（絞り込みに未使用）: " + " / ".join(unsupported))
+        if job["missing"]:
+            notes.append("取得できなかった列: " + "、".join(job["missing"]))
+        if job.get("capped"):
+            notes.append(f"要素が多いため {self.SCHEDULE_ELEMENT_LIMIT} 件で打ち切り")
+        self.status_label.setText(f"一覧表「{sched['name']}」: {len(elements)} 件"
+                                  + ("  ※" + "  ※".join(notes) if notes else ""))
+        self._schedule_status(f"一覧表「{sched['name']}」: {len(elements)} 件を表示しました")
+        append_log(f"[SCHEDULE] shown {sched['name']} elements={len(elements)}/{len(job['elements'])} "
+                   f"cols={len(job['columns'])} notes={notes}")
 
     # ── 検索と置換 ───────────────────────────────────────────────────
 

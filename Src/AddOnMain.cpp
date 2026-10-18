@@ -141,6 +141,8 @@ static void LogLoadedAddOnBinary();
 // 敷地マネージャー（SiteManager.apx）が配置する GDL オブジェクトの一覧（定義は後方）
 static GS::Array<API_Guid> GetSiteManagerElements();
 static const char* const kSiteManagerTypeKey = "SiteManager";
+static GS::UniString JsonStr(const GS::UniString& s);   // JSON 文字列リテラル（定義は後方）
+void ResolveSchedule(const std::string& json);           // 一覧表の列・条件の解決（定義は後方）
 
 static void ScheduleProcessOneCommand() {
     const GSErrCode err = ACAPI_AddOnAddOnCommunication_CallFromEventLoop(
@@ -758,6 +760,7 @@ void ExecuteBatch(const CommandBatch& batch) {
         else if (cmd.find("\"get_definitions\"") != std::string::npos) ExportDefs(cmd);
         else if (cmd.find("\"get_values\"") != std::string::npos) ExportValues(cmd);
         else if (cmd.find("\"get_site_summary\"") != std::string::npos) ExportSiteSummary();
+        else if (cmd.find("\"resolve_schedule\"") != std::string::npos) ResolveSchedule(cmd);
         else if (cmd.find("\"select_elements\"") != std::string::npos) {
             GS::Array<API_Guid> guids = ExtractGuids(cmd, "guids");
             WriteExternalLog("select_elements: " + std::to_string(guids.GetSize()) + " guid(s)");
@@ -943,7 +946,13 @@ void DoSearch(const std::string& json) {
             if (p < sl.length()) try { stories.Push((short)std::stoi(sl.substr(p))); } catch(...) {}
         }
     }
-    const UInt32 kMaxResults = 1000;
+    // 上限は既定 1000 件。一覧表の取得などは "limit" で引き上げる（最大 20000）
+    UInt32 kMaxResults = 1000;
+    {
+        const std::string lim = GetV(json, "limit");
+        if (!lim.empty()) { try { kMaxResults = (UInt32)std::min(20000, std::max(1, std::stoi(lim))); } catch (...) {} }
+    }
+    const std::string reqId = GetV(json, "reqId");
     GS::Array<API_Guid> results;
     GS::Array<const char*> resultTypes;
     GS::HashTable<API_Guid, bool> seen;   // Object と 敷地マネージャー を両方選んだ時の重複除外
@@ -965,8 +974,10 @@ void DoSearch(const std::string& json) {
         collect(all, t.key);
     }
     const bool capped = results.GetSize() >= kMaxResults;
-    if (capped) WriteExternalLog("DoSearch: result capped at 1000");
-    GS::UniString out = "{\"type\":\"elements\",\"capped\":";
+    if (capped) WriteExternalLog("DoSearch: result capped at " + std::to_string(kMaxResults));
+    GS::UniString out = "{\"type\":\"elements\",";
+    if (!reqId.empty()) { out.Append("\"reqId\":"); out.Append(JsonStr(GS::UniString(reqId.c_str(), CC_UTF8))); out.Append(","); }
+    out.Append("\"capped\":");
     out.Append(capped ? "true" : "false");
     out.Append(",\"elements\":[");
     for (UInt32 i = 0; i < results.GetSize(); i++) {
@@ -1184,6 +1195,107 @@ static GS::UniString GdlParamJson(const API_AddParType& p) {
     return JsonNum(p.value.real);
 }
 
+// ─── 連動一覧表（スキーム XML を Python 側で解析）の列・条件の解決 ─────────────
+
+static std::string HexToUtf8(const std::string& hex) {
+    std::string out;
+    for (size_t i = 0; i + 1 < hex.size(); i += 2) {
+        try { out.push_back((char)std::stoi(hex.substr(i, 2), nullptr, 16)); } catch (...) { return std::string(); }
+    }
+    return out;
+}
+
+// プロパティ定義 1 件を JSON で（ref = Python 側の参照キー）
+static void AppendResolvedDefJson(GS::UniString& out, bool& first, const std::string& ref,
+                                  const API_PropertyDefinition& d, const GS::UniString& groupName) {
+    if (!first) out.Append(",");
+    first = false;
+    out.Append("{\"ref\":"); out.Append(JsonStr(GS::UniString(ref.c_str(), CC_UTF8)));
+    out.Append(",\"guid\":\""); out.Append(APIGuid2GSGuid(d.guid).ToUniString());
+    out.Append("\",\"name\":"); out.Append(JsonStr(d.name));
+    out.Append(",\"group\":"); out.Append(JsonStr(groupName));
+    out.Append(",\"editable\":"); out.Append(d.canValueBeEditable ? "true" : "false");
+    out.Append(",\"valueType\":"); out.Append(GS::UniString::Printf("%d", (int)d.valueType));
+    out.Append(",\"collectionType\":"); out.Append(GS::UniString::Printf("%d", (int)d.collectionType));
+    out.Append(",\"isCustom\":"); out.Append(d.definitionType == API_PropertyCustomDefinitionType ? "true" : "false");
+    const bool isEnum = d.collectionType == API_PropertySingleChoiceEnumerationCollectionType ||
+                        d.collectionType == API_PropertyMultipleChoiceEnumerationCollectionType;
+    if (isEnum || !d.possibleEnumValues.IsEmpty()) {
+        out.Append(",\"enums\":[");
+        for (UInt32 j = 0; j < d.possibleEnumValues.GetSize(); j++) {
+            if (j > 0) out.Append(",");
+            out.Append(JsonStr(d.possibleEnumValues[j].displayVariant.uniStringValue));
+        }
+        out.Append("]");
+    } else if (d.valueType == API_PropertyBooleanValueType && d.collectionType == API_PropertySingleCollectionType) {
+        out.Append(",\"enums\":[\"True\",\"False\"]");
+    }
+    out.Append("}");
+}
+
+// 入力: propGuids（組み込み等）、propNamesHex（"グループ||名前" の UTF-8 16進）、layers（レイヤー番号）
+// 出力: 各プロパティの定義（GUID・編集可否・候補値）とレイヤー番号→名前
+void ResolveSchedule(const std::string& json) {
+    const std::string reqId = GetV(json, "reqId");
+    GS::UniString out("{\"type\":\"schedule_resolved\",\"reqId\":");
+    out.Append(JsonStr(GS::UniString(reqId.c_str(), CC_UTF8)));
+    out.Append(",\"definitions\":[");
+    bool first = true;
+    UInt32 found = 0, wanted = 0;
+
+    for (const auto& g : ExtractStringArray(json, "propGuids")) {
+        wanted++;
+        API_PropertyDefinition d; d.guid = APINULLGuid;
+        try { d.guid = GSGuid2APIGuid(GS::Guid(g.c_str())); } catch (...) { continue; }
+        if (ACAPI_Property_GetPropertyDefinition(d) != NoError) continue;
+        API_PropertyGroup grp; grp.guid = d.groupGuid;
+        ACAPI_Property_GetPropertyGroup(grp);
+        AppendResolvedDefJson(out, first, g, d, grp.name);
+        found++;
+    }
+
+    std::vector<std::string> names;
+    for (const auto& h : ExtractStringArray(json, "propNamesHex")) names.push_back(HexToUtf8(h));
+    if (!names.empty()) {
+        GS::Array<API_PropertyGroup> groups;
+        ACAPI_Property_GetPropertyGroups(groups);
+        for (const auto& ref : names) {
+            wanted++;
+            const size_t sep = ref.find("||");
+            if (sep == std::string::npos) continue;
+            const GS::UniString gname(ref.substr(0, sep).c_str(), CC_UTF8);
+            const GS::UniString pname(ref.substr(sep + 2).c_str(), CC_UTF8);
+            bool ok = false;
+            for (const auto& grp : groups) {
+                if (grp.name != gname) continue;
+                GS::Array<API_PropertyDefinition> defs;
+                if (ACAPI_Property_GetPropertyDefinitions(grp.guid, defs) != NoError) continue;
+                for (const auto& d : defs) {
+                    if (d.name == pname) { AppendResolvedDefJson(out, first, ref, d, grp.name); ok = true; break; }
+                }
+                if (ok) break;
+            }
+            if (ok) found++;
+        }
+    }
+
+    out.Append("],\"layers\":{");
+    bool firstL = true;
+    for (const auto& s : ExtractStringArray(json, "layers")) {
+        int idx = 0;
+        try { idx = std::stoi(s); } catch (...) { continue; }
+        API_Attribute a; BNZeroMemory(&a, sizeof(a));
+        a.header.typeID = API_LayerID; a.header.index = ACAPI_CreateAttributeIndex(idx);
+        if (ACAPI_Attribute_Get(&a) != NoError) continue;
+        if (!firstL) out.Append(",");
+        firstL = false;
+        out.Append(GS::UniString::Printf("\"%d\":", idx)); out.Append(JsonStr(a.header.name));
+    }
+    out.Append("}}");
+    WriteExternalLog("resolve_schedule: " + std::to_string(found) + "/" + std::to_string(wanted) + " properties");
+    EnqueueResult(std::string((const char*)out.ToCStr(CC_UTF8)));
+}
+
 void ExportSiteSummary() {
     GS::UniString out("{\"type\":\"site_summary\",\"elements\":[");
     GS::Array<API_Guid> guids = GetSiteManagerElements();
@@ -1259,7 +1371,7 @@ static std::string ElemTypeName(API_ElemTypeID id) {
 
 static bool IsSimpleInfoKey(const std::string& k) {
     return k == "elem:W" || k == "elem:L" || k == "elem:H" || k == "elem:elevation" ||
-           k == "elem:story" || k == "elem:classification";
+           k == "elem:story" || k == "elem:classification" || k == "elem:floorIndex";
 }
 
 struct SimpleDims { double W = NAN, L = NAN, H = NAN, zMin = NAN; };
@@ -1345,6 +1457,8 @@ static std::string GetSimpleInfoValue(const API_Element& el, const SimpleDims& d
         return it != stories.end() ? it->second : std::to_string(el.header.floorInd);
     }
     if (key == "elem:classification") return GetClassificationText(el.header.guid);
+    // 配置フロアの番号（一覧表の「配置フロア」条件の判定用。1FL=0）
+    if (key == "elem:floorIndex") return std::to_string((int)el.header.floorInd);
     return "---";
 }
 
@@ -1565,12 +1679,28 @@ void ExportDefs(const std::string& json) {
     out.Append("]}"); EnqueueResult(std::string((const char*)out.ToCStr(CC_UTF8)));
 }
 
+// 組み込みプロパティ「レイヤー」「配置フロア名」（値取得では番号で返る）
+static const API_Guid kLayerPropGuid          = GSGuid2APIGuid(GS::Guid("0F43553E-58E7-4661-8CEB-8B4E5D2ED50A"));
+static const API_Guid kHomeStoryNamePropGuid  = GSGuid2APIGuid(GS::Guid("8583BC95-C85D-48A3-9C2E-1EBED328BBFE"));
+
+static std::map<short, GS::UniString> GetRawStoryNames() {
+    std::map<short, GS::UniString> m;
+    API_StoryInfo si; BNZeroMemory(&si, sizeof(si));
+    if (ACAPI_ProjectSetting_GetStorySettings(&si) == NoError && si.data != nullptr) {
+        const Int32 n = si.lastStory - si.firstStory + 1;
+        for (Int32 i = 0; i < n; i++) m[(*si.data)[i].index] = GS::UniString((*si.data)[i].uName);
+    }
+    if (si.data != nullptr) BMKillHandle(reinterpret_cast<GSHandle*>(&si.data));
+    return m;
+}
+
 void ExportValues(const std::string& json) {
     GS::Array<API_Guid> guids = ExtractGuids(json, "guids"); std::vector<std::string> pgs = ExtractStringArray(json, "propGuids");
     if (guids.IsEmpty() || pgs.empty()) return;
     GS::Array<API_PropertyDefinition> pDefs; bool incID = false, incRen = false, incSF = false, incPos = false;
     std::vector<std::string> elemKeys, gdlKeys;
     std::map<short, std::string> storyNames;   // フロア名（基本情報のフロア列用、必要時に 1 回取得）
+    std::map<short, GS::UniString> rawStoryNames;   // Archicad 上のフロア名そのもの（例: 1FL）
     for (const auto& s : pgs) {
         if (s == "builtin:element_id") incID = true; else if (s == "builtin:RenovationStatus") incRen = true; else if (s == "builtin:StructuralFunction") incSF = true; else if (s == "builtin:Position") incPos = true;
         else if (s.size() > 5 && s.substr(0, 5) == "elem:") { elemKeys.push_back(s); }
@@ -1643,6 +1773,14 @@ void ExportValues(const std::string& json) {
                                      : (ev.keyVariant.intValue == key.intValue);
                         if (match) { v = ev.displayVariant.uniStringValue; break; }
                     }
+                }
+                // レイヤー / 配置フロア名 は値取得で番号が返るため、Archicad の一覧表と同じ名前に置き換える
+                if (ps[j].definition.guid == kLayerPropGuid) {
+                    v = GetLayerName(h.layer);
+                } else if (ps[j].definition.guid == kHomeStoryNamePropGuid) {
+                    if (rawStoryNames.empty()) rawStoryNames = GetRawStoryNames();
+                    auto it = rawStoryNames.find(h.floorInd);
+                    if (it != rawStoryNames.end()) v = it->second;
                 }
                 if (v.IsEmpty()) v = "---";
                 add(propGuidStr, v);

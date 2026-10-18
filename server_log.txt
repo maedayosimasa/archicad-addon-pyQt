@@ -14650,3 +14650,1643 @@ rent_floor: actStory=0 lastKnown=0
 [2026-10-18 16:37:23] get_current_floor: actStory=0 lastKnown=0
 [2026-10-18 16:37:23] EXEC END: other
 [PY] [PANEL] closed #3 (36e6108c)
+[2026-10-18 17:04:28] Loaded binary: C:\AC28_AddOnProject\archicad-addon-pyQt\Build\Release\maedaAddOnPyqt.apx
+[2026-10-18 17:04:28] Build stamp: Oct 18 2026 16:44:57
+[2026-10-18 17:04:28] Command listener started on port 5001
+[2026-10-18 17:04:28] Started Python server process
+[2026-10-18 17:04:28] Initialize: actStory=0
+[2026-10-18 17:04:28] Initialize: project already open, running BIM auto-setup
+[2026-10-18 17:04:28] SetupBIMOverride: start (silent=true)
+[2026-10-18 17:04:28] SetupBIMOverride: xmlDir=C:\AC28_AddOnProject\archicad-addon-pyQt\
+[2026-10-18 17:04:28] SetupBIMOverride Phase1: ChangeStatus property check
+[2026-10-18 17:04:28]   anyGuids count=660
+[2026-10-18 17:04:28]   ChangeStatus existing=YES
+[2026-10-18 17:04:28]   Phase1: ChangeStatus already exists, skip import
+[2026-10-18 17:04:28] SetupBIMOverride Phase2: BIM graphic override check
+[2026-10-18 17:04:28]   Phase2: GO XML path=C:\AC28_AddOnProject\archicad-addon-pyQt\BIM????Graphic Override.xml
+[2026-10-18 17:04:28]   Phase2: rule group already exists
+[2026-10-18 17:04:28]   Phase2: GO XML parsed 2 rules
+[2026-10-18 17:04:28]   BIM変更済: criterion updated OK
+[2026-10-18 17:04:28]   BIM確認済: criterion updated OK
+[PY] --- Python startup begin ---
+[PY] Python 3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]
+[PY] Executable: C:\Users\gdre1\AppData\Local\Programs\Python\Python311\python.exe
+[PY] Path[0]: C:\AC28_AddOnProject\archicad-addon-pyQt
+[PY] PyQt6.QtWidgets OK
+[PY] PyQt6.QtCore OK
+[PY] PyQt6.QtGui OK
+[PY] QShortcut found in PyQt6.QtGui
+[PY] QUndoStack from QtGui OK
+[PY] db_manager OK
+[PY] undo_commands OK
+[PY] table_tools OK
+[PY] --- All imports OK ---
+[PY] --- Starting Application ---
+[PY] Python 3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]
+[PY] [FLOOR POLL] polling thread starting
+[PY] [FLOOR POLL] thread running
+[PY] [FLOOR POLL] thread started name=Thread-1 (_loop)
+[PY] [ORDER] dialog_order.json 読み込み完了: 26 グループ定義
+[PY] Server started (5000)
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:04:31] EXEC START: other
+[2026-10-18 17:04:31] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:04:31] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:04:34] EXEC START: other
+[2026-10-18 17:04:34] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:04:34] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:04:37] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:04:37] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:04:41] EXEC START: other
+[2026-10-18 17:04:41] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:04:41] EXEC END: other
+[2026-10-18 17:04:41] config per-story Wall: -1:45 0:161 1:144 2:128 3:135 4:43 5:4
+[2026-10-18 17:04:41] config per-story Column: -1:48 0:31 1:30 2:30 3:30 4:29 5:2
+[2026-10-18 17:04:41] config per-story Beam: 0:42 1:79 2:73 3:73 4:69 5:10
+[2026-10-18 17:04:41] config per-story Slab: -1:4 0:45 1:32 2:23 3:33 4:4 5:1
+[2026-10-18 17:04:41] config per-story Window: 0:72 1:71 2:67 3:67 4:38 6:20
+[2026-10-18 17:04:41] config per-story Door: 0:36 1:31 2:24 3:31 4:8
+[2026-10-18 17:04:41] config per-story Zone: -1:17 0:39 1:32 2:23 3:30 4:9
+[2026-10-18 17:04:41] config per-story Roof: 1:1
+[2026-10-18 17:04:41] config per-story Object: -1:81 0:1048 1:529 2:472 3:443 4:917 5:5
+[2026-10-18 17:04:41] config per-story Morph: 0:1 1:1 2:1 3:1
+[2026-10-18 17:04:41] config per-story Mesh: 0:18
+[2026-10-18 17:04:41] SiteManager: 9 elems / libParts=[道路境界線, 道路ラベル, 敷地オブジェクト, 敷地境界線ラベル]
+[2026-10-18 17:04:41] SiteManager: other object libParts (69) = [ゾーン_仕上用, ゾーンラベル, ゾーンスタンプ 02, 断面図マーカー_02, 標準通り芯マーカー, フロアレベル記号, 標準立面図マーカー, エレベーター, 営_label_建具符号_AC27L_01, 営_室名札_AC27L_01, 営_ピクトサイン_AC27L_01, 営_点状ブロック_折り返し_AC27L_01, 営_線状ブロック_AC27L_01, 交差開口, 落葉樹(3Dアウトラインなし), 営_集水桝_AC27L_01, ポスト, 傾斜シンボル, 指示表示_左折矢印, 階段グリッド, 動線, 番号付け, 上-下テキスト, 階段説明, ジグザグ破断線, 標準 破断線, 標準 蹴上, 標準 踏面, フライト階段梁, 踊り場階段梁, 小便器_w1, 洋便器_w1, 複数洗面カウンター, 営_壁掛洗面器用手摺_AC27L_01, 洗面キャビネット, 保護付はしご, 営_ドレン_AC27L_01, 個別展開図(IE)マーカー, 共通展開図(IE)マーカー1, 営_照明開口_V27L_001]
+[2026-10-18 17:04:41] config per-story SiteManager: 0:9
+[2026-10-18 17:04:42] Attempting to send message to Python (1047 bytes)
+[2026-10-18 17:04:42] Successfully sent to Python (1047 bytes)
+[PY] [CONNECT] ('127.0.0.1', 58341)
+[PY] [RECV RAW] {"type":"project_config","stories":[{"index":-1,"name":"-1 Floor (PIT)"},{"index":0,"name":"1 Floor (1FL)"},{"index":1,"name":"2 Floor (2FL)"},{"index":2,"name":"3 Floor (3FL)"},{"index":3,"name":"4 Floor (4FL)"},{"index":4,"name":"5 Floor (5FL)"},{"index":5,"name":"6 Floor (RFL)"},{"index":6,"name":"7 Floor (パラペット天端)"}],"elementTypes":{"Wall":660,"Column":200,"Beam":346,"Slab":142,"Window":335,"Door":130,"Zone":150,"Roof":1,"Object":3495,"Morph":4,"Mesh":18,"SiteManager":9},"elementTypeStories":{"Wall":{"-1":45,"0":161,"1":144,"2":128,"3":135,"4":43,"5":4},"Column":{"-1":48,"0":31,"1":30,"2":30,"3":30,"4":29,"5":2},"Beam":{"0":42,"1":79,"2":73,"3":73,"4":69,"5":10},"Slab":{"-1":4,"0":45,"1":32,"2":23,"3":33,"4":4,"5":1},"Window":{"0":72,"1":71,"2":67,"3":67,"4":38,"6":20},"Door":{"0":36,"1":31,"2":24,"3":31,"4":8},"Zone":{"-1":17,"0":39,"1":32,"2":23,"3":30,"4":9},"Roof":{"1":1},"Object":{"-1":81,"0":1048,"1":529,"2":472,"3":443,"4":917,"5":5},"Morph":{"0":1,"1":1,"2":1,"3":1},"Mesh":
+[PY] [TYPE] project_config
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:04:44] EXEC START: other
+[2026-10-18 17:04:44] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:04:44] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:04:47] EXEC START: other
+[2026-10-18 17:04:47] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:04:47] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:04:50] EXEC START: other
+[2026-10-18 17:04:50] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:04:50] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:04:53] EXEC START: other
+[2026-10-18 17:04:53] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:04:53] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:04:56] EXEC START: other
+[2026-10-18 17:04:56] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:04:56] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:04:59] EXEC START: other
+[2026-10-18 17:04:59] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:04:59] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:05:02] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:05:02] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:05:05] EXEC START: other
+[2026-10-18 17:05:05] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:05:05] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:05:08] EXEC START: other
+[2026-10-18 17:05:08] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:05:08] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:05:11] EXEC START: other
+[2026-10-18 17:05:11] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:05:11] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:05:14] EXEC START: other
+[2026-10-18 17:05:14] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:05:14] EXEC END: other
+[2026-10-18 17:05:17] EXEC START: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:05:17] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:05:17] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:05:20] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:05:20] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:05:23] EXEC START: other
+[2026-10-18 17:05:23] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:05:23] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:05:26] EXEC START: other
+[2026-10-18 17:05:26] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:05:26] EXEC END: other
+[PY] [PANEL] closed #1 (bf9ec439)
+[2026-10-18 17:16:18] Loaded binary: C:\AC28_AddOnProject\archicad-addon-pyQt\Build\Release\maedaAddOnPyqt.apx
+[2026-10-18 17:16:18] Build stamp: Oct 18 2026 16:44:57
+[2026-10-18 17:16:18] Command listener started on port 5001
+[2026-10-18 17:16:18] Started Python server process
+[2026-10-18 17:16:18] Initialize: actStory=0
+[2026-10-18 17:16:18] Initialize: project already open, running BIM auto-setup
+[2026-10-18 17:16:18] SetupBIMOverride: start (silent=true)
+[2026-10-18 17:16:18] SetupBIMOverride: xmlDir=C:\AC28_AddOnProject\archicad-addon-pyQt\
+[2026-10-18 17:16:18] SetupBIMOverride Phase1: ChangeStatus property check
+[2026-10-18 17:16:18]   anyGuids count=660
+[2026-10-18 17:16:18]   ChangeStatus existing=YES
+[2026-10-18 17:16:18]   Phase1: ChangeStatus already exists, skip import
+[2026-10-18 17:16:18] SetupBIMOverride Phase2: BIM graphic override check
+[2026-10-18 17:16:18]   Phase2: GO XML path=C:\AC28_AddOnProject\archicad-addon-pyQt\BIM????Graphic Override.xml
+[2026-10-18 17:16:18]   Phase2: rule group already exists
+[2026-10-18 17:16:18]   Phase2: GO XML parsed 2 rules
+[2026-10-18 17:16:18]   BIM変更済: criterion updated OK
+[2026-10-18 17:16:18]   BIM確認済: criterion updated OK
+[PY] --- Python startup begin ---
+[PY] Python 3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]
+[PY] Executable: C:\Users\gdre1\AppData\Local\Programs\Python\Python311\python.exe
+[PY] Path[0]: C:\AC28_AddOnProject\archicad-addon-pyQt
+[PY] PyQt6.QtWidgets OK
+[PY] PyQt6.QtCore OK
+[PY] PyQt6.QtGui OK
+[PY] QShortcut found in PyQt6.QtGui
+[PY] QUndoStack from QtGui OK
+[PY] db_manager OK
+[PY] undo_commands OK
+[PY] table_tools OK
+[PY] --- All imports OK ---
+[PY] --- Starting Application ---
+[PY] Python 3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]
+[PY] [FLOOR POLL] polling thread starting
+[PY] [FLOOR POLL] thread running
+[PY] [FLOOR POLL] thread started name=Thread-1 (_loop)
+[PY] [ORDER] dialog_order.json 読み込み完了: 26 グループ定義
+[PY] Server started (5000)
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:16:22] EXEC START: other
+[2026-10-18 17:16:22] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:16:22] EXEC END: other
+[2026-10-18 17:16:22] config per-story Wall: -1:45 0:161 1:144 2:128 3:135 4:43 5:4
+[2026-10-18 17:16:22] config per-story Column: -1:48 0:31 1:30 2:30 3:30 4:29 5:2
+[2026-10-18 17:16:22] config per-story Beam: 0:42 1:79 2:73 3:73 4:69 5:10
+[2026-10-18 17:16:22] config per-story Slab: -1:4 0:45 1:32 2:23 3:33 4:4 5:1
+[2026-10-18 17:16:22] config per-story Window: 0:72 1:71 2:67 3:67 4:38 6:20
+[2026-10-18 17:16:22] config per-story Door: 0:36 1:31 2:24 3:31 4:8
+[2026-10-18 17:16:22] config per-story Zone: -1:17 0:39 1:32 2:23 3:30 4:9
+[2026-10-18 17:16:22] config per-story Roof: 1:1
+[2026-10-18 17:16:22] config per-story Object: -1:81 0:1048 1:529 2:472 3:443 4:917 5:5
+[2026-10-18 17:16:22] config per-story Morph: 0:1 1:1 2:1 3:1
+[2026-10-18 17:16:22] config per-story Mesh: 0:18
+[2026-10-18 17:16:24] SiteManager: 9 elems / libParts=[道路境界線, 道路ラベル, 敷地オブジェクト, 敷地境界線ラベル]
+[2026-10-18 17:16:24] SiteManager: other object libParts (69) = [ゾーン_仕上用, ゾーンラベル, ゾーンスタンプ 02, 断面図マーカー_02, 標準通り芯マーカー, フロアレベル記号, 標準立面図マーカー, エレベーター, 営_label_建具符号_AC27L_01, 営_室名札_AC27L_01, 営_ピクトサイン_AC27L_01, 営_点状ブロック_折り返し_AC27L_01, 営_線状ブロック_AC27L_01, 交差開口, 落葉樹(3Dアウトラインなし), 営_集水桝_AC27L_01, ポスト, 傾斜シンボル, 指示表示_左折矢印, 階段グリッド, 動線, 番号付け, 上-下テキスト, 階段説明, ジグザグ破断線, 標準 破断線, 標準 蹴上, 標準 踏面, フライト階段梁, 踊り場階段梁, 小便器_w1, 洋便器_w1, 複数洗面カウンター, 営_壁掛洗面器用手摺_AC27L_01, 洗面キャビネット, 保護付はしご, 営_ドレン_AC27L_01, 個別展開図(IE)マーカー, 共通展開図(IE)マーカー1, 営_照明開口_V27L_001]
+[2026-10-18 17:16:24] config per-story SiteManager: 0:9
+[2026-10-18 17:16:24] Attempting to send message to Python (1047 bytes)
+[2026-10-18 17:16:24] Successfully sent to Python (1047 bytes)
+[PY] [CONNECT] ('127.0.0.1', 61579)
+[PY] [RECV RAW] {"type":"project_config","stories":[{"index":-1,"name":"-1 Floor (PIT)"},{"index":0,"name":"1 Floor (1FL)"},{"index":1,"name":"2 Floor (2FL)"},{"index":2,"name":"3 Floor (3FL)"},{"index":3,"name":"4 Floor (4FL)"},{"index":4,"name":"5 Floor (5FL)"},{"index":5,"name":"6 Floor (RFL)"},{"index":6,"name":"7 Floor (パラペット天端)"}],"elementTypes":{"Wall":660,"Column":200,"Beam":346,"Slab":142,"Window":335,"Door":130,"Zone":150,"Roof":1,"Object":3495,"Morph":4,"Mesh":18,"SiteManager":9},"elementTypeStories":{"Wall":{"-1":45,"0":161,"1":144,"2":128,"3":135,"4":43,"5":4},"Column":{"-1":48,"0":31,"1":30,"2":30,"3":30,"4":29,"5":2},"Beam":{"0":42,"1":79,"2":73,"3":73,"4":69,"5":10},"Slab":{"-1":4,"0":45,"1":32,"2":23,"3":33,"4":4,"5":1},"Window":{"0":72,"1":71,"2":67,"3":67,"4":38,"6":20},"Door":{"0":36,"1":31,"2":24,"3":31,"4":8},"Zone":{"-1":17,"0":39,"1":32,"2":23,"3":30,"4":9},"Roof":{"1":1},"Object":{"-1":81,"0":1048,"1":529,"2":472,"3":443,"4":917,"5":5},"Morph":{"0":1,"1":1,"2":1,"3":1},"Mesh":
+[PY] [TYPE] project_config
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:16:25] EXEC START: other
+[2026-10-18 17:16:25] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:16:25] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:16:28] EXEC START: other
+[2026-10-18 17:16:28] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:16:28] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:16:31] EXEC START: other
+[2026-10-18 17:16:31] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:16:31] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:16:34] EXEC START: other
+[2026-10-18 17:16:34] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:16:34] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:16:37] EXEC START: other
+[2026-10-18 17:16:37] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:16:37] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:16:40] EXEC START: other
+[2026-10-18 17:16:40] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:16:40] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:16:43] EXEC START: other
+[2026-10-18 17:16:43] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:16:43] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:16:46] EXEC START: other
+[2026-10-18 17:16:46] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:16:46] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:16:49] EXEC START: other
+[2026-10-18 17:16:49] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:16:49] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:16:52] EXEC START: other
+[2026-10-18 17:16:52] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:16:52] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:16:55] EXEC START: other
+[2026-10-18 17:16:55] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:16:55] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:16:58] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:16:58] EXEC END: other
+[2026-10-18 17:17:01] EXEC START: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:17:01] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:01] EXEC END: other
+[PY] [SCHEDULE] open 内部仕上表 1階 refs=18 layers=['9']
+[PY] [SEND] {"command":"resolve_schedule","reqId":"sched:8b09b4e0-f508-4d6e-9914-a749ed1219cb","propGuids":["8583BC95-C85D-48A3-9C2E-1EBED328BBFE","77367980-3D5A-452B-9900-D88C53E82176","CAF8D1EB-0BAD-48DE-AEA4-9...
+[PY] [NO ACK]
+[2026-10-18 17:17:03] EXEC START: other
+[2026-10-18 17:17:03] resolve_schedule: 18/18 properties
+[2026-10-18 17:17:03] EXEC END: other
+[2026-10-18 17:17:03] Attempting to send message to Python (4700 bytes)
+[2026-10-18 17:17:03] Successfully sent to Python (4700 bytes)
+[PY] [CONNECT] ('127.0.0.1', 61629)
+[PY] [RECV RAW] {"type":"schedule_resolved","reqId":"sched:8b09b4e0-f508-4d6e-9914-a749ed1219cb","definitions":[{"ref":"8583BC95-C85D-48A3-9C2E-1EBED328BBFE","guid":"8583BC95-C85D-48A3-9C2E-1EBED328BBFE","name":"配置フロア名","group":"一般パラメータ","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"77367980-3D5A-452B-9900-D88C53E82176","guid":"77367980-3D5A-452B-9900-D88C53E82176","name":"ゾーン番号","group":"ゾーン","editable":true,"valueType":3,"collectionType":1,"isCustom":false},{"ref":"CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913","guid":"CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913","name":"ゾーン名","group":"ゾーン","editable":true,"valueType":3,"collectionType":1,"isCustom":false},{"ref":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","guid":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","name":"レイヤー","group":"モデルビュー","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"内部仕上||床下地","guid":"8159A988-716F-45C0-B338-8D1055B820B1","name":"床下地","group":"内部仕上","editable":true,"valueType":3,"collectionType":4,"isC
+[PY] [TYPE] schedule_resolved
+[PY] [SEND] {"command":"get_elements","reqId":"sched:8b09b4e0-f508-4d6e-9914-a749ed1219cb","stories":[],"limit":20000,"Zone":true}
+...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 17:17:05] EXEC START: other
+[2026-10-18 17:17:05] EXEC END: other
+[2026-10-18 17:17:05] EXEC START: other
+[2026-10-18 17:17:05] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:05] EXEC END: other
+[2026-10-18 17:17:05] Attempting to send message to Python (9401 bytes)
+[2026-10-18 17:17:05] Successfully sent to Python (9401 bytes)
+[PY] [CONNECT] ('127.0.0.1', 61635)
+[PY] [RECV RAW] {"type":"elements","reqId":"sched:8b09b4e0-f508-4d6e-9914-a749ed1219cb","capped":false,"elements":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","type":"Zone"},{"guid":"52AAA942-CA97-49DE-8454-3B349CC9E9C0","type":"Zone"},{"guid":"A7E36240-05E0-4586-B0B0-EF2E1565FAF6","type":"Zone"},{"guid":"F383F9E7-0D05-4AA7-BBEB-A3807068D784","type":"Zone"},{"guid":"159F9C36-FD08-4042-AF8C-738EA97EF749","type":"Zone"},{"guid":"4E087BD0-1059-4E4E-A210-7929FB655F9B","type":"Zone"},{"guid":"49185295-0A36-4E37-AF52-C0AEE5DAAFE1","type":"Zone"},{"guid":"8054994C-6933-4B0C-8EAE-3C5992341EFA","type":"Zone"},{"guid":"68068468-C83C-413E-A1F1-973BE64079B0","type":"Zone"},{"guid":"48441378-3064-454B-9E60-2B4E73B2F166","type":"Zone"},{"guid":"2C4A18D1-2D36-4DCD-89C4-6FFB98606D60","type":"Zone"},{"guid":"E7717054-B574-4DA6-A918-4064E598A489","type":"Zone"},{"guid":"046F3341-E93C-46F8-9AA9-25BD0A843FA7","type":"Zone"},{"guid":"77EBD341-6792-4504-B291-2FE135AF92C4","type":"Zone"},{"guid":"80CF1AA9-9E34-437B-ADE4-
+[PY] [TYPE] elements
+[PY] [SEND] {"command":"get_values","reqId":"sched:8b09b4e0-f508-4d6e-9914-a749ed1219cb","guids":["83AFBD36-9666-4438-9E30-89D748C01919","52AAA942-CA97-49DE-8454-3B349CC9E9C0","A7E36240-05E0-4586-B0B0-EF2E1565FAF...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 17:17:07] EXEC START: other
+[2026-10-18 17:17:08] EXEC END: other
+[2026-10-18 17:17:08] EXEC START: other
+[2026-10-18 17:17:08] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:08] EXEC END: other
+[2026-10-18 17:17:08] Attempting to send message to Python (147703 bytes)
+[PY] [CONNECT] ('127.0.0.1', 61641)
+nt to Python (147703 bytes)
+[PY] [RECV RAW] {"type":"property_values","reqId":"sched:8b09b4e0-f508-4d6e-9914-a749ed1219cb","values":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","modiStamp":204952358,"props":{"elem:floorIndex":"1","8583BC95-C85D-48A3-9C2E-1EBED328BBFE":"1","77367980-3D5A-452B-9900-D88C53E82176":"211","CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913":"事務室2-1","8159A988-716F-45C0-B338-8D1055B820B1":"FA1","B4BCE044-1BE9-41C0-B8FB-0EDDF1E7B414":"タイルカーペット","A1D5F736-A536-4B3C-99D6-FE5304570F4A":"C; S","506ADB35-4912-4BAC-89DF-EA7196CCCFDC":"VB","2267E295-A478-42D4-95B4-FB20623E2855":"C; S","5085E686-2D37-4478-864D-786F28B9C64A":"二重張GB-Rの上EP","07F11403-E68C-4BC7-90EF-DE461340F094":"準不燃","526C973E-5D0F-4A75-9E3B-6F5DB4CAF1FB":"S","7E43E7CC-AA7C-4183-ABE6-DC9A02BDE862":"GB-R下地張DR","3B4EDF42-1B1E-40A5-B6F2-AADA6E27F12E":"準不燃","A0859D61-7C04-4D9C-8254-DC0B79D56846":"2700","767D0E8C-13F5-444C-8A2A-FBB59FD681D3":"自然排煙","A1CE06A3-6377-4F7E-A9AF-8AABFE7FFEEB":"---","0F43553E-58E7-4661-8CEB-8B4E5D2ED50A":"9","2B32E45C-4761-41D8-AFFA-8D
+[PY] [TYPE] property_values
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:17:10] EXEC START: other
+[2026-10-18 17:17:10] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:10] EXEC END: other
+[PY] [SCHEDULE] open 内部仕上表 1階 refs=18 layers=['9']
+[PY] [SEND] {"command":"resolve_schedule","reqId":"sched:52ce9f3a-1543-4a86-95f2-5b7fcff96517","propGuids":["8583BC95-C85D-48A3-9C2E-1EBED328BBFE","77367980-3D5A-452B-9900-D88C53E82176","CAF8D1EB-0BAD-48DE-AEA4-9...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 17:17:14] EXEC START: other
+[2026-10-18 17:17:14] resolve_schedule: 18/18 properties
+[2026-10-18 17:17:14] EXEC END: other
+[2026-10-18 17:17:14] EXEC START: other
+[2026-10-18 17:17:14] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:14] EXEC END: other
+[2026-10-18 17:17:14] Attempting to send message to Python (4700 bytes)
+[2026-10-18 17:17:14] Successfully sent to Python (4700 bytes)
+[PY] [CONNECT] ('127.0.0.1', 61650)
+[PY] [RECV RAW] {"type":"schedule_resolved","reqId":"sched:52ce9f3a-1543-4a86-95f2-5b7fcff96517","definitions":[{"ref":"8583BC95-C85D-48A3-9C2E-1EBED328BBFE","guid":"8583BC95-C85D-48A3-9C2E-1EBED328BBFE","name":"配置フロア名","group":"一般パラメータ","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"77367980-3D5A-452B-9900-D88C53E82176","guid":"77367980-3D5A-452B-9900-D88C53E82176","name":"ゾーン番号","group":"ゾーン","editable":true,"valueType":3,"collectionType":1,"isCustom":false},{"ref":"CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913","guid":"CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913","name":"ゾーン名","group":"ゾーン","editable":true,"valueType":3,"collectionType":1,"isCustom":false},{"ref":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","guid":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","name":"レイヤー","group":"モデルビュー","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"内部仕上||床下地","guid":"8159A988-716F-45C0-B338-8D1055B820B1","name":"床下地","group":"内部仕上","editable":true,"valueType":3,"collectionType":4,"isC
+[PY] [TYPE] schedule_resolved
+[PY] [SEND] {"command":"get_elements","reqId":"sched:52ce9f3a-1543-4a86-95f2-5b7fcff96517","stories":[],"limit":20000,"Zone":true}
+...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 17:17:16] EXEC START: other
+[2026-10-18 17:17:16] EXEC END: other
+[2026-10-18 17:17:16] EXEC START: other
+[2026-10-18 17:17:16] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:16] EXEC END: other
+[2026-10-18 17:17:17] Attempting to send message to Python (9401 bytes)
+[2026-10-18 17:17:17] Successfully sent to Python (9401 bytes)
+[PY] [CONNECT] ('127.0.0.1', 61657)
+[PY] [RECV RAW] {"type":"elements","reqId":"sched:52ce9f3a-1543-4a86-95f2-5b7fcff96517","capped":false,"elements":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","type":"Zone"},{"guid":"52AAA942-CA97-49DE-8454-3B349CC9E9C0","type":"Zone"},{"guid":"A7E36240-05E0-4586-B0B0-EF2E1565FAF6","type":"Zone"},{"guid":"F383F9E7-0D05-4AA7-BBEB-A3807068D784","type":"Zone"},{"guid":"159F9C36-FD08-4042-AF8C-738EA97EF749","type":"Zone"},{"guid":"4E087BD0-1059-4E4E-A210-7929FB655F9B","type":"Zone"},{"guid":"49185295-0A36-4E37-AF52-C0AEE5DAAFE1","type":"Zone"},{"guid":"8054994C-6933-4B0C-8EAE-3C5992341EFA","type":"Zone"},{"guid":"68068468-C83C-413E-A1F1-973BE64079B0","type":"Zone"},{"guid":"48441378-3064-454B-9E60-2B4E73B2F166","type":"Zone"},{"guid":"2C4A18D1-2D36-4DCD-89C4-6FFB98606D60","type":"Zone"},{"guid":"E7717054-B574-4DA6-A918-4064E598A489","type":"Zone"},{"guid":"046F3341-E93C-46F8-9AA9-25BD0A843FA7","type":"Zone"},{"guid":"77EBD341-6792-4504-B291-2FE135AF92C4","type":"Zone"},{"guid":"80CF1AA9-9E34-437B-ADE4-
+[PY] [TYPE] elements
+[PY] [SEND] {"command":"get_values","reqId":"sched:52ce9f3a-1543-4a86-95f2-5b7fcff96517","guids":["83AFBD36-9666-4438-9E30-89D748C01919","52AAA942-CA97-49DE-8454-3B349CC9E9C0","A7E36240-05E0-4586-B0B0-EF2E1565FAF...
+[PY] [NO ACK]
+[2026-10-18 17:17:19] EXEC START: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:17:19] EXEC END: other
+[2026-10-18 17:17:19] EXEC START: other
+[2026-10-18 17:17:19] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:19] EXEC END: other
+[2026-10-18 17:17:19] Attempting to send message to Python (147703 bytes)
+[2026-10-18 17:17:19] Successfully sent to Python (147703 bytes)
+[PY] [CONNECT] ('127.0.0.1', 61661)
+[PY] [RECV RAW] {"type":"property_values","reqId":"sched:52ce9f3a-1543-4a86-95f2-5b7fcff96517","values":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","modiStamp":204952358,"props":{"elem:floorIndex":"1","8583BC95-C85D-48A3-9C2E-1EBED328BBFE":"1","77367980-3D5A-452B-9900-D88C53E82176":"211","CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913":"事務室2-1","8159A988-716F-45C0-B338-8D1055B820B1":"FA1","B4BCE044-1BE9-41C0-B8FB-0EDDF1E7B414":"タイルカーペット","A1D5F736-A536-4B3C-99D6-FE5304570F4A":"C; S","506ADB35-4912-4BAC-89DF-EA7196CCCFDC":"VB","2267E295-A478-42D4-95B4-FB20623E2855":"C; S","5085E686-2D37-4478-864D-786F28B9C64A":"二重張GB-Rの上EP","07F11403-E68C-4BC7-90EF-DE461340F094":"準不燃","526C973E-5D0F-4A75-9E3B-6F5DB4CAF1FB":"S","7E43E7CC-AA7C-4183-ABE6-DC9A02BDE862":"GB-R下地張DR","3B4EDF42-1B1E-40A5-B6F2-AADA6E27F12E":"準不燃","A0859D61-7C04-4D9C-8254-DC0B79D56846":"2700","767D0E8C-13F5-444C-8A2A-FBB59FD681D3":"自然排煙","A1CE06A3-6377-4F7E-A9AF-8AABFE7FFEEB":"---","0F43553E-58E7-4661-8CEB-8B4E5D2ED50A":"9","2B32E45C-4761-41D8-AFFA-8D
+[PY] [TYPE] property_values
+[PY] [SCHEDULE] open 内部仕上表 1階 refs=18 layers=['9']
+[PY] [SEND] {"command":"resolve_schedule","reqId":"sched:c9f33da2-3b58-4a8c-9f9c-79fe80b56e79","propGuids":["8583BC95-C85D-48A3-9C2E-1EBED328BBFE","77367980-3D5A-452B-9900-D88C53E82176","CAF8D1EB-0BAD-48DE-AEA4-9...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 17:17:23] EXEC START: other
+[2026-10-18 17:17:23] resolve_schedule: 18/18 properties
+[2026-10-18 17:17:23] EXEC END: other
+[2026-10-18 17:17:23] EXEC START: other
+[2026-10-18 17:17:23] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:23] EXEC END: other
+[2026-10-18 17:17:23] Attempting to send message to Python (4700 bytes)
+[2026-10-18 17:17:23] Successfully sent to Python (4700 bytes)
+[PY] [CONNECT] ('127.0.0.1', 61665)
+[PY] [RECV RAW] {"type":"schedule_resolved","reqId":"sched:c9f33da2-3b58-4a8c-9f9c-79fe80b56e79","definitions":[{"ref":"8583BC95-C85D-48A3-9C2E-1EBED328BBFE","guid":"8583BC95-C85D-48A3-9C2E-1EBED328BBFE","name":"配置フロア名","group":"一般パラメータ","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"77367980-3D5A-452B-9900-D88C53E82176","guid":"77367980-3D5A-452B-9900-D88C53E82176","name":"ゾーン番号","group":"ゾーン","editable":true,"valueType":3,"collectionType":1,"isCustom":false},{"ref":"CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913","guid":"CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913","name":"ゾーン名","group":"ゾーン","editable":true,"valueType":3,"collectionType":1,"isCustom":false},{"ref":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","guid":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","name":"レイヤー","group":"モデルビュー","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"内部仕上||床下地","guid":"8159A988-716F-45C0-B338-8D1055B820B1","name":"床下地","group":"内部仕上","editable":true,"valueType":3,"collectionType":4,"isC
+[PY] [TYPE] schedule_resolved
+[PY] [SEND] {"command":"get_elements","reqId":"sched:c9f33da2-3b58-4a8c-9f9c-79fe80b56e79","stories":[],"limit":20000,"Zone":true}
+...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 17:17:25] EXEC START: other
+[2026-10-18 17:17:25] EXEC END: other
+[2026-10-18 17:17:25] EXEC START: other
+[2026-10-18 17:17:25] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:25] EXEC END: other
+[2026-10-18 17:17:25] Attempting to send message to Python (9401 bytes)
+[2026-10-18 17:17:25] Successfully sent to Python (9401 bytes)
+[PY] [CONNECT] ('127.0.0.1', 61672)
+[PY] [RECV RAW] {"type":"elements","reqId":"sched:c9f33da2-3b58-4a8c-9f9c-79fe80b56e79","capped":false,"elements":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","type":"Zone"},{"guid":"52AAA942-CA97-49DE-8454-3B349CC9E9C0","type":"Zone"},{"guid":"A7E36240-05E0-4586-B0B0-EF2E1565FAF6","type":"Zone"},{"guid":"F383F9E7-0D05-4AA7-BBEB-A3807068D784","type":"Zone"},{"guid":"159F9C36-FD08-4042-AF8C-738EA97EF749","type":"Zone"},{"guid":"4E087BD0-1059-4E4E-A210-7929FB655F9B","type":"Zone"},{"guid":"49185295-0A36-4E37-AF52-C0AEE5DAAFE1","type":"Zone"},{"guid":"8054994C-6933-4B0C-8EAE-3C5992341EFA","type":"Zone"},{"guid":"68068468-C83C-413E-A1F1-973BE64079B0","type":"Zone"},{"guid":"48441378-3064-454B-9E60-2B4E73B2F166","type":"Zone"},{"guid":"2C4A18D1-2D36-4DCD-89C4-6FFB98606D60","type":"Zone"},{"guid":"E7717054-B574-4DA6-A918-4064E598A489","type":"Zone"},{"guid":"046F3341-E93C-46F8-9AA9-25BD0A843FA7","type":"Zone"},{"guid":"77EBD341-6792-4504-B291-2FE135AF92C4","type":"Zone"},{"guid":"80CF1AA9-9E34-437B-ADE4-
+[PY] [TYPE] elements
+[PY] [SEND] {"command":"get_values","reqId":"sched:c9f33da2-3b58-4a8c-9f9c-79fe80b56e79","guids":["83AFBD36-9666-4438-9E30-89D748C01919","52AAA942-CA97-49DE-8454-3B349CC9E9C0","A7E36240-05E0-4586-B0B0-EF2E1565FAF...
+[PY] [NO ACK]
+[2026-10-18 17:17:27] EXEC START: other
+[2026-10-18 17:17:28] EXEC END: other
+[2026-10-18 17:17:28] EXEC START: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:17:28] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:28] EXEC END: other
+[2026-10-18 17:17:28] Attempting to send message to Python (147703 bytes)
+[PY] [CONNECT] ('127.0.0.1', 61677)
+nt to Python (147703 bytes)
+[PY] [RECV RAW] {"type":"property_values","reqId":"sched:c9f33da2-3b58-4a8c-9f9c-79fe80b56e79","values":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","modiStamp":204952358,"props":{"elem:floorIndex":"1","8583BC95-C85D-48A3-9C2E-1EBED328BBFE":"1","77367980-3D5A-452B-9900-D88C53E82176":"211","CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913":"事務室2-1","8159A988-716F-45C0-B338-8D1055B820B1":"FA1","B4BCE044-1BE9-41C0-B8FB-0EDDF1E7B414":"タイルカーペット","A1D5F736-A536-4B3C-99D6-FE5304570F4A":"C; S","506ADB35-4912-4BAC-89DF-EA7196CCCFDC":"VB","2267E295-A478-42D4-95B4-FB20623E2855":"C; S","5085E686-2D37-4478-864D-786F28B9C64A":"二重張GB-Rの上EP","07F11403-E68C-4BC7-90EF-DE461340F094":"準不燃","526C973E-5D0F-4A75-9E3B-6F5DB4CAF1FB":"S","7E43E7CC-AA7C-4183-ABE6-DC9A02BDE862":"GB-R下地張DR","3B4EDF42-1B1E-40A5-B6F2-AADA6E27F12E":"準不燃","A0859D61-7C04-4D9C-8254-DC0B79D56846":"2700","767D0E8C-13F5-444C-8A2A-FBB59FD681D3":"自然排煙","A1CE06A3-6377-4F7E-A9AF-8AABFE7FFEEB":"---","0F43553E-58E7-4661-8CEB-8B4E5D2ED50A":"9","2B32E45C-4761-41D8-AFFA-8D
+[PY] [TYPE] property_values
+[2026-10-18 17:17:31] EXEC START: other
+
+[2026-10-18 17:17:31] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:31] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:17:34] EXEC START: other
+[2026-10-18 17:17:34] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:34] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:17:37] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:37] EXEC END: other
+[2026-10-18 17:17:40] EXEC START: other
+
+[2026-10-18 17:17:40] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:40] EXEC END: other
+[PY] [SCHEDULE] open 内部仕上表 2.3.4.5階 refs=18 layers=['9']
+[PY] [SEND] {"command":"resolve_schedule","reqId":"sched:4662f3e5-0894-4843-9502-bb10e0f36bbe","propGuids":["8583BC95-C85D-48A3-9C2E-1EBED328BBFE","77367980-3D5A-452B-9900-D88C53E82176","CAF8D1EB-0BAD-48DE-AEA4-9...
+[PY] [NO ACK]
+[2026-10-18 17:17:42] EXEC START: other
+[2026-10-18 17:17:42] resolve_schedule: 18/18 properties
+[2026-10-18 17:17:42] EXEC END: other
+[2026-10-18 17:17:42] Attempting to send message to Python (4700 bytes)
+[2026-10-18 17:17:42] Successfully sent to Python (4700 bytes)
+[PY] [CONNECT] ('127.0.0.1', 61691)
+[PY] [RECV RAW] {"type":"schedule_resolved","reqId":"sched:4662f3e5-0894-4843-9502-bb10e0f36bbe","definitions":[{"ref":"8583BC95-C85D-48A3-9C2E-1EBED328BBFE","guid":"8583BC95-C85D-48A3-9C2E-1EBED328BBFE","name":"配置フロア名","group":"一般パラメータ","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"77367980-3D5A-452B-9900-D88C53E82176","guid":"77367980-3D5A-452B-9900-D88C53E82176","name":"ゾーン番号","group":"ゾーン","editable":true,"valueType":3,"collectionType":1,"isCustom":false},{"ref":"CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913","guid":"CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913","name":"ゾーン名","group":"ゾーン","editable":true,"valueType":3,"collectionType":1,"isCustom":false},{"ref":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","guid":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","name":"レイヤー","group":"モデルビュー","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"内部仕上||床下地","guid":"8159A988-716F-45C0-B338-8D1055B820B1","name":"床下地","group":"内部仕上","editable":true,"valueType":3,"collectionType":4,"isC
+[PY] [TYPE] schedule_resolved
+[PY] [SEND] {"command":"get_elements","reqId":"sched:4662f3e5-0894-4843-9502-bb10e0f36bbe","stories":[],"limit":20000,"Zone":true}
+...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 17:17:44] EXEC START: other
+[2026-10-18 17:17:44] EXEC END: other
+[2026-10-18 17:17:44] EXEC START: other
+[2026-10-18 17:17:44] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:44] EXEC END: other
+[2026-10-18 17:17:44] Attempting to send message to Python (9401 bytes)
+[2026-10-18 17:17:44] Successfully sent to Python (9401 bytes)
+[PY] [CONNECT] ('127.0.0.1', 61695)
+[PY] [RECV RAW] {"type":"elements","reqId":"sched:4662f3e5-0894-4843-9502-bb10e0f36bbe","capped":false,"elements":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","type":"Zone"},{"guid":"52AAA942-CA97-49DE-8454-3B349CC9E9C0","type":"Zone"},{"guid":"A7E36240-05E0-4586-B0B0-EF2E1565FAF6","type":"Zone"},{"guid":"F383F9E7-0D05-4AA7-BBEB-A3807068D784","type":"Zone"},{"guid":"159F9C36-FD08-4042-AF8C-738EA97EF749","type":"Zone"},{"guid":"4E087BD0-1059-4E4E-A210-7929FB655F9B","type":"Zone"},{"guid":"49185295-0A36-4E37-AF52-C0AEE5DAAFE1","type":"Zone"},{"guid":"8054994C-6933-4B0C-8EAE-3C5992341EFA","type":"Zone"},{"guid":"68068468-C83C-413E-A1F1-973BE64079B0","type":"Zone"},{"guid":"48441378-3064-454B-9E60-2B4E73B2F166","type":"Zone"},{"guid":"2C4A18D1-2D36-4DCD-89C4-6FFB98606D60","type":"Zone"},{"guid":"E7717054-B574-4DA6-A918-4064E598A489","type":"Zone"},{"guid":"046F3341-E93C-46F8-9AA9-25BD0A843FA7","type":"Zone"},{"guid":"77EBD341-6792-4504-B291-2FE135AF92C4","type":"Zone"},{"guid":"80CF1AA9-9E34-437B-ADE4-
+[PY] [TYPE] elements
+[PY] [SEND] {"command":"get_values","reqId":"sched:4662f3e5-0894-4843-9502-bb10e0f36bbe","guids":["83AFBD36-9666-4438-9E30-89D748C01919","52AAA942-CA97-49DE-8454-3B349CC9E9C0","A7E36240-05E0-4586-B0B0-EF2E1565FAF...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 17:17:46] EXEC START: other
+[2026-10-18 17:17:47] EXEC END: other
+[2026-10-18 17:17:47] EXEC START: other
+[2026-10-18 17:17:47] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:47] EXEC END: other
+[2026-10-18 17:17:47] Attempting to send message to Python (147703 bytes)
+[PY] [CONNECT] ('127.0.0.1', 61703)
+nt to Python (147703 bytes)
+[PY] [RECV RAW] {"type":"property_values","reqId":"sched:4662f3e5-0894-4843-9502-bb10e0f36bbe","values":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","modiStamp":204952358,"props":{"elem:floorIndex":"1","8583BC95-C85D-48A3-9C2E-1EBED328BBFE":"1","77367980-3D5A-452B-9900-D88C53E82176":"211","CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913":"事務室2-1","8159A988-716F-45C0-B338-8D1055B820B1":"FA1","B4BCE044-1BE9-41C0-B8FB-0EDDF1E7B414":"タイルカーペット","A1D5F736-A536-4B3C-99D6-FE5304570F4A":"C; S","506ADB35-4912-4BAC-89DF-EA7196CCCFDC":"VB","2267E295-A478-42D4-95B4-FB20623E2855":"C; S","5085E686-2D37-4478-864D-786F28B9C64A":"二重張GB-Rの上EP","07F11403-E68C-4BC7-90EF-DE461340F094":"準不燃","526C973E-5D0F-4A75-9E3B-6F5DB4CAF1FB":"S","7E43E7CC-AA7C-4183-ABE6-DC9A02BDE862":"GB-R下地張DR","3B4EDF42-1B1E-40A5-B6F2-AADA6E27F12E":"準不燃","A0859D61-7C04-4D9C-8254-DC0B79D56846":"2700","767D0E8C-13F5-444C-8A2A-FBB59FD681D3":"自然排煙","A1CE06A3-6377-4F7E-A9AF-8AABFE7FFEEB":"---","0F43553E-58E7-4661-8CEB-8B4E5D2ED50A":"9","2B32E45C-4761-41D8-AFFA-8D
+[PY] [TYPE] property_values
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:17:49] EXEC START: other
+[2026-10-18 17:17:49] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:49] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:17:52] EXEC START: other
+[2026-10-18 17:17:52] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:52] EXEC END: other
+[2026-10-18 17:17:55] EXEC START: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:17:55] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:55] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:17:58] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:17:58] EXEC END: other
+[2026-10-18 17:18:01] EXEC START: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:18:01] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:01] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:18:04] EXEC START: other
+[2026-10-18 17:18:04] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:04] EXEC END: other
+[PY] [SCHEDULE] open 壁リスト refs=8 layers=[]
+[PY] [SEND] {"command":"resolve_schedule","reqId":"sched:f6a6f663-c01c-4cbc-8bd3-cb758874cf66","propGuids":["C9EDA02D-EA3A-4604-9E25-DD597361F472","FC8B1598-3E3B-4A4F-BBCE-277F83BC8598","A7B55E43-7C56-4C9E-836D-7...
+[PY] [NO ACK]
+[2026-10-18 17:18:07] EXEC START: other
+[2026-10-18 17:18:07] resolve_schedule: 8/8 properties
+[2026-10-18 17:18:07] EXEC END: other
+[2026-10-18 17:18:07] Attempting to send message to Python (1846 bytes)
+[2026-10-18 17:18:07] Successfully sent to Python (1846 bytes)
+[PY] [CONNECT] ('127.0.0.1', 61727)
+[PY] [RECV RAW] {"type":"schedule_resolved","reqId":"sched:f6a6f663-c01c-4cbc-8bd3-cb758874cf66","definitions":[{"ref":"C9EDA02D-EA3A-4604-9E25-DD597361F472","guid":"C9EDA02D-EA3A-4604-9E25-DD597361F472","name":"ビルディングマテリアル/複合構造/断面形状/塗りつぶし","group":"一般パラメータ","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"FC8B1598-3E3B-4A4F-BBCE-277F83BC8598","guid":"FC8B1598-3E3B-4A4F-BBCE-277F83BC8598","name":"体積(正味)","group":"一般パラメータ","editable":false,"valueType":2,"collectionType":1,"isCustom":false},{"ref":"A7B55E43-7C56-4C9E-836D-7A56F1D9D760","guid":"A7B55E43-7C56-4C9E-836D-7A56F1D9D760","name":"厚さ","group":"一般パラメータ","editable":true,"valueType":2,"collectionType":1,"isCustom":false},{"ref":"C4B62357-1289-4D43-A3F6-AB02B192864C","guid":"C4B62357-1289-4D43-A3F6-AB02B192864C","name":"高さ","group":"一般パラメータ","editable":true,"valueType":2,"collectionType":1,"isCustom":false},{"ref":"AC5CCA52-F79B-4850-92A9-BED7CB7C3847","guid":"AC5CCA52-F79B-4850-92A9-BED7CB7C3847","name":"面積","group":"一般パラメ
+[PY] [TYPE] schedule_resolved
+[PY] [SEND] {"command":"get_elements","reqId":"sched:f6a6f663-c01c-4cbc-8bd3-cb758874cf66","stories":[],"limit":20000,"Wall":true}
+...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 17:18:09] EXEC START: other
+[2026-10-18 17:18:09] EXEC END: other
+[2026-10-18 17:18:09] EXEC START: other
+[2026-10-18 17:18:09] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:09] EXEC END: other
+[2026-10-18 17:18:09] Attempting to send message to Python (41021 bytes)
+[2026-10-18 17:18:09] Successfully sent to Python (41021 bytes)
+[PY] [CONNECT] ('127.0.0.1', 61731)
+[PY] [RECV RAW] {"type":"elements","reqId":"sched:f6a6f663-c01c-4cbc-8bd3-cb758874cf66","capped":false,"elements":[{"guid":"BF32FDAB-5999-4436-9C01-1FEAA732F4D6","type":"Wall"},{"guid":"D882955E-C5AC-4F33-8CD8-519574E976DC","type":"Wall"},{"guid":"95938D0E-0F41-4EB7-B0F5-ED41DFF39F9B","type":"Wall"},{"guid":"EEA692FB-1815-4CAF-98AD-2E273AFA06CE","type":"Wall"},{"guid":"8FDEFB26-BA00-4EEA-8196-C0228AEC9741","type":"Wall"},{"guid":"A0FE6AA3-AA25-40CB-AE4E-A7A9DE4CC85B","type":"Wall"},{"guid":"47FEE8E2-74A5-4778-84D8-AE87A8EB2BB9","type":"Wall"},{"guid":"34729C70-901B-4066-B356-FDC8799C9BEC","type":"Wall"},{"guid":"8561519B-0B7B-470C-9A71-2A6F6149526D","type":"Wall"},{"guid":"0337D288-0A19-4A8D-90C4-53102427A901","type":"Wall"},{"guid":"C1E3F924-35C3-43D1-BFED-502842830242","type":"Wall"},{"guid":"5D21D11E-11CE-48CD-B15C-7D0C70AE8940","type":"Wall"},{"guid":"C97C3D7C-0A0A-452B-87EF-C3E2ED3C0E67","type":"Wall"},{"guid":"26578A0F-6BF5-40A6-8549-6F21702AEF08","type":"Wall"},{"guid":"1AEE8F87-06A4-4287-B607-
+[PY] [TYPE] elements
+[PY] [SEND] {"command":"get_values","reqId":"sched:f6a6f663-c01c-4cbc-8bd3-cb758874cf66","guids":["BF32FDAB-5999-4436-9C01-1FEAA732F4D6","D882955E-C5AC-4F33-8CD8-519574E976DC","95938D0E-0F41-4EB7-B0F5-ED41DFF39F9...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 17:18:11] EXEC START: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:18:14] EXEC END: other
+[2026-10-18 17:18:14] EXEC START: other
+[2026-10-18 17:18:14] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:14] EXEC END: other
+[2026-10-18 17:18:14] EXEC START: other
+[2026-10-18 17:18:14] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:14] EXEC END: other
+[2026-10-18 17:18:14] Attempting to send message to Python (299215 bytes)
+[PY] [CONNECT] ('127.0.0.1', 61737)
+nt to Python (299215 bytes)
+[PY] [RECV RAW] {"type":"property_values","reqId":"sched:f6a6f663-c01c-4cbc-8bd3-cb758874cf66","values":[{"guid":"BF32FDAB-5999-4436-9C01-1FEAA732F4D6","modiStamp":204951105,"props":{"C9EDA02D-EA3A-4604-9E25-DD597361F472":"74","FC8B1598-3E3B-4A4F-BBCE-277F83BC8598":"14.65","A7B55E43-7C56-4C9E-836D-7A56F1D9D760":"210.0","C4B62357-1289-4D43-A3F6-AB02B192864C":"4,100.0","AC5CCA52-F79B-4850-92A9-BED7CB7C3847":"4.632","EEAD00FC-FBB0-4278-959D-C5244F66E8C1":"---","30EF220F-495D-4B8B-AE0C-484A04814816":"24,900.0","9FF86DF1-5498-4925-83BA-1D9B97ABE103":"81.330"}},{"guid":"D882955E-C5AC-4F33-8CD8-519574E976DC","modiStamp":204952543,"props":{"C9EDA02D-EA3A-4604-9E25-DD597361F472":"74","FC8B1598-3E3B-4A4F-BBCE-277F83BC8598":"20.78","A7B55E43-7C56-4C9E-836D-7A56F1D9D760":"210.0","C4B62357-1289-4D43-A3F6-AB02B192864C":"4,100.0","AC5CCA52-F79B-4850-92A9-BED7CB7C3847":"6.020","EEAD00FC-FBB0-4278-959D-C5244F66E8C1":"---","30EF220F-495D-4B8B-AE0C-484A04814816":"32,900.0","9FF86DF1-5498-4925-83BA-1D9B97ABE103":"116.244
+[PY] [TYPE] property_values
+[PY] [DB] values saved: 5280 cells
+[PY] [SCHEDULE] shown 壁リスト elements=660/660 cols=8 notes=[]
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:18:16] EXEC START: other
+[2026-10-18 17:18:16] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:16] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:18:19] EXEC START: other
+[2026-10-18 17:18:19] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:19] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:18:22] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:22] EXEC END: other
+[2026-10-18 17:18:25] EXEC START: other
+
+[2026-10-18 17:18:25] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:25] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:18:28] EXEC START: other
+[2026-10-18 17:18:28] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:28] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:18:31] EXEC START: other
+[2026-10-18 17:18:31] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:31] EXEC END: other
+[2026-10-18 17:18:34] EXEC START: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:18:34] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:34] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:18:37] EXEC START: other
+[2026-10-18 17:18:37] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:37] EXEC END: other
+[PY] [SCHEDULE] open 内部仕上表 1階 refs=18 layers=['9']
+[PY] [SEND] {"command":"resolve_schedule","reqId":"sched:fc7e9ab1-10a6-43dc-b096-f163f92aaeba","propGuids":["8583BC95-C85D-48A3-9C2E-1EBED328BBFE","77367980-3D5A-452B-9900-D88C53E82176","CAF8D1EB-0BAD-48DE-AEA4-9...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 17:18:42] EXEC START: other
+[2026-10-18 17:18:42] resolve_schedule: 18/18 properties
+[2026-10-18 17:18:42] EXEC END: other
+[2026-10-18 17:18:42] EXEC START: other
+[2026-10-18 17:18:42] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:42] EXEC END: other
+[2026-10-18 17:18:42] Attempting to send message to Python (4700 bytes)
+[2026-10-18 17:18:42] Successfully sent to Python (4700 bytes)
+[PY] [CONNECT] ('127.0.0.1', 58589)
+[PY] [RECV RAW] {"type":"schedule_resolved","reqId":"sched:fc7e9ab1-10a6-43dc-b096-f163f92aaeba","definitions":[{"ref":"8583BC95-C85D-48A3-9C2E-1EBED328BBFE","guid":"8583BC95-C85D-48A3-9C2E-1EBED328BBFE","name":"配置フロア名","group":"一般パラメータ","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"77367980-3D5A-452B-9900-D88C53E82176","guid":"77367980-3D5A-452B-9900-D88C53E82176","name":"ゾーン番号","group":"ゾーン","editable":true,"valueType":3,"collectionType":1,"isCustom":false},{"ref":"CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913","guid":"CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913","name":"ゾーン名","group":"ゾーン","editable":true,"valueType":3,"collectionType":1,"isCustom":false},{"ref":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","guid":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","name":"レイヤー","group":"モデルビュー","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"内部仕上||床下地","guid":"8159A988-716F-45C0-B338-8D1055B820B1","name":"床下地","group":"内部仕上","editable":true,"valueType":3,"collectionType":4,"isC
+[PY] [TYPE] schedule_resolved
+[PY] [SEND] {"command":"get_elements","reqId":"sched:fc7e9ab1-10a6-43dc-b096-f163f92aaeba","stories":[],"limit":20000,"Zone":true}
+...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 17:18:44] EXEC START: other
+[2026-10-18 17:18:44] EXEC END: other
+[2026-10-18 17:18:44] EXEC START: other
+[2026-10-18 17:18:44] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:44] EXEC END: other
+[2026-10-18 17:18:44] Attempting to send message to Python (9401 bytes)
+[2026-10-18 17:18:44] Successfully sent to Python (9401 bytes)
+[PY] [CONNECT] ('127.0.0.1', 58592)
+[PY] [RECV RAW] {"type":"elements","reqId":"sched:fc7e9ab1-10a6-43dc-b096-f163f92aaeba","capped":false,"elements":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","type":"Zone"},{"guid":"52AAA942-CA97-49DE-8454-3B349CC9E9C0","type":"Zone"},{"guid":"A7E36240-05E0-4586-B0B0-EF2E1565FAF6","type":"Zone"},{"guid":"F383F9E7-0D05-4AA7-BBEB-A3807068D784","type":"Zone"},{"guid":"159F9C36-FD08-4042-AF8C-738EA97EF749","type":"Zone"},{"guid":"4E087BD0-1059-4E4E-A210-7929FB655F9B","type":"Zone"},{"guid":"49185295-0A36-4E37-AF52-C0AEE5DAAFE1","type":"Zone"},{"guid":"8054994C-6933-4B0C-8EAE-3C5992341EFA","type":"Zone"},{"guid":"68068468-C83C-413E-A1F1-973BE64079B0","type":"Zone"},{"guid":"48441378-3064-454B-9E60-2B4E73B2F166","type":"Zone"},{"guid":"2C4A18D1-2D36-4DCD-89C4-6FFB98606D60","type":"Zone"},{"guid":"E7717054-B574-4DA6-A918-4064E598A489","type":"Zone"},{"guid":"046F3341-E93C-46F8-9AA9-25BD0A843FA7","type":"Zone"},{"guid":"77EBD341-6792-4504-B291-2FE135AF92C4","type":"Zone"},{"guid":"80CF1AA9-9E34-437B-ADE4-
+[PY] [TYPE] elements
+[PY] [SEND] {"command":"get_values","reqId":"sched:fc7e9ab1-10a6-43dc-b096-f163f92aaeba","guids":["83AFBD36-9666-4438-9E30-89D748C01919","52AAA942-CA97-49DE-8454-3B349CC9E9C0","A7E36240-05E0-4586-B0B0-EF2E1565FAF...
+[PY] [NO ACK]
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:18:52] EXEC START: other
+[2026-10-18 17:18:52] EXEC END: other
+[2026-10-18 17:18:52] EXEC START: other
+[2026-10-18 17:18:52] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:52] EXEC END: other
+[2026-10-18 17:18:52] EXEC START: other
+[2026-10-18 17:18:52] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:52] EXEC END: other
+[2026-10-18 17:18:52] Attempting to send message to Python (147703 bytes)
+[2026-10-18 17:18:52] Successfully sent to Python (147703 bytes)
+[PY] [CONNECT] ('127.0.0.1', 58608)
+[PY] [RECV RAW] {"type":"property_values","reqId":"sched:fc7e9ab1-10a6-43dc-b096-f163f92aaeba","values":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","modiStamp":204952358,"props":{"elem:floorIndex":"1","8583BC95-C85D-48A3-9C2E-1EBED328BBFE":"1","77367980-3D5A-452B-9900-D88C53E82176":"211","CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913":"事務室2-1","8159A988-716F-45C0-B338-8D1055B820B1":"FA1","B4BCE044-1BE9-41C0-B8FB-0EDDF1E7B414":"タイルカーペット","A1D5F736-A536-4B3C-99D6-FE5304570F4A":"C; S","506ADB35-4912-4BAC-89DF-EA7196CCCFDC":"VB","2267E295-A478-42D4-95B4-FB20623E2855":"C; S","5085E686-2D37-4478-864D-786F28B9C64A":"二重張GB-Rの上EP","07F11403-E68C-4BC7-90EF-DE461340F094":"準不燃","526C973E-5D0F-4A75-9E3B-6F5DB4CAF1FB":"S","7E43E7CC-AA7C-4183-ABE6-DC9A02BDE862":"GB-R下地張DR","3B4EDF42-1B1E-40A5-B6F2-AADA6E27F12E":"準不燃","A0859D61-7C04-4D9C-8254-DC0B79D56846":"2700","767D0E8C-13F5-444C-8A2A-FBB59FD681D3":"自然排煙","A1CE06A3-6377-4F7E-A9AF-8AABFE7FFEEB":"---","0F43553E-58E7-4661-8CEB-8B4E5D2ED50A":"9","2B32E45C-4761-41D8-AFFA-8D
+[PY] [TYPE] property_values
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:18:52] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:52] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:18:55] EXEC START: other
+[2026-10-18 17:18:55] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:55] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:18:58] EXEC START: other
+[2026-10-18 17:18:58] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:18:58] EXEC END: other
+[PY] [SCHEDULE] open 建具姿図_窓_申請 refs=3 layers=[]
+[PY] [SEND] {"command":"resolve_schedule","reqId":"sched:bac80b1d-da9b-41c0-8c43-430ab196ec2b","propGuids":[],"propNamesHex":["e5bbbae585b7e68385e5a0b128e585b1e9809a297c7ce5bbbae585b7e7aca6e58fb7efbc88e5bbbae585b...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 17:19:03] EXEC START: other
+[2026-10-18 17:19:03] resolve_schedule: 3/3 properties
+[2026-10-18 17:19:03] EXEC END: other
+[2026-10-18 17:19:03] EXEC START: other
+[2026-10-18 17:19:03] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:03] EXEC END: other
+[2026-10-18 17:19:03] Attempting to send message to Python (838 bytes)
+[2026-10-18 17:19:03] Successfully sent to Python (838 bytes)
+[PY] [CONNECT] ('127.0.0.1', 58621)
+[PY] [RECV RAW] {"type":"schedule_resolved","reqId":"sched:bac80b1d-da9b-41c0-8c43-430ab196ec2b","definitions":[{"ref":"建具情報(共通)||建具符号（建具種類+建具番号）","guid":"04A88010-2B66-48AF-A7AA-6B7F99A22452","name":"建具符号（建具種類+建具番号）","group":"建具情報(共通)","editable":true,"valueType":3,"collectionType":1,"isCustom":true},{"ref":"建具情報(共通)||姿図番号","guid":"8A8C4AAB-F6B0-4943-AE05-B4C678D7B3D4","name":"姿図番号","group":"建具情報(共通)","editable":true,"valueType":3,"collectionType":1,"isCustom":true},{"ref":"建具情報(共通)||姿図表示 ON/OFF","guid":"781E6E39-E1B5-4D98-AC63-1CC3E0393C01","name":"姿図表示 ON/OFF","group":"建具情報(共通)","editable":true,"valueType":4,"collectionType":1,"isCustom":true,"enums":["True","False"]}],"layers":{}}
+[PY] [TYPE] schedule_resolved
+[PY] [SEND] {"command":"get_elements","reqId":"sched:bac80b1d-da9b-41c0-8c43-430ab196ec2b","stories":[],"limit":20000,"Door":true,"Window":true}
+...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 17:19:05] EXEC START: other
+[2026-10-18 17:19:05] EXEC END: other
+[2026-10-18 17:19:05] EXEC START: other
+[2026-10-18 17:19:05] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:05] EXEC END: other
+[2026-10-18 17:19:05] Attempting to send message to Python (29601 bytes)
+[2026-10-18 17:19:05] Successfully sent to Python (29601 bytes)
+[PY] [CONNECT] ('127.0.0.1', 58625)
+[PY] [RECV RAW] {"type":"elements","reqId":"sched:bac80b1d-da9b-41c0-8c43-430ab196ec2b","capped":false,"elements":[{"guid":"332E18B5-08CA-45DE-8CC3-BD6150FB57C5","type":"Window"},{"guid":"C9FB0419-B58F-4FF3-97A4-C4630BE1278B","type":"Window"},{"guid":"BE31997D-0394-41A5-A26B-0B5F01B1E8F7","type":"Window"},{"guid":"553313B3-B680-41C3-8CB2-FE904CEE32EC","type":"Window"},{"guid":"D41CEE64-509D-48DE-ACE0-DEAFC764FD23","type":"Window"},{"guid":"ABD879C8-68A9-47CD-A32C-F851FC5D12E6","type":"Window"},{"guid":"12769DD8-435E-4D70-A834-476D817CB2F3","type":"Window"},{"guid":"75D18064-73AE-4098-8264-810F47B07DF8","type":"Window"},{"guid":"D9140E37-9609-4C6B-B716-4E1138AD3D05","type":"Window"},{"guid":"76ACD218-3062-4B73-A045-9B54E237EDEE","type":"Window"},{"guid":"18155AA6-E1BD-404F-9F03-62D66F62462E","type":"Window"},{"guid":"DFCA5AC1-EDDF-4E95-B835-C7C9ACB3CCB9","type":"Window"},{"guid":"43783A5A-907D-4932-A3D6-4D322F1FFD1A","type":"Window"},{"guid":"88123F87-9F07-4847-8B7E-FBED891F5B98","type":"Window"},{"gui
+[PY] [TYPE] elements
+[PY] [SEND] {"command":"get_values","reqId":"sched:bac80b1d-da9b-41c0-8c43-430ab196ec2b","guids":["332E18B5-08CA-45DE-8CC3-BD6150FB57C5","C9FB0419-B58F-4FF3-97A4-C4630BE1278B","BE31997D-0394-41A5-A26B-0B5F01B1E8F...
+[PY] [NO ACK]
+[2026-10-18 17:19:07] EXEC START: other
+[2026-10-18 17:19:07] EXEC END: other
+[2026-10-18 17:19:07] Attempting to send message to Python (113230 bytes)
+[2026-10-18 17:19:07] Successfully sent to Python (113230 bytes)
+[PY] [CONNECT] ('127.0.0.1', 58631)
+[PY] [RECV RAW] {"type":"property_values","reqId":"sched:bac80b1d-da9b-41c0-8c43-430ab196ec2b","values":[{"guid":"332E18B5-08CA-45DE-8CC3-BD6150FB57C5","modiStamp":208284667,"props":{"gdl:kaj_door_ident":"0","04A88010-2B66-48AF-A7AA-6B7F99A22452":"AG-04","8A8C4AAB-F6B0-4943-AE05-B4C678D7B3D4":"G-1","781E6E39-E1B5-4D98-AC63-1CC3E0393C01":"False"}},{"guid":"C9FB0419-B58F-4FF3-97A4-C4630BE1278B","modiStamp":208284666,"props":{"gdl:kaj_door_ident":"0","04A88010-2B66-48AF-A7AA-6B7F99A22452":"AW-04","8A8C4AAB-F6B0-4943-AE05-B4C678D7B3D4":"図示","781E6E39-E1B5-4D98-AC63-1CC3E0393C01":"True"}},{"guid":"BE31997D-0394-41A5-A26B-0B5F01B1E8F7","modiStamp":208284665,"props":{"gdl:kaj_door_ident":"0","04A88010-2B66-48AF-A7AA-6B7F99A22452":"AW-07","8A8C4AAB-F6B0-4943-AE05-B4C678D7B3D4":"図示","781E6E39-E1B5-4D98-AC63-1CC3E0393C01":"True"}},{"guid":"553313B3-B680-41C3-8CB2-FE904CEE32EC","modiStamp":208284664,"props":{"gdl:kaj_door_ident":"0","04A88010-2B66-48AF-A7AA-6B7F99A22452":"AG-07","8A8C4AAB-F6B0-4943-AE05-B4C678D7
+[PY] [TYPE] property_values
+[PY] [DB] values saved: 43 cells
+[PY] [SCHEDULE] shown 建具姿図_窓_申請 elements=43/465 cols=1 notes=[]
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:19:07] EXEC START: other
+[2026-10-18 17:19:07] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:07] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:19:10] EXEC START: other
+[2026-10-18 17:19:10] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:10] EXEC END: other
+[PY] [PANEL] closed #2 (d6e99b9b)
+[PY] [PANEL] closed #1 (2deca540)
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:19:13] EXEC START: other
+[2026-10-18 17:19:13] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:13] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:19:16] EXEC START: other
+[2026-10-18 17:19:16] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:16] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:19:19] EXEC START: other
+[2026-10-18 17:19:19] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:19] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:19:22] EXEC START: other
+[2026-10-18 17:19:22] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:22] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:19:25] EXEC START: other
+[2026-10-18 17:19:25] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:25] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:19:28] EXEC START: other
+[2026-10-18 17:19:28] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:28] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:19:31] EXEC START: other
+[2026-10-18 17:19:31] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:31] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:19:34] EXEC START: other
+[2026-10-18 17:19:34] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:34] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:19:37] EXEC START: other
+[2026-10-18 17:19:37] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:37] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:19:41] EXEC START: other
+[2026-10-18 17:19:41] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:41] EXEC END: other
+[PY] [SCHEDULE] open 内部仕上表 1階 refs=18 layers=['9']
+[PY] [SEND] {"command":"resolve_schedule","reqId":"sched:40941d22-4af4-423e-a635-d7d0629a3bb7","propGuids":["8583BC95-C85D-48A3-9C2E-1EBED328BBFE","77367980-3D5A-452B-9900-D88C53E82176","CAF8D1EB-0BAD-48DE-AEA4-9...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 17:19:44] EXEC START: other
+[2026-10-18 17:19:44] resolve_schedule: 18/18 properties
+[2026-10-18 17:19:44] EXEC END: other
+[2026-10-18 17:19:44] EXEC START: other
+[2026-10-18 17:19:44] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:44] EXEC END: other
+[2026-10-18 17:19:44] Attempting to send message to Python (4700 bytes)
+[2026-10-18 17:19:44] Successfully sent to Python (4700 bytes)
+[PY] [CONNECT] ('127.0.0.1', 58675)
+[PY] [RECV RAW] {"type":"schedule_resolved","reqId":"sched:40941d22-4af4-423e-a635-d7d0629a3bb7","definitions":[{"ref":"8583BC95-C85D-48A3-9C2E-1EBED328BBFE","guid":"8583BC95-C85D-48A3-9C2E-1EBED328BBFE","name":"配置フロア名","group":"一般パラメータ","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"77367980-3D5A-452B-9900-D88C53E82176","guid":"77367980-3D5A-452B-9900-D88C53E82176","name":"ゾーン番号","group":"ゾーン","editable":true,"valueType":3,"collectionType":1,"isCustom":false},{"ref":"CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913","guid":"CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913","name":"ゾーン名","group":"ゾーン","editable":true,"valueType":3,"collectionType":1,"isCustom":false},{"ref":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","guid":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","name":"レイヤー","group":"モデルビュー","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"内部仕上||床下地","guid":"8159A988-716F-45C0-B338-8D1055B820B1","name":"床下地","group":"内部仕上","editable":true,"valueType":3,"collectionType":4,"isC
+[PY] [TYPE] schedule_resolved
+[PY] [SEND] {"command":"get_elements","reqId":"sched:40941d22-4af4-423e-a635-d7d0629a3bb7","stories":[],"limit":20000,"Zone":true}
+...
+[PY] [NO ACK]
+[2026-10-18 17:19:46] EXEC START: other
+[2026-10-18 17:19:46] EXEC END: other
+[2026-10-18 17:19:46] Attempting to send message to Python (9401 bytes)
+[2026-10-18 17:19:46] Successfully sent to Python (9401 bytes)
+[PY] [CONNECT] ('127.0.0.1', 58683)
+[PY] [RECV RAW] {"type":"elements","reqId":"sched:40941d22-4af4-423e-a635-d7d0629a3bb7","capped":false,"elements":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","type":"Zone"},{"guid":"52AAA942-CA97-49DE-8454-3B349CC9E9C0","type":"Zone"},{"guid":"A7E36240-05E0-4586-B0B0-EF2E1565FAF6","type":"Zone"},{"guid":"F383F9E7-0D05-4AA7-BBEB-A3807068D784","type":"Zone"},{"guid":"159F9C36-FD08-4042-AF8C-738EA97EF749","type":"Zone"},{"guid":"4E087BD0-1059-4E4E-A210-7929FB655F9B","type":"Zone"},{"guid":"49185295-0A36-4E37-AF52-C0AEE5DAAFE1","type":"Zone"},{"guid":"8054994C-6933-4B0C-8EAE-3C5992341EFA","type":"Zone"},{"guid":"68068468-C83C-413E-A1F1-973BE64079B0","type":"Zone"},{"guid":"48441378-3064-454B-9E60-2B4E73B2F166","type":"Zone"},{"guid":"2C4A18D1-2D36-4DCD-89C4-6FFB98606D60","type":"Zone"},{"guid":"E7717054-B574-4DA6-A918-4064E598A489","type":"Zone"},{"guid":"046F3341-E93C-46F8-9AA9-25BD0A843FA7","type":"Zone"},{"guid":"77EBD341-6792-4504-B291-2FE135AF92C4","type":"Zone"},{"guid":"80CF1AA9-9E34-437B-ADE4-
+[PY] [TYPE] elements
+[PY] [SEND] {"command":"get_values","reqId":"sched:40941d22-4af4-423e-a635-d7d0629a3bb7","guids":["83AFBD36-9666-4438-9E30-89D748C01919","52AAA942-CA97-49DE-8454-3B349CC9E9C0","A7E36240-05E0-4586-B0B0-EF2E1565FAF...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 17:19:48] EXEC START: other
+[2026-10-18 17:19:48] EXEC END: other
+[2026-10-18 17:19:48] EXEC START: other
+[2026-10-18 17:19:48] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:48] EXEC END: other
+[2026-10-18 17:19:48] Attempting to send message to Python (147703 bytes)
+[PY] [CONNECT] ('127.0.0.1', 58711)
+nt to Python (147703 bytes)
+[PY] [RECV RAW] {"type":"property_values","reqId":"sched:40941d22-4af4-423e-a635-d7d0629a3bb7","values":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","modiStamp":204952358,"props":{"elem:floorIndex":"1","8583BC95-C85D-48A3-9C2E-1EBED328BBFE":"1","77367980-3D5A-452B-9900-D88C53E82176":"211","CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913":"事務室2-1","8159A988-716F-45C0-B338-8D1055B820B1":"FA1","B4BCE044-1BE9-41C0-B8FB-0EDDF1E7B414":"タイルカーペット","A1D5F736-A536-4B3C-99D6-FE5304570F4A":"C; S","506ADB35-4912-4BAC-89DF-EA7196CCCFDC":"VB","2267E295-A478-42D4-95B4-FB20623E2855":"C; S","5085E686-2D37-4478-864D-786F28B9C64A":"二重張GB-Rの上EP","07F11403-E68C-4BC7-90EF-DE461340F094":"準不燃","526C973E-5D0F-4A75-9E3B-6F5DB4CAF1FB":"S","7E43E7CC-AA7C-4183-ABE6-DC9A02BDE862":"GB-R下地張DR","3B4EDF42-1B1E-40A5-B6F2-AADA6E27F12E":"準不燃","A0859D61-7C04-4D9C-8254-DC0B79D56846":"2700","767D0E8C-13F5-444C-8A2A-FBB59FD681D3":"自然排煙","A1CE06A3-6377-4F7E-A9AF-8AABFE7FFEEB":"---","0F43553E-58E7-4661-8CEB-8B4E5D2ED50A":"9","2B32E45C-4761-41D8-AFFA-8D
+[PY] [TYPE] property_values
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:19:50] EXEC START: other
+[2026-10-18 17:19:50] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:50] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:19:53] EXEC START: other
+[2026-10-18 17:19:53] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:53] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:19:56] EXEC START: other
+[2026-10-18 17:19:56] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:56] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:19:59] EXEC START: other
+[2026-10-18 17:19:59] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:19:59] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:02] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:02] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:05] EXEC START: other
+[2026-10-18 17:20:05] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:05] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:08] EXEC START: other
+[2026-10-18 17:20:08] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:08] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:11] EXEC START: other
+[2026-10-18 17:20:11] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:11] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:14] EXEC START: other
+[2026-10-18 17:20:14] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:14] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:17] EXEC START: other
+[2026-10-18 17:20:17] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:17] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:20] EXEC START: other
+[2026-10-18 17:20:20] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:20] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:23] EXEC START: other
+[2026-10-18 17:20:23] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:23] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:26] EXEC START: other
+[2026-10-18 17:20:26] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:26] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:29] EXEC START: other
+[2026-10-18 17:20:29] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:29] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:32] EXEC START: other
+[2026-10-18 17:20:32] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:32] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:35] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:35] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:38] EXEC START: other
+[2026-10-18 17:20:38] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:38] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:41] EXEC START: other
+[2026-10-18 17:20:41] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:41] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:44] EXEC START: other
+[2026-10-18 17:20:44] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:44] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:47] EXEC START: other
+[2026-10-18 17:20:47] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:47] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:50] EXEC START: other
+[2026-10-18 17:20:50] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:50] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:53] EXEC START: other
+[2026-10-18 17:20:53] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:53] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:56] EXEC START: other
+[2026-10-18 17:20:56] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:56] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:20:59] EXEC START: other
+[2026-10-18 17:20:59] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:20:59] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:02] EXEC START: other
+[2026-10-18 17:21:02] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:02] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:05] EXEC START: other
+[2026-10-18 17:21:05] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:05] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:08] EXEC START: other
+[2026-10-18 17:21:08] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:08] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:11] EXEC START: other
+[2026-10-18 17:21:11] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:11] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:14] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:14] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:17] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:17] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:20] EXEC START: other
+[2026-10-18 17:21:20] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:20] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:23] EXEC START: other
+[2026-10-18 17:21:23] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:23] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:26] EXEC START: other
+[2026-10-18 17:21:26] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:26] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:29] EXEC START: other
+[2026-10-18 17:21:29] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:29] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:32] EXEC START: other
+[2026-10-18 17:21:32] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:32] EXEC END: other
+[2026-10-18 17:21:35] EXEC START: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:35] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:35] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:38] EXEC START: other
+[2026-10-18 17:21:38] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:38] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:41] EXEC START: other
+[2026-10-18 17:21:41] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:41] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:44] EXEC START: other
+[2026-10-18 17:21:44] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:44] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:47] EXEC START: other
+[2026-10-18 17:21:47] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:47] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:50] EXEC START: other
+[2026-10-18 17:21:50] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:50] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:53] EXEC START: other
+[2026-10-18 17:21:53] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:53] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:56] EXEC START: other
+[2026-10-18 17:21:56] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:56] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:21:59] EXEC START: other
+[2026-10-18 17:21:59] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:21:59] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:22:02] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:22:02] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:22:05] EXEC START: other
+[2026-10-18 17:22:05] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:22:05] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:22:08] EXEC START: other
+[2026-10-18 17:22:08] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:22:08] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:22:11] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:22:11] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:22:14] EXEC START: other
+[2026-10-18 17:22:14] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:22:14] EXEC END: other
+[2026-10-18 17:22:17] EXEC START: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 17:22:17] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 17:22:17] EXEC END: other
+[PY] [PANEL] closed #3 (54bce5b9)
+[2026-10-18 18:41:53] Loaded binary: C:\AC28_AddOnProject\archicad-addon-pyQt\Build\Release\maedaAddOnPyqt.apx
+[2026-10-18 18:41:53] Build stamp: Oct 18 2026 18:32:35
+[2026-10-18 18:41:53] Command listener started on port 5001
+[2026-10-18 18:41:53] Started Python server process
+[2026-10-18 18:41:53] Initialize: actStory=0
+[2026-10-18 18:41:53] Initialize: project already open, running BIM auto-setup
+[2026-10-18 18:41:53] SetupBIMOverride: start (silent=true)
+[2026-10-18 18:41:53] SetupBIMOverride: xmlDir=C:\AC28_AddOnProject\archicad-addon-pyQt\
+[2026-10-18 18:41:53] SetupBIMOverride Phase1: ChangeStatus property check
+[2026-10-18 18:41:53]   anyGuids count=660
+[2026-10-18 18:41:53]   ChangeStatus existing=YES
+[2026-10-18 18:41:53]   Phase1: ChangeStatus already exists, skip import
+[2026-10-18 18:41:53] SetupBIMOverride Phase2: BIM graphic override check
+[2026-10-18 18:41:53]   Phase2: GO XML path=C:\AC28_AddOnProject\archicad-addon-pyQt\BIM????Graphic Override.xml
+[2026-10-18 18:41:53]   Phase2: rule group already exists
+[2026-10-18 18:41:53]   Phase2: GO XML parsed 2 rules
+[2026-10-18 18:41:53]   BIM変更済: criterion updated OK
+[2026-10-18 18:41:53]   BIM確認済: criterion updated OK
+[PY] --- Python startup begin ---
+[PY] Python 3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]
+[PY] Executable: C:\Users\gdre1\AppData\Local\Programs\Python\Python311\python.exe
+[PY] Path[0]: C:\AC28_AddOnProject\archicad-addon-pyQt
+[PY] PyQt6.QtWidgets OK
+[PY] PyQt6.QtCore OK
+[PY] PyQt6.QtGui OK
+[PY] QShortcut found in PyQt6.QtGui
+[PY] QUndoStack from QtGui OK
+[PY] db_manager OK
+[PY] undo_commands OK
+[PY] table_tools OK
+[PY] --- All imports OK ---
+[PY] --- Starting Application ---
+[PY] Python 3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]
+[PY] [FLOOR POLL] polling thread starting
+[PY] [FLOOR POLL] thread running
+[PY] [FLOOR POLL] thread started name=Thread-1 (_loop)
+[PY] [ORDER] dialog_order.json 読み込み完了: 26 グループ定義
+[PY] Server started (5000)
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:41:56] EXEC START: other
+[2026-10-18 18:41:56] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:41:56] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:41:59] EXEC START: other
+[2026-10-18 18:41:59] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:41:59] EXEC END: other
+[2026-10-18 18:42:00] config per-story Wall: -1:45 0:161 1:144 2:128 3:135 4:43 5:4
+[2026-10-18 18:42:00] config per-story Column: -1:48 0:31 1:30 2:30 3:30 4:29 5:2
+[2026-10-18 18:42:00] config per-story Beam: 0:42 1:79 2:73 3:73 4:69 5:10
+[2026-10-18 18:42:00] config per-story Slab: -1:4 0:45 1:32 2:23 3:33 4:4 5:1
+[2026-10-18 18:42:00] config per-story Window: 0:72 1:71 2:67 3:67 4:38 6:20
+[2026-10-18 18:42:00] config per-story Door: 0:36 1:31 2:24 3:31 4:8
+[2026-10-18 18:42:00] config per-story Zone: -1:17 0:39 1:32 2:23 3:30 4:9
+[2026-10-18 18:42:00] config per-story Roof: 1:1
+[2026-10-18 18:42:00] config per-story Object: -1:81 0:1048 1:529 2:472 3:443 4:917 5:5
+[2026-10-18 18:42:00] config per-story Morph: 0:1 1:1 2:1 3:1
+[2026-10-18 18:42:00] config per-story Mesh: 0:18
+[2026-10-18 18:42:00] SiteManager: 9 elems / libParts=[道路境界線, 道路ラベル, 敷地オブジェクト, 敷地境界線ラベル]
+[2026-10-18 18:42:00] SiteManager: other object libParts (69) = [ゾーン_仕上用, ゾーンラベル, ゾーンスタンプ 02, 断面図マーカー_02, 標準通り芯マーカー, フロアレベル記号, 標準立面図マーカー, エレベーター, 営_label_建具符号_AC27L_01, 営_室名札_AC27L_01, 営_ピクトサイン_AC27L_01, 営_点状ブロック_折り返し_AC27L_01, 営_線状ブロック_AC27L_01, 交差開口, 落葉樹(3Dアウトラインなし), 営_集水桝_AC27L_01, ポスト, 傾斜シンボル, 指示表示_左折矢印, 階段グリッド, 動線, 番号付け, 上-下テキスト, 階段説明, ジグザグ破断線, 標準 破断線, 標準 蹴上, 標準 踏面, フライト階段梁, 踊り場階段梁, 小便器_w1, 洋便器_w1, 複数洗面カウンター, 営_壁掛洗面器用手摺_AC27L_01, 洗面キャビネット, 保護付はしご, 営_ドレン_AC27L_01, 個別展開図(IE)マーカー, 共通展開図(IE)マーカー1, 営_照明開口_V27L_001]
+[2026-10-18 18:42:00] config per-story SiteManager: 0:9
+[2026-10-18 18:42:00] Attempting to send message to Python (1047 bytes)
+[2026-10-18 18:42:00] Successfully sent to Python (1047 bytes)
+[PY] [CONNECT] ('127.0.0.1', 57493)
+[PY] [RECV RAW] {"type":"project_config","stories":[{"index":-1,"name":"-1 Floor (PIT)"},{"index":0,"name":"1 Floor (1FL)"},{"index":1,"name":"2 Floor (2FL)"},{"index":2,"name":"3 Floor (3FL)"},{"index":3,"name":"4 Floor (4FL)"},{"index":4,"name":"5 Floor (5FL)"},{"index":5,"name":"6 Floor (RFL)"},{"index":6,"name":"7 Floor (パラペット天端)"}],"elementTypes":{"Wall":660,"Column":200,"Beam":346,"Slab":142,"Window":335,"Door":130,"Zone":150,"Roof":1,"Object":3495,"Morph":4,"Mesh":18,"SiteManager":9},"elementTypeStories":{"Wall":{"-1":45,"0":161,"1":144,"2":128,"3":135,"4":43,"5":4},"Column":{"-1":48,"0":31,"1":30,"2":30,"3":30,"4":29,"5":2},"Beam":{"0":42,"1":79,"2":73,"3":73,"4":69,"5":10},"Slab":{"-1":4,"0":45,"1":32,"2":23,"3":33,"4":4,"5":1},"Window":{"0":72,"1":71,"2":67,"3":67,"4":38,"6":20},"Door":{"0":36,"1":31,"2":24,"3":31,"4":8},"Zone":{"-1":17,"0":39,"1":32,"2":23,"3":30,"4":9},"Roof":{"1":1},"Object":{"-1":81,"0":1048,"1":529,"2":472,"3":443,"4":917,"5":5},"Morph":{"0":1,"1":1,"2":1,"3":1},"Mesh":
+[PY] [TYPE] project_config
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:42:02] EXEC START: other
+[2026-10-18 18:42:02] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:42:02] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:42:06] EXEC START: other
+[2026-10-18 18:42:06] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:42:06] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:42:09] EXEC START: other
+[2026-10-18 18:42:09] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:42:09] EXEC END: other
+[2026-10-18 18:42:12] EXEC START: other
+
+[2026-10-18 18:42:12] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:42:12] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:42:15] EXEC START: other
+[2026-10-18 18:42:15] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:42:15] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:42:18] EXEC START: other
+[2026-10-18 18:42:18] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:42:18] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:42:21] EXEC START: other
+[2026-10-18 18:42:21] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:42:21] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:42:24] EXEC START: other
+[2026-10-18 18:42:24] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:42:24] EXEC END: other
+[PY] [SCHEDULE] open 内部仕上表 1階 refs=18 layers=['9']
+[PY] [SEND] {"command":"resolve_schedule","reqId":"sched:a9fb37bd-f6aa-4c3e-a768-040bf7b0d7dd","propGuids":["8583BC95-C85D-48A3-9C2E-1EBED328BBFE","77367980-3D5A-452B-9900-D88C53E82176","CAF8D1EB-0BAD-48DE-AEA4-9...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 18:42:27] EXEC START: other
+[2026-10-18 18:42:27] resolve_schedule: 18/18 properties
+[2026-10-18 18:42:27] EXEC END: other
+[2026-10-18 18:42:27] EXEC START: other
+[2026-10-18 18:42:27] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:42:27] EXEC END: other
+[2026-10-18 18:42:27] Attempting to send message to Python (4700 bytes)
+[2026-10-18 18:42:27] Successfully sent to Python (4700 bytes)
+[PY] [CONNECT] ('127.0.0.1', 50159)
+[PY] [RECV RAW] {"type":"schedule_resolved","reqId":"sched:a9fb37bd-f6aa-4c3e-a768-040bf7b0d7dd","definitions":[{"ref":"8583BC95-C85D-48A3-9C2E-1EBED328BBFE","guid":"8583BC95-C85D-48A3-9C2E-1EBED328BBFE","name":"配置フロア名","group":"一般パラメータ","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"77367980-3D5A-452B-9900-D88C53E82176","guid":"77367980-3D5A-452B-9900-D88C53E82176","name":"ゾーン番号","group":"ゾーン","editable":true,"valueType":3,"collectionType":1,"isCustom":false},{"ref":"CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913","guid":"CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913","name":"ゾーン名","group":"ゾーン","editable":true,"valueType":3,"collectionType":1,"isCustom":false},{"ref":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","guid":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","name":"レイヤー","group":"モデルビュー","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"内部仕上||床下地","guid":"8159A988-716F-45C0-B338-8D1055B820B1","name":"床下地","group":"内部仕上","editable":true,"valueType":3,"collectionType":4,"isC
+[PY] [TYPE] schedule_resolved
+[PY] [SEND] {"command":"get_elements","reqId":"sched:a9fb37bd-f6aa-4c3e-a768-040bf7b0d7dd","stories":[],"limit":20000,"Zone":true}
+...
+[PY] [NO ACK]
+[2026-10-18 18:42:29] EXEC START: other
+[2026-10-18 18:42:29] EXEC END: other
+[2026-10-18 18:42:29] Attempting to send message to Python (9401 bytes)
+[2026-10-18 18:42:29] Successfully sent to Python (9401 bytes)
+[PY] [CONNECT] ('127.0.0.1', 50163)
+[PY] [RECV RAW] {"type":"elements","reqId":"sched:a9fb37bd-f6aa-4c3e-a768-040bf7b0d7dd","capped":false,"elements":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","type":"Zone"},{"guid":"52AAA942-CA97-49DE-8454-3B349CC9E9C0","type":"Zone"},{"guid":"A7E36240-05E0-4586-B0B0-EF2E1565FAF6","type":"Zone"},{"guid":"F383F9E7-0D05-4AA7-BBEB-A3807068D784","type":"Zone"},{"guid":"159F9C36-FD08-4042-AF8C-738EA97EF749","type":"Zone"},{"guid":"4E087BD0-1059-4E4E-A210-7929FB655F9B","type":"Zone"},{"guid":"49185295-0A36-4E37-AF52-C0AEE5DAAFE1","type":"Zone"},{"guid":"8054994C-6933-4B0C-8EAE-3C5992341EFA","type":"Zone"},{"guid":"68068468-C83C-413E-A1F1-973BE64079B0","type":"Zone"},{"guid":"48441378-3064-454B-9E60-2B4E73B2F166","type":"Zone"},{"guid":"2C4A18D1-2D36-4DCD-89C4-6FFB98606D60","type":"Zone"},{"guid":"E7717054-B574-4DA6-A918-4064E598A489","type":"Zone"},{"guid":"046F3341-E93C-46F8-9AA9-25BD0A843FA7","type":"Zone"},{"guid":"77EBD341-6792-4504-B291-2FE135AF92C4","type":"Zone"},{"guid":"80CF1AA9-9E34-437B-ADE4-
+[PY] [TYPE] elements
+[PY] [SEND] {"command":"get_values","reqId":"sched:a9fb37bd-f6aa-4c3e-a768-040bf7b0d7dd","guids":["83AFBD36-9666-4438-9E30-89D748C01919","52AAA942-CA97-49DE-8454-3B349CC9E9C0","A7E36240-05E0-4586-B0B0-EF2E1565FAF...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 18:42:31] EXEC START: other
+[2026-10-18 18:42:32] EXEC END: other
+[2026-10-18 18:42:32] EXEC START: other
+[2026-10-18 18:42:32] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:42:32] EXEC END: other
+[2026-10-18 18:42:32] Attempting to send message to Python (150178 bytes)
+[2026-10-18 18:42:32] Successfully sent to Python (150178 bytes)
+[PY] [CONNECT] ('127.0.0.1', 50166)
+[PY] [RECV RAW] {"type":"property_values","reqId":"sched:a9fb37bd-f6aa-4c3e-a768-040bf7b0d7dd","values":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","modiStamp":204952358,"props":{"elem:floorIndex":"1","8583BC95-C85D-48A3-9C2E-1EBED328BBFE":"2FL","77367980-3D5A-452B-9900-D88C53E82176":"211","CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913":"事務室2-1","8159A988-716F-45C0-B338-8D1055B820B1":"FA1","B4BCE044-1BE9-41C0-B8FB-0EDDF1E7B414":"タイルカーペット","A1D5F736-A536-4B3C-99D6-FE5304570F4A":"C; S","506ADB35-4912-4BAC-89DF-EA7196CCCFDC":"VB","2267E295-A478-42D4-95B4-FB20623E2855":"C; S","5085E686-2D37-4478-864D-786F28B9C64A":"二重張GB-Rの上EP","07F11403-E68C-4BC7-90EF-DE461340F094":"準不燃","526C973E-5D0F-4A75-9E3B-6F5DB4CAF1FB":"S","7E43E7CC-AA7C-4183-ABE6-DC9A02BDE862":"GB-R下地張DR","3B4EDF42-1B1E-40A5-B6F2-AADA6E27F12E":"準不燃","A0859D61-7C04-4D9C-8254-DC0B79D56846":"2700","767D0E8C-13F5-444C-8A2A-FBB59FD681D3":"自然排煙","A1CE06A3-6377-4F7E-A9AF-8AABFE7FFEEB":"---","0F43553E-58E7-4661-8CEB-8B4E5D2ED50A":"10-ゾーン","2B32E45C-4761-41D8-
+[PY] [TYPE] property_values
+[PY] [DB] values saved: 416 cells
+[PY] [SCHEDULE] shown 内部仕上表 1階 elements=26/150 cols=16 notes=[]
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:42:33] EXEC START: other
+[2026-10-18 18:42:33] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:42:33] EXEC END: other
+[2026-10-18 18:42:36] EXEC START: other
+
+[2026-10-18 18:42:36] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:42:36] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:42:39] EXEC START: other
+[2026-10-18 18:42:39] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:42:39] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:42:42] EXEC START: other
+[2026-10-18 18:42:42] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:42:42] EXEC END: other
+[PY] [SCHEDULE] open 内部仕上表 2.3.4.5階 refs=18 layers=['9']
+[PY] [SEND] {"command":"resolve_schedule","reqId":"sched:b89bf8b2-0c12-4877-bcee-7d9283ed22a9","propGuids":["8583BC95-C85D-48A3-9C2E-1EBED328BBFE","77367980-3D5A-452B-9900-D88C53E82176","CAF8D1EB-0BAD-48DE-AEA4-9...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 18:42:46] EXEC START: other
+[2026-10-18 18:42:46] resolve_schedule: 18/18 properties
+[2026-10-18 18:42:46] EXEC END: other
+[2026-10-18 18:42:46] EXEC START: other
+[2026-10-18 18:42:46] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:42:46] EXEC END: other
+[2026-10-18 18:42:46] Attempting to send message to Python (4700 bytes)
+[2026-10-18 18:42:46] Successfully sent to Python (4700 bytes)
+[PY] [CONNECT] ('127.0.0.1', 52452)
+[PY] [RECV RAW] {"type":"schedule_resolved","reqId":"sched:b89bf8b2-0c12-4877-bcee-7d9283ed22a9","definitions":[{"ref":"8583BC95-C85D-48A3-9C2E-1EBED328BBFE","guid":"8583BC95-C85D-48A3-9C2E-1EBED328BBFE","name":"配置フロア名","group":"一般パラメータ","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"77367980-3D5A-452B-9900-D88C53E82176","guid":"77367980-3D5A-452B-9900-D88C53E82176","name":"ゾーン番号","group":"ゾーン","editable":true,"valueType":3,"collectionType":1,"isCustom":false},{"ref":"CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913","guid":"CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913","name":"ゾーン名","group":"ゾーン","editable":true,"valueType":3,"collectionType":1,"isCustom":false},{"ref":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","guid":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","name":"レイヤー","group":"モデルビュー","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"内部仕上||床下地","guid":"8159A988-716F-45C0-B338-8D1055B820B1","name":"床下地","group":"内部仕上","editable":true,"valueType":3,"collectionType":4,"isC
+[PY] [TYPE] schedule_resolved
+[PY] [SEND] {"command":"get_elements","reqId":"sched:b89bf8b2-0c12-4877-bcee-7d9283ed22a9","stories":[],"limit":20000,"Zone":true}
+...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 18:42:48] EXEC START: other
+[2026-10-18 18:42:48] EXEC END: other
+[2026-10-18 18:42:48] EXEC START: other
+[2026-10-18 18:42:48] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:42:48] EXEC END: other
+[2026-10-18 18:42:48] Attempting to send message to Python (9401 bytes)
+[2026-10-18 18:42:48] Successfully sent to Python (9401 bytes)
+[PY] [CONNECT] ('127.0.0.1', 52460)
+[PY] [RECV RAW] {"type":"elements","reqId":"sched:b89bf8b2-0c12-4877-bcee-7d9283ed22a9","capped":false,"elements":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","type":"Zone"},{"guid":"52AAA942-CA97-49DE-8454-3B349CC9E9C0","type":"Zone"},{"guid":"A7E36240-05E0-4586-B0B0-EF2E1565FAF6","type":"Zone"},{"guid":"F383F9E7-0D05-4AA7-BBEB-A3807068D784","type":"Zone"},{"guid":"159F9C36-FD08-4042-AF8C-738EA97EF749","type":"Zone"},{"guid":"4E087BD0-1059-4E4E-A210-7929FB655F9B","type":"Zone"},{"guid":"49185295-0A36-4E37-AF52-C0AEE5DAAFE1","type":"Zone"},{"guid":"8054994C-6933-4B0C-8EAE-3C5992341EFA","type":"Zone"},{"guid":"68068468-C83C-413E-A1F1-973BE64079B0","type":"Zone"},{"guid":"48441378-3064-454B-9E60-2B4E73B2F166","type":"Zone"},{"guid":"2C4A18D1-2D36-4DCD-89C4-6FFB98606D60","type":"Zone"},{"guid":"E7717054-B574-4DA6-A918-4064E598A489","type":"Zone"},{"guid":"046F3341-E93C-46F8-9AA9-25BD0A843FA7","type":"Zone"},{"guid":"77EBD341-6792-4504-B291-2FE135AF92C4","type":"Zone"},{"guid":"80CF1AA9-9E34-437B-ADE4-
+[PY] [TYPE] elements
+[PY] [SEND] {"command":"get_values","reqId":"sched:b89bf8b2-0c12-4877-bcee-7d9283ed22a9","guids":["83AFBD36-9666-4438-9E30-89D748C01919","52AAA942-CA97-49DE-8454-3B349CC9E9C0","A7E36240-05E0-4586-B0B0-EF2E1565FAF...
+[PY] [NO ACK]
+[2026-10-18 18:42:50] EXEC START: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:42:51] EXEC END: other
+[2026-10-18 18:42:51] EXEC START: other
+[2026-10-18 18:42:51] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:42:51] EXEC END: other
+[2026-10-18 18:42:51] Attempting to send message to Python (150178 bytes)
+[2026-10-18 18:42:51] Successfully sent to Python (150178 bytes)
+[PY] [CONNECT] ('127.0.0.1', 52463)
+[PY] [RECV RAW] {"type":"property_values","reqId":"sched:b89bf8b2-0c12-4877-bcee-7d9283ed22a9","values":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","modiStamp":204952358,"props":{"elem:floorIndex":"1","8583BC95-C85D-48A3-9C2E-1EBED328BBFE":"2FL","77367980-3D5A-452B-9900-D88C53E82176":"211","CAF8D1EB-0BAD-48DE-AEA4-9932ECA3D913":"事務室2-1","8159A988-716F-45C0-B338-8D1055B820B1":"FA1","B4BCE044-1BE9-41C0-B8FB-0EDDF1E7B414":"タイルカーペット","A1D5F736-A536-4B3C-99D6-FE5304570F4A":"C; S","506ADB35-4912-4BAC-89DF-EA7196CCCFDC":"VB","2267E295-A478-42D4-95B4-FB20623E2855":"C; S","5085E686-2D37-4478-864D-786F28B9C64A":"二重張GB-Rの上EP","07F11403-E68C-4BC7-90EF-DE461340F094":"準不燃","526C973E-5D0F-4A75-9E3B-6F5DB4CAF1FB":"S","7E43E7CC-AA7C-4183-ABE6-DC9A02BDE862":"GB-R下地張DR","3B4EDF42-1B1E-40A5-B6F2-AADA6E27F12E":"準不燃","A0859D61-7C04-4D9C-8254-DC0B79D56846":"2700","767D0E8C-13F5-444C-8A2A-FBB59FD681D3":"自然排煙","A1CE06A3-6377-4F7E-A9AF-8AABFE7FFEEB":"---","0F43553E-58E7-4661-8CEB-8B4E5D2ED50A":"10-ゾーン","2B32E45C-4761-41D8-
+[PY] [TYPE] property_values
+[PY] [DB] values saved: 1152 cells
+[PY] [SCHEDULE] shown 内部仕上表 2.3.4.5階 elements=72/150 cols=16 notes=[]
+[2026-10-18 18:42:54] EXEC START: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:42:54] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:42:54] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:42:57] EXEC START: other
+[2026-10-18 18:42:57] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:42:57] EXEC END: other
+[PY] [PANEL] closed #2 (3a09db0b)
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:43:00] EXEC START: other
+[2026-10-18 18:43:00] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:00] EXEC END: other
+[PY] [PANEL] closed #1 (c959e009)
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:43:03] EXEC START: other
+[2026-10-18 18:43:03] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:03] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:43:06] EXEC START: other
+[2026-10-18 18:43:06] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:06] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:43:09] EXEC START: other
+[2026-10-18 18:43:09] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:09] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:43:12] EXEC START: other
+[2026-10-18 18:43:12] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:12] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:43:15] EXEC START: other
+[2026-10-18 18:43:15] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:15] EXEC END: other
+[2026-10-18 18:43:18] EXEC START: other
+
+[2026-10-18 18:43:18] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:18] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:43:21] EXEC START: other
+[2026-10-18 18:43:21] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:21] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:43:24] EXEC START: other
+[2026-10-18 18:43:24] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:24] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:43:27] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:27] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:43:30] EXEC START: other
+[2026-10-18 18:43:30] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:30] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:43:33] EXEC START: other
+[2026-10-18 18:43:33] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:33] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:43:36] EXEC START: other
+[2026-10-18 18:43:36] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:36] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:43:39] EXEC START: other
+[2026-10-18 18:43:39] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:39] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:43:42] EXEC START: other
+[2026-10-18 18:43:42] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:42] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:43:45] EXEC START: other
+[2026-10-18 18:43:45] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:45] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:43:48] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:48] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:43:51] EXEC START: other
+[2026-10-18 18:43:51] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:51] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:43:54] EXEC START: other
+[2026-10-18 18:43:54] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:54] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:43:57] EXEC START: other
+[2026-10-18 18:43:57] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:43:57] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:44:00] EXEC START: other
+[2026-10-18 18:44:00] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:00] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:44:03] EXEC START: other
+[2026-10-18 18:44:03] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:03] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:44:06] EXEC START: other
+[2026-10-18 18:44:06] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:06] EXEC END: other
+[2026-10-18 18:44:09] EXEC START: other
+
+[2026-10-18 18:44:09] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:09] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:44:12] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:12] EXEC END: other
+[2026-10-18 18:44:15] EXEC START: other
+
+[2026-10-18 18:44:15] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:15] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:44:18] EXEC START: other
+[2026-10-18 18:44:18] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:18] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:44:21] EXEC START: other
+[2026-10-18 18:44:21] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:21] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:44:24] EXEC START: other
+[2026-10-18 18:44:24] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:24] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:44:27] EXEC START: other
+[2026-10-18 18:44:27] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:27] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:44:30] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:30] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:44:33] EXEC START: other
+[2026-10-18 18:44:33] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:33] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:44:36] EXEC START: other
+[2026-10-18 18:44:36] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:36] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:44:39] EXEC START: other
+[2026-10-18 18:44:39] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:39] EXEC END: other
+[PY] [SCHEDULE] open 03_国有財産法建築面積_合計 refs=4 layers=['49']
+[PY] [SEND] {"command":"resolve_schedule","reqId":"sched:1480397c-9f46-4344-bb3a-d44dc785f062","propGuids":["0F43553E-58E7-4661-8CEB-8B4E5D2ED50A"],"propNamesHex":["e794a8e98094e588a5e99da2e7a98de8a1a87c7ce7a9bae...
+[PY] [NO ACK]
+[2026-10-18 18:44:41] EXEC START: other
+[2026-10-18 18:44:41] resolve_schedule: 4/4 properties
+[2026-10-18 18:44:41] EXEC END: other
+[2026-10-18 18:44:41] Attempting to send message to Python (1006 bytes)
+[2026-10-18 18:44:41] Successfully sent to Python (1006 bytes)
+[PY] [CONNECT] ('127.0.0.1', 51917)
+[PY] [RECV RAW] {"type":"schedule_resolved","reqId":"sched:1480397c-9f46-4344-bb3a-d44dc785f062","definitions":[{"ref":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","guid":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","name":"レイヤー","group":"モデルビュー","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"用途別面積表||空欄","guid":"3672CD89-C71D-4D60-B0CC-75F8D34C9EBA","name":"空欄","group":"用途別面積表","editable":true,"valueType":3,"collectionType":1,"isCustom":true},{"ref":"用途別面積表||延べ面積","guid":"F0F03F78-C55A-4DD8-A7EB-391A839FC171","name":"延べ面積","group":"用途別面積表","editable":true,"valueType":2,"collectionType":1,"isCustom":true},{"ref":"室情報||国有財産法_建築面積対象","guid":"87A4C795-3D64-4E19-980D-DEC64096E3D3","name":"国有財産法_建築面積対象","group":"室情報","editable":true,"valueType":4,"collectionType":1,"isCustom":true,"enums":["True","False"]}],"layers":{"49":"10-ゾーン-建築面積"}}
+[PY] [TYPE] schedule_resolved
+[PY] [SEND] {"command":"get_elements","reqId":"sched:1480397c-9f46-4344-bb3a-d44dc785f062","stories":[],"limit":20000,"Zone":true}
+...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 18:44:43] EXEC START: other
+[2026-10-18 18:44:43] EXEC END: other
+[2026-10-18 18:44:43] EXEC START: other
+[2026-10-18 18:44:43] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:43] EXEC END: other
+[2026-10-18 18:44:43] Attempting to send message to Python (9401 bytes)
+[2026-10-18 18:44:43] Successfully sent to Python (9401 bytes)
+[PY] [CONNECT] ('127.0.0.1', 51922)
+[PY] [RECV RAW] {"type":"elements","reqId":"sched:1480397c-9f46-4344-bb3a-d44dc785f062","capped":false,"elements":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","type":"Zone"},{"guid":"52AAA942-CA97-49DE-8454-3B349CC9E9C0","type":"Zone"},{"guid":"A7E36240-05E0-4586-B0B0-EF2E1565FAF6","type":"Zone"},{"guid":"F383F9E7-0D05-4AA7-BBEB-A3807068D784","type":"Zone"},{"guid":"159F9C36-FD08-4042-AF8C-738EA97EF749","type":"Zone"},{"guid":"4E087BD0-1059-4E4E-A210-7929FB655F9B","type":"Zone"},{"guid":"49185295-0A36-4E37-AF52-C0AEE5DAAFE1","type":"Zone"},{"guid":"8054994C-6933-4B0C-8EAE-3C5992341EFA","type":"Zone"},{"guid":"68068468-C83C-413E-A1F1-973BE64079B0","type":"Zone"},{"guid":"48441378-3064-454B-9E60-2B4E73B2F166","type":"Zone"},{"guid":"2C4A18D1-2D36-4DCD-89C4-6FFB98606D60","type":"Zone"},{"guid":"E7717054-B574-4DA6-A918-4064E598A489","type":"Zone"},{"guid":"046F3341-E93C-46F8-9AA9-25BD0A843FA7","type":"Zone"},{"guid":"77EBD341-6792-4504-B291-2FE135AF92C4","type":"Zone"},{"guid":"80CF1AA9-9E34-437B-ADE4-
+[PY] [TYPE] elements
+[PY] [SEND] {"command":"get_values","reqId":"sched:1480397c-9f46-4344-bb3a-d44dc785f062","guids":["83AFBD36-9666-4438-9E30-89D748C01919","52AAA942-CA97-49DE-8454-3B349CC9E9C0","A7E36240-05E0-4586-B0B0-EF2E1565FAF...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 18:44:45] EXEC START: other
+[2026-10-18 18:44:45] EXEC END: other
+[2026-10-18 18:44:45] EXEC START: other
+[2026-10-18 18:44:45] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:45] EXEC END: other
+[2026-10-18 18:44:45] Attempting to send message to Python (42052 bytes)
+[2026-10-18 18:44:45] Successfully sent to Python (42052 bytes)
+[PY] [CONNECT] ('127.0.0.1', 51926)
+[PY] [RECV RAW] {"type":"property_values","reqId":"sched:1480397c-9f46-4344-bb3a-d44dc785f062","values":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","modiStamp":204952358,"props":{"3672CD89-C71D-4D60-B0CC-75F8D34C9EBA":"合計","F0F03F78-C55A-4DD8-A7EB-391A839FC171":"194.420","0F43553E-58E7-4661-8CEB-8B4E5D2ED50A":"10-ゾーン","87A4C795-3D64-4E19-980D-DEC64096E3D3":"True"}},{"guid":"52AAA942-CA97-49DE-8454-3B349CC9E9C0","modiStamp":204946655,"props":{"3672CD89-C71D-4D60-B0CC-75F8D34C9EBA":"合計","F0F03F78-C55A-4DD8-A7EB-391A839FC171":"13.110","0F43553E-58E7-4661-8CEB-8B4E5D2ED50A":"10-ゾーン","87A4C795-3D64-4E19-980D-DEC64096E3D3":"True"}},{"guid":"A7E36240-05E0-4586-B0B0-EF2E1565FAF6","modiStamp":204944808,"props":{"3672CD89-C71D-4D60-B0CC-75F8D34C9EBA":"合計","F0F03F78-C55A-4DD8-A7EB-391A839FC171":"13.110","0F43553E-58E7-4661-8CEB-8B4E5D2ED50A":"10-ゾーン","87A4C795-3D64-4E19-980D-DEC64096E3D3":"True"}},{"guid":"F383F9E7-0D05-4AA7-BBEB-A3807068D784","modiStamp":204944147,"props":{"3672CD89-C71D-4D60-B0CC-75F8D34C9
+[PY] [TYPE] property_values
+[PY] [DB] values saved: 4 cells
+[PY] [SCHEDULE] shown 03_国有財産法建築面積_合計 elements=2/150 cols=2 notes=[]
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:44:48] EXEC START: other
+[2026-10-18 18:44:48] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:48] EXEC END: other
+[PY] [PANEL] closed #3 (4a11e387)
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:44:51] EXEC START: other
+[2026-10-18 18:44:51] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:51] EXEC END: other
+[PY] [SCHEDULE] open 官署 refs=4 layers=['9']
+[PY] [SEND] {"command":"resolve_schedule","reqId":"sched:3832d6e2-50f0-41b5-98e1-90b353580fab","propGuids":["0B987FC1-B684-4BDE-B384-23E6397E3901","C55E9728-EB60-40A2-AA76-77B061FA4ADA","0F43553E-58E7-4661-8CEB-8...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 18:44:55] EXEC START: other
+[2026-10-18 18:44:55] resolve_schedule: 4/4 properties
+[2026-10-18 18:44:55] EXEC END: other
+[2026-10-18 18:44:55] EXEC START: other
+[2026-10-18 18:44:55] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:55] EXEC END: other
+[2026-10-18 18:44:55] Attempting to send message to Python (993 bytes)
+[PY] [CONNECT] ('127.0.0.1', 51941)
+nt to Python (993 bytes)
+[PY] [RECV RAW] {"type":"schedule_resolved","reqId":"sched:3832d6e2-50f0-41b5-98e1-90b353580fab","definitions":[{"ref":"0B987FC1-B684-4BDE-B384-23E6397E3901","guid":"0B987FC1-B684-4BDE-B384-23E6397E3901","name":"ゾーンカテゴリコード","group":"ゾーン","editable":false,"valueType":3,"collectionType":1,"isCustom":false},{"ref":"C55E9728-EB60-40A2-AA76-77B061FA4ADA","guid":"C55E9728-EB60-40A2-AA76-77B061FA4ADA","name":"ゾーンカテゴリ","group":"ゾーン","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","guid":"0F43553E-58E7-4661-8CEB-8B4E5D2ED50A","name":"レイヤー","group":"モデルビュー","editable":true,"valueType":1,"collectionType":1,"isCustom":false},{"ref":"85B4C922-8979-41AE-B7A2-ED5DB25821AD","guid":"85B4C922-8979-41AE-B7A2-ED5DB25821AD","name":"関連ゾーンカテゴリ","group":"IDとカテゴリ","editable":false,"valueType":1,"collectionType":1,"isCustom":false}],"layers":{"9":"10-ゾーン"}}
+[PY] [TYPE] schedule_resolved
+[PY] [SEND] {"command":"get_elements","reqId":"sched:3832d6e2-50f0-41b5-98e1-90b353580fab","stories":[],"limit":20000,"Zone":true}
+...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 18:44:57] EXEC START: other
+[2026-10-18 18:44:57] EXEC END: other
+[2026-10-18 18:44:57] EXEC START: other
+[2026-10-18 18:44:57] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:44:57] EXEC END: other
+[2026-10-18 18:44:57] Attempting to send message to Python (9401 bytes)
+[2026-10-18 18:44:57] Successfully sent to Python (9401 bytes)
+[PY] [CONNECT] ('127.0.0.1', 51947)
+[PY] [RECV RAW] {"type":"elements","reqId":"sched:3832d6e2-50f0-41b5-98e1-90b353580fab","capped":false,"elements":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","type":"Zone"},{"guid":"52AAA942-CA97-49DE-8454-3B349CC9E9C0","type":"Zone"},{"guid":"A7E36240-05E0-4586-B0B0-EF2E1565FAF6","type":"Zone"},{"guid":"F383F9E7-0D05-4AA7-BBEB-A3807068D784","type":"Zone"},{"guid":"159F9C36-FD08-4042-AF8C-738EA97EF749","type":"Zone"},{"guid":"4E087BD0-1059-4E4E-A210-7929FB655F9B","type":"Zone"},{"guid":"49185295-0A36-4E37-AF52-C0AEE5DAAFE1","type":"Zone"},{"guid":"8054994C-6933-4B0C-8EAE-3C5992341EFA","type":"Zone"},{"guid":"68068468-C83C-413E-A1F1-973BE64079B0","type":"Zone"},{"guid":"48441378-3064-454B-9E60-2B4E73B2F166","type":"Zone"},{"guid":"2C4A18D1-2D36-4DCD-89C4-6FFB98606D60","type":"Zone"},{"guid":"E7717054-B574-4DA6-A918-4064E598A489","type":"Zone"},{"guid":"046F3341-E93C-46F8-9AA9-25BD0A843FA7","type":"Zone"},{"guid":"77EBD341-6792-4504-B291-2FE135AF92C4","type":"Zone"},{"guid":"80CF1AA9-9E34-437B-ADE4-
+[PY] [TYPE] elements
+[PY] [SEND] {"command":"get_values","reqId":"sched:3832d6e2-50f0-41b5-98e1-90b353580fab","guids":["83AFBD36-9666-4438-9E30-89D748C01919","52AAA942-CA97-49DE-8454-3B349CC9E9C0","A7E36240-05E0-4586-B0B0-EF2E1565FAF...
+[PY] [NO ACK]
+[2026-10-18 18:44:59] EXEC START: other
+[2026-10-18 18:45:00] EXEC END: other
+[2026-10-18 18:45:00] Attempting to send message to Python (44310 bytes)
+[2026-10-18 18:45:00] Successfully sent to Python (44310 bytes)
+[PY] [CONNECT] ('127.0.0.1', 51951)
+[PY] [RECV RAW] {"type":"property_values","reqId":"sched:3832d6e2-50f0-41b5-98e1-90b353580fab","values":[{"guid":"83AFBD36-9666-4438-9E30-89D748C01919","modiStamp":204952358,"props":{"elem:floorIndex":"1","0B987FC1-B684-4BDE-B384-23E6397E3901":"S2-003","C55E9728-EB60-40A2-AA76-77B061FA4ADA":"2","0F43553E-58E7-4661-8CEB-8B4E5D2ED50A":"10-ゾーン","85B4C922-8979-41AE-B7A2-ED5DB25821AD":"2"}},{"guid":"52AAA942-CA97-49DE-8454-3B349CC9E9C0","modiStamp":204946655,"props":{"elem:floorIndex":"1","0B987FC1-B684-4BDE-B384-23E6397E3901":"S2-002","C55E9728-EB60-40A2-AA76-77B061FA4ADA":"36","0F43553E-58E7-4661-8CEB-8B4E5D2ED50A":"10-ゾーン","85B4C922-8979-41AE-B7A2-ED5DB25821AD":"36"}},{"guid":"A7E36240-05E0-4586-B0B0-EF2E1565FAF6","modiStamp":204944808,"props":{"elem:floorIndex":"1","0B987FC1-B684-4BDE-B384-23E6397E3901":"S2-002","C55E9728-EB60-40A2-AA76-77B061FA4ADA":"36","0F43553E-58E7-4661-8CEB-8B4E5D2ED50A":"10-ゾーン","85B4C922-8979-41AE-B7A2-ED5DB25821AD":"36"}},{"guid":"F383F9E7-0D05-4AA7-BBEB-A3807068D784","modiSta
+[PY] [TYPE] property_values
+[PY] [DB] values saved: 204 cells
+[PY] [SCHEDULE] shown 官署 elements=102/150 cols=2 notes=[]
+[2026-10-18 18:45:00] EXEC START: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:45:00] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:00] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:45:03] EXEC START: other
+[2026-10-18 18:45:03] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:03] EXEC END: other
+[PY] [PANEL] closed #4 (33b9c6f4)
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:45:06] EXEC START: other
+[2026-10-18 18:45:06] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:06] EXEC END: other
+[PY] [SCHEDULE] open オブジェクトリスト refs=4 layers=[]
+[PY] [SEND] {"command":"resolve_schedule","reqId":"sched:f826c0dc-0150-4818-9e01-e5ef41816be0","propGuids":["B8CFC590-58A3-43CF-A159-1B23BD3E8596","567C4B42-4904-4872-BDFD-8BAB914989BC","3799B10A-61C5-4566-BF9C-E...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 18:45:10] EXEC START: other
+[2026-10-18 18:45:10] resolve_schedule: 4/4 properties
+[2026-10-18 18:45:10] EXEC END: other
+[2026-10-18 18:45:10] EXEC START: other
+[2026-10-18 18:45:10] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:10] EXEC END: other
+[2026-10-18 18:45:10] Attempting to send message to Python (964 bytes)
+[2026-10-18 18:45:10] Successfully sent to Python (964 bytes)
+[PY] [CONNECT] ('127.0.0.1', 51968)
+[PY] [RECV RAW] {"type":"schedule_resolved","reqId":"sched:f826c0dc-0150-4818-9e01-e5ef41816be0","definitions":[{"ref":"B8CFC590-58A3-43CF-A159-1B23BD3E8596","guid":"B8CFC590-58A3-43CF-A159-1B23BD3E8596","name":"ライブラリ部品名","group":"一般パラメータ","editable":false,"valueType":3,"collectionType":1,"isCustom":false},{"ref":"567C4B42-4904-4872-BDFD-8BAB914989BC","guid":"567C4B42-4904-4872-BDFD-8BAB914989BC","name":"長さ(A)","group":"オブジェクト/ランプ","editable":true,"valueType":2,"collectionType":1,"isCustom":false},{"ref":"3799B10A-61C5-4566-BF9C-EAA9CE49196E","guid":"3799B10A-61C5-4566-BF9C-EAA9CE49196E","name":"幅","group":"一般パラメータ","editable":true,"valueType":2,"collectionType":1,"isCustom":false},{"ref":"C4B62357-1289-4D43-A3F6-AB02B192864C","guid":"C4B62357-1289-4D43-A3F6-AB02B192864C","name":"高さ","group":"一般パラメータ","editable":true,"valueType":2,"collectionType":1,"isCustom":false}],"layers":{}}
+[PY] [TYPE] schedule_resolved
+[PY] [SEND] {"command":"get_elements","reqId":"sched:f826c0dc-0150-4818-9e01-e5ef41816be0","stories":[],"limit":20000,"Object":true}
+...
+[PY] [NO ACK]
+[2026-10-18 18:45:12] EXEC START: other
+[2026-10-18 18:45:12] EXEC END: other
+[2026-10-18 18:45:12] Attempting to send message to Python (223781 bytes)
+[2026-10-18 18:45:12] Successfully sent to Python (223781 bytes)
+[PY] [CONNECT] ('127.0.0.1', 51970)
+[PY] [RECV RAW] {"type":"elements","reqId":"sched:f826c0dc-0150-4818-9e01-e5ef41816be0","capped":false,"elements":[{"guid":"63111CDA-98F6-4D46-8866-A3D9E06811C4","type":"Object"},{"guid":"08C88F61-278C-4A67-B563-98C51BE53A3A","type":"Object"},{"guid":"A07C03BC-2D4C-4DB8-89E7-F3C1FA198DE6","type":"Object"},{"guid":"DCEA1AB6-73BB-4071-ABC1-71A04DF7D3D6","type":"Object"},{"guid":"08D32FCC-8411-4131-BA4B-DDAA2B536903","type":"Object"},{"guid":"E23FD121-8065-47B5-8926-F5F5BF023D28","type":"Object"},{"guid":"3FA566CB-7F99-4584-B982-F8B4752DF271","type":"Object"},{"guid":"6B3B6128-0FD2-4B9D-92A8-A6BFC7D73EBE","type":"Object"},{"guid":"8DD6D06C-CFC1-4429-8150-F5A7A77DC780","type":"Object"},{"guid":"F035D77D-627F-4576-9CC1-2AAA938008FC","type":"Object"},{"guid":"4EBE8DA2-715C-4625-A83E-53879FA0A1D5","type":"Object"},{"guid":"2E6F208C-CA3E-49E1-92C3-DEC4B01B6F5A","type":"Object"},{"guid":"841E52AF-98C9-4EE7-9206-A38F5EA21585","type":"Object"},{"guid":"D974D522-5991-4160-8D03-45A6AC68390C","type":"Object"},{"gui
+[PY] [TYPE] elements
+[PY] [SEND] {"command":"get_values","reqId":"sched:f826c0dc-0150-4818-9e01-e5ef41816be0","guids":["63111CDA-98F6-4D46-8866-A3D9E06811C4","08C88F61-278C-4A67-B563-98C51BE53A3A","A07C03BC-2D4C-4DB8-89E7-F3C1FA198DE...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 18:45:14] EXEC START: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:45:15] EXEC END: other
+[2026-10-18 18:45:15] EXEC START: other
+[2026-10-18 18:45:15] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:15] EXEC END: other
+[2026-10-18 18:45:15] EXEC START: other
+[2026-10-18 18:45:15] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:15] EXEC END: other
+[2026-10-18 18:45:15] Attempting to send message to Python (1003217 bytes)
+[2026-10-18 18:45:15] Successfully sent to Python (1003217 bytes)
+[PY] [RECV RAW] {"type":"property_values","reqId":"sched:f826c0dc-0150-4818-9e01-e5ef41816be0","values":[{"guid":"63111CDA-98F6-4D46-8866-A3D9E06811C4","modiStamp":208288523,"props":{"B8CFC590-58A3-43CF-A159-1B23BD3E8596":"ゾーン_仕上用","567C4B42-4904-4872-BDFD-8BAB914989BC":"1,761.1","3799B10A-61C5-4566-BF9C-EAA9CE49196E":"1,066.7","C4B62357-1289-4D43-A3F6-AB02B192864C":"---"}},{"guid":"08C88F61-278C-4A67-B563-98C51BE53A3A","modiStamp":208288480,"props":{"B8CFC590-58A3-43CF-A159-1B23BD3E8596":"ゾーンラベル","567C4B42-4904-4872-BDFD-8BAB914989BC":"1,000.0","3799B10A-61C5-4566-BF9C-EAA9CE49196E":"1,000.0","C4B62357-1289-4D43-A3F6-AB02B192864C":"---"}},{"guid":"A07C03BC-2D4C-4DB8-89E7-F3C1FA198DE6","modiStamp":208288481,"props":{"B8CFC590-58A3-43CF-A159-1B23BD3E8596":"ゾーンスタンプ 02","567C4B42-4904-4872-BDFD-8BAB914989BC":"1,761.1","3799B10A-61C5-4566-BF9C-EAA9CE49196E":"1,066.7","C4B62357-1289-4D43-A3F6-AB02B192864C":"---"}},{"guid":"DCEA1AB6-73BB-4071-ABC1-71A04DF7D3D6","modiStamp":208288525,"props":{"B8CFC590-58A3-
+[PY] [TYPE] property_values
+[PY] [DB] values saved: 13980 cells
+[PY] [SCHEDULE] shown オブジェクトリスト elements=3495/3495 cols=4 notes=[]
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:45:18] EXEC START: other
+[2026-10-18 18:45:18] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:18] EXEC END: other
+[PY] [PANEL] closed #5 (f3b5f39f)
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:45:21] EXEC START: other
+[2026-10-18 18:45:21] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:21] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:45:24] EXEC START: other
+[2026-10-18 18:45:24] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:24] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:45:27] EXEC START: other
+[2026-10-18 18:45:27] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:27] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:45:30] EXEC START: other
+[2026-10-18 18:45:30] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:30] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:45:33] EXEC START: other
+[2026-10-18 18:45:33] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:33] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:45:36] EXEC START: other
+[2026-10-18 18:45:36] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:36] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:45:39] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:39] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:45:42] EXEC START: other
+[2026-10-18 18:45:42] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:42] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:45:45] EXEC START: other
+[2026-10-18 18:45:45] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:45] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:45:48] EXEC START: other
+[2026-10-18 18:45:48] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:48] EXEC END: other
+[2026-10-18 18:45:51] EXEC START: other
+
+[2026-10-18 18:45:51] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:51] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:45:54] EXEC START: other
+[2026-10-18 18:45:54] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:54] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:45:58] EXEC START: other
+[2026-10-18 18:45:58] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:45:58] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:46:01] EXEC START: other
+[2026-10-18 18:46:01] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:01] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:46:04] EXEC START: other
+[2026-10-18 18:46:04] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:04] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:46:07] EXEC START: other
+[2026-10-18 18:46:07] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:07] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:46:10] EXEC START: other
+[2026-10-18 18:46:10] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:10] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:46:13] EXEC START: other
+[2026-10-18 18:46:13] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:13] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:46:16] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:16] EXEC END: other
+[2026-10-18 18:46:19] EXEC START: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:46:19] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:19] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:46:22] EXEC START: other
+[2026-10-18 18:46:22] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:22] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:46:25] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:25] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:46:28] EXEC START: other
+[2026-10-18 18:46:28] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:28] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:46:31] EXEC START: other
+[2026-10-18 18:46:31] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:31] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:46:34] EXEC START: other
+[2026-10-18 18:46:34] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:34] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:46:37] EXEC START: other
+[2026-10-18 18:46:37] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:37] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:46:40] EXEC START: other
+[2026-10-18 18:46:40] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:40] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:46:43] EXEC START: other
+[2026-10-18 18:46:43] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:43] EXEC END: other
+[PY] [SEND] {"command":"get_site_summary"}
+...
+[PY] [FLOOR POLL] sent get_current_floor
+[PY] [NO ACK]
+[2026-10-18 18:46:47] EXEC START: other
+[2026-10-18 18:46:48] SiteManager: 9 elems / libParts=[道路境界線, 道路ラベル, 敷地オブジェクト, 敷地境界線ラベル]
+[2026-10-18 18:46:48] SiteManager: other object libParts (69) = [ゾーン_仕上用, ゾーンラベル, ゾーンスタンプ 02, 断面図マーカー_02, 標準通り芯マーカー, フロアレベル記号, 標準立面図マーカー, エレベーター, 営_label_建具符号_AC27L_01, 営_室名札_AC27L_01, 営_ピクトサイン_AC27L_01, 営_点状ブロック_折り返し_AC27L_01, 営_線状ブロック_AC27L_01, 交差開口, 落葉樹(3Dアウトラインなし), 営_集水桝_AC27L_01, ポスト, 傾斜シンボル, 指示表示_左折矢印, 階段グリッド, 動線, 番号付け, 上-下テキスト, 階段説明, ジグザグ破断線, 標準 破断線, 標準 蹴上, 標準 踏面, フライト階段梁, 踊り場階段梁, 小便器_w1, 洋便器_w1, 複数洗面カウンター, 営_壁掛洗面器用手摺_AC27L_01, 洗面キャビネット, 保護付はしご, 営_ドレン_AC27L_01, 個別展開図(IE)マーカー, 共通展開図(IE)マーカー1, 営_照明開口_V27L_001]
+[2026-10-18 18:46:48] site_summary: elements=9 projectInfo=237
+[2026-10-18 18:46:48] EXEC END: other
+[2026-10-18 18:46:48] EXEC START: other
+[2026-10-18 18:46:48] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:48] EXEC END: other
+[2026-10-18 18:46:48] Attempting to send message to Python (44265 bytes)
+[2026-10-18 18:46:48] Successfully sent to Python (44265 bytes)
+[PY] [CONNECT] ('127.0.0.1', 53990)
+[PY] [RECV RAW] {"type":"site_summary","elements":[{"guid":"989863C2-59C0-4D6E-8C86-2D77626F9D00","libPart":"道路境界線","floor":0,"params":{"A":1,"B":1,"ZZYZX":0,"AC_show2DHotspotsIn3D":false,"ac_bottomlevel":1,"ac_toplevel":0,"gs_ui_current_page":1,"iSiteCategory":1,"strSiteCategory":["第一種低層住居専用地域","第二種低層住居専用地域","第一種中高層住居専用地域","第二種中高層住居専用地域","第一種住居地域","第二種住居地域","準住居地域","田園住居地域","近隣商業地域","商業地域","準工業地域","工業地域","工業専用地域","指定なし"],"iBoundaryType":2,"strBoundaryType":["隣地境界線","道路境界線","その他"],"iBoundaryDataType":2,"strBoundaryDataType":["","",""],"iRoadType":1,"strRoadType":["法42条1項1号","法42条1項2号","法42条1項3号","法42条1項4号","法42条1項5号","法42条2項"],"iRoadProperty":1,"strRoadProperty":["道路中心線","道路境界線","指定なし"],"strRoadName":"北側道路","iBoundaryTypeArray":[2,2],"bShowBoundary":[1,1,1,1],"lengthBoundary":["","","",""],"numVertex":2,"vertexXArray":[-41.74567688,77.37453489],"vertexYArray":[52.0820103,52.0820103],"vertexZArray":[0,0],"vertexStatusArray":[0,0,0,0],"bClosePolyline":false,"bShowMarkerOnVertexArray":[0,0,0,0],"iMarkerT
+[PY] [TYPE] site_summary
+[PY] [SITE SUMMARY] sites=1 roads=2
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:46:49] EXEC START: other
+[2026-10-18 18:46:49] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:49] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:46:52] EXEC START: other
+[2026-10-18 18:46:52] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:52] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:46:55] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:55] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:46:58] EXEC START: other
+[2026-10-18 18:46:58] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:46:58] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:01] EXEC START: other
+[2026-10-18 18:47:01] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:01] EXEC END: other
+[PY] [SEND] {"command":"get_site_summary"}
+...
+[PY] [SEND] {"command":"get_site_summary"}
+...
+[PY] [NO ACK]
+[2026-10-18 18:47:04] EXEC START: other
+[PY] [NO ACK]
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:04] SiteManager: 9 elems / libParts=[道路境界線, 道路ラベル, 敷地オブジェクト, 敷地境界線ラベル]
+[2026-10-18 18:47:04] SiteManager: other object libParts (69) = [ゾーン_仕上用, ゾーンラベル, ゾーンスタンプ 02, 断面図マーカー_02, 標準通り芯マーカー, フロアレベル記号, 標準立面図マーカー, エレベーター, 営_label_建具符号_AC27L_01, 営_室名札_AC27L_01, 営_ピクトサイン_AC27L_01, 営_点状ブロック_折り返し_AC27L_01, 営_線状ブロック_AC27L_01, 交差開口, 落葉樹(3Dアウトラインなし), 営_集水桝_AC27L_01, ポスト, 傾斜シンボル, 指示表示_左折矢印, 階段グリッド, 動線, 番号付け, 上-下テキスト, 階段説明, ジグザグ破断線, 標準 破断線, 標準 蹴上, 標準 踏面, フライト階段梁, 踊り場階段梁, 小便器_w1, 洋便器_w1, 複数洗面カウンター, 営_壁掛洗面器用手摺_AC27L_01, 洗面キャビネット, 保護付はしご, 営_ドレン_AC27L_01, 個別展開図(IE)マーカー, 共通展開図(IE)マーカー1, 営_照明開口_V27L_001]
+[2026-10-18 18:47:04] site_summary: elements=9 projectInfo=237
+[2026-10-18 18:47:04] EXEC END: other
+[2026-10-18 18:47:04] EXEC START: other
+[2026-10-18 18:47:04] Attempting to send message to Python (44265 bytes)
+[2026-10-18 18:47:04] Successfully sent to Python (44265 bytes)
+[PY] [CONNECT] ('127.0.0.1', 54011)
+[PY] [RECV RAW] {"type":"site_summary","elements":[{"guid":"989863C2-59C0-4D6E-8C86-2D77626F9D00","libPart":"道路境界線","floor":0,"params":{"A":1,"B":1,"ZZYZX":0,"AC_show2DHotspotsIn3D":false,"ac_bottomlevel":1,"ac_toplevel":0,"gs_ui_current_page":1,"iSiteCategory":1,"strSiteCategory":["第一種低層住居専用地域","第二種低層住居専用地域","第一種中高層住居専用地域","第二種中高層住居専用地域","第一種住居地域","第二種住居地域","準住居地域","田園住居地域","近隣商業地域","商業地域","準工業地域","工業地域","工業専用地域","指定なし"],"iBoundaryType":2,"strBoundaryType":["隣地境界線","道路境界線","その他"],"iBoundaryDataType":2,"strBoundaryDataType":["","",""],"iRoadType":1,"strRoadType":["法42条1項1号","法42条1項2号","法42条1項3号","法42条1項4号","法42条1項5号","法42条2項"],"iRoadProperty":1,"strRoadProperty":["道路中心線","道路境界線","指定なし"],"strRoadName":"北側道路","iBoundaryTypeArray":[2,2],"bShowBoundary":[1,1,1,1],"lengthBoundary":["","","",""],"numVertex":2,"vertexXArray":[-41.74567688,77.37453489],"vertexYArray":[52.0820103,52.0820103],"vertexZArray":[0,0],"vertexStatusArray":[0,0,0,0],"bClosePolyline":false,"bShowMarkerOnVertexArray":[0,0,0,0],"iMarkerT
+[PY] [TYPE] site_summary
+[PY] [SITE SUMMARY] sites=1 roads=2
+[2026-10-18 18:47:05] SiteManager: 9 elems / libParts=[道路境界線, 道路ラベル, 敷地オブジェクト, 敷地境界線ラベル]
+[2026-10-18 18:47:05] SiteManager: other object libParts (69) = [ゾーン_仕上用, ゾーンラベル, ゾーンスタンプ 02, 断面図マーカー_02, 標準通り芯マーカー, フロアレベル記号, 標準立面図マーカー, エレベーター, 営_label_建具符号_AC27L_01, 営_室名札_AC27L_01, 営_ピクトサイン_AC27L_01, 営_点状ブロック_折り返し_AC27L_01, 営_線状ブロック_AC27L_01, 交差開口, 落葉樹(3Dアウトラインなし), 営_集水桝_AC27L_01, ポスト, 傾斜シンボル, 指示表示_左折矢印, 階段グリッド, 動線, 番号付け, 上-下テキスト, 階段説明, ジグザグ破断線, 標準 破断線, 標準 蹴上, 標準 踏面, フライト階段梁, 踊り場階段梁, 小便器_w1, 洋便器_w1, 複数洗面カウンター, 営_壁掛洗面器用手摺_AC27L_01, 洗面キャビネット, 保護付はしご, 営_ドレン_AC27L_01, 個別展開図(IE)マーカー, 共通展開図(IE)マーカー1, 営_照明開口_V27L_001]
+[2026-10-18 18:47:05] site_summary: elements=9 projectInfo=237
+[2026-10-18 18:47:05] EXEC END: other
+[2026-10-18 18:47:05] EXEC START: other
+[2026-10-18 18:47:05] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:05] EXEC END: other
+[2026-10-18 18:47:05] Attempting to send message to Python (44265 bytes)
+[2026-10-18 18:47:05] Successfully sent to Python (44265 bytes)
+[PY] [CONNECT] ('127.0.0.1', 54012)
+[PY] [RECV RAW] {"type":"site_summary","elements":[{"guid":"989863C2-59C0-4D6E-8C86-2D77626F9D00","libPart":"道路境界線","floor":0,"params":{"A":1,"B":1,"ZZYZX":0,"AC_show2DHotspotsIn3D":false,"ac_bottomlevel":1,"ac_toplevel":0,"gs_ui_current_page":1,"iSiteCategory":1,"strSiteCategory":["第一種低層住居専用地域","第二種低層住居専用地域","第一種中高層住居専用地域","第二種中高層住居専用地域","第一種住居地域","第二種住居地域","準住居地域","田園住居地域","近隣商業地域","商業地域","準工業地域","工業地域","工業専用地域","指定なし"],"iBoundaryType":2,"strBoundaryType":["隣地境界線","道路境界線","その他"],"iBoundaryDataType":2,"strBoundaryDataType":["","",""],"iRoadType":1,"strRoadType":["法42条1項1号","法42条1項2号","法42条1項3号","法42条1項4号","法42条1項5号","法42条2項"],"iRoadProperty":1,"strRoadProperty":["道路中心線","道路境界線","指定なし"],"strRoadName":"北側道路","iBoundaryTypeArray":[2,2],"bShowBoundary":[1,1,1,1],"lengthBoundary":["","","",""],"numVertex":2,"vertexXArray":[-41.74567688,77.37453489],"vertexYArray":[52.0820103,52.0820103],"vertexZArray":[0,0],"vertexStatusArray":[0,0,0,0],"bClosePolyline":false,"bShowMarkerOnVertexArray":[0,0,0,0],"iMarkerT
+[PY] [TYPE] site_summary
+[PY] [SITE SUMMARY] sites=1 roads=2
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:07] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:07] EXEC END: other
+[2026-10-18 18:47:10] EXEC START: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:10] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:10] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:13] EXEC START: other
+[2026-10-18 18:47:13] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:13] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:16] EXEC START: other
+[2026-10-18 18:47:16] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:16] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:19] EXEC START: other
+[2026-10-18 18:47:19] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:19] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:22] EXEC START: other
+[2026-10-18 18:47:22] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:22] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:25] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:25] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:28] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:28] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:31] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:31] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:34] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:34] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:37] EXEC START: other
+[2026-10-18 18:47:37] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:37] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:40] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:40] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:43] EXEC START: other
+[2026-10-18 18:47:43] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:43] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:46] EXEC START: other
+[2026-10-18 18:47:46] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:46] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:49] EXEC START: other
+[2026-10-18 18:47:49] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:49] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:52] EXEC START: other
+[2026-10-18 18:47:52] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:52] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:55] EXEC START: other
+[2026-10-18 18:47:55] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:55] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:47:58] EXEC START: other
+[2026-10-18 18:47:58] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:47:58] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:48:01] EXEC START: other
+[2026-10-18 18:48:01] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:48:01] EXEC END: other
+[PY] [FLOOR POLL] sent get_current_floor
+[2026-10-18 18:48:04] get_current_floor: actStory=0 lastKnown=0
+[2026-10-18 18:48:04] EXEC END: other
