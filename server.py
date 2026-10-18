@@ -1,3 +1,4 @@
+import os
 import sys
 import socket
 import json
@@ -8,8 +9,10 @@ import uuid
 from pathlib import Path
 
 # ── ロギングをインポート前に有効化（クラッシュ原因を必ず記録する）────────────
-LOG_PATH       = Path(__file__).resolve().parent / "server_log.txt"
-FAULT_LOG_PATH = Path(__file__).resolve().parent / "fault_log.txt"
+# BIM_LOG_DIR 環境変数でログ出力先を差し替え可能（テスト時に本番ログを汚さないため）
+_LOG_DIR       = Path(os.environ.get("BIM_LOG_DIR") or Path(__file__).resolve().parent)
+LOG_PATH       = _LOG_DIR / "server_log.txt"
+FAULT_LOG_PATH = _LOG_DIR / "fault_log.txt"
 
 
 def append_log(message: str):
@@ -34,6 +37,7 @@ try:
         QTreeWidgetItemIterator, QMenu, QInputDialog, QAbstractItemView,
         QStyledItemDelegate, QComboBox, QDialog, QTableWidget, QTableWidgetItem,
         QDialogButtonBox, QFrame, QCheckBox, QSlider,
+        QFileDialog, QLineEdit,
     )
     append_log("PyQt6.QtWidgets OK")
 except Exception as _e:
@@ -43,7 +47,7 @@ except Exception as _e:
 try:
     from PyQt6.QtCore import (
         Qt, QAbstractTableModel, pyqtSignal, QObject,
-        QSortFilterProxyModel,
+        QSortFilterProxyModel, QItemSelection, QItemSelectionModel,
     )
     append_log("PyQt6.QtCore OK")
 except Exception as _e:
@@ -94,6 +98,13 @@ try:
     append_log("undo_commands OK")
 except Exception as _e:
     append_log(f"IMPORT FATAL undo_commands: {_e}\n{traceback.format_exc()}")
+    sys.exit(1)
+
+try:
+    import table_tools
+    append_log("table_tools OK")
+except Exception as _e:
+    append_log(f"IMPORT FATAL table_tools (openpyxl 未インストール?): {_e}\n{traceback.format_exc()}")
     sys.exit(1)
 
 append_log("--- All imports OK ---")
@@ -157,6 +168,22 @@ class ExcelFilterProxyModel(QSortFilterProxyModel):
         super().__init__()
         self._filters         = {}
         self._numeric_filters = {}
+        self._search_text     = ""
+
+    def set_search_text(self, text):
+        """全列を対象にしたキーワード検索（部分一致・大文字小文字無視）。"""
+        self._search_text = (text or "").strip().casefold()
+        self.invalidateFilter()
+
+    def lessThan(self, left, right):
+        """Excel と同様、数値は数値として比較し、空欄 / "---" は昇順・降順とも末尾に置く。"""
+        kl = table_tools.sort_key(self.sourceModel().data(left))
+        kr = table_tools.sort_key(self.sourceModel().data(right))
+        if self.sortOrder() == Qt.SortOrder.DescendingOrder:
+            # 降順では Qt が結果を反転するため、空欄グループを最小にして末尾へ
+            kl = (-1,) + kl[1:] if kl[0] == 2 else kl
+            kr = (-1,) + kr[1:] if kr[0] == 2 else kr
+        return kl < kr
 
     def set_value_filter(self, col, allowed_values):
         self._filters[col] = set(allowed_values)
@@ -187,6 +214,12 @@ class ExcelFilterProxyModel(QSortFilterProxyModel):
                 if ftype == "range" and not (data[1] <= val <= data[2]): return False
             except:
                 return False
+        if self._search_text:
+            model = self.sourceModel()
+            return any(
+                self._search_text in str(model.data(model.index(source_row, c, source_parent))).casefold()
+                for c in range(model.columnCount())
+            )
         return True
 
 
@@ -257,7 +290,10 @@ class PropertyTableModel(QAbstractTableModel):
             prop_guid = self._properties[col - 1]["guid"]
             if str(self._values.get((guid, prop_guid))) != str(self._original_values.get((guid, prop_guid))):
                 return QColor("red")
-            return QColor("darkRed") if guid in self._conflicts else QColor("black")
+            if guid in self._conflicts:
+                return QColor("darkRed")
+            # 編集不可プロパティ（PropertyDefinition.editable=False）はグレー表示
+            return QColor("black") if table_tools.is_editable(self._properties[col - 1]) else QColor("gray")
 
         if role == Qt.ItemDataRole.BackgroundRole:
             if guid == self._selected_guid:
@@ -390,9 +426,16 @@ class PropertyTableModel(QAbstractTableModel):
                 self.dataChanged.emit(tl, br, [Qt.ItemDataRole.BackgroundRole])
 
     def flags(self, index):
-        if index.column() == 0:
-            return Qt.ItemFlag.ItemIsEnabled
-        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable
+        base = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable  # コピー用に ID 列も選択可
+        if index.column() == 0 or index.column() > len(self._properties):
+            return base
+        if not table_tools.is_editable(self._properties[index.column() - 1]):
+            return base
+        return base | Qt.ItemFlag.ItemIsEditable
+
+    def prop_at(self, col):
+        """表の列番号 → プロパティ定義（ID 列は None）。"""
+        return self._properties[col - 1] if 0 < col <= len(self._properties) else None
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
@@ -695,6 +738,79 @@ class DiffDialog(QDialog):
 
 
 # ─────────────────────────────────────────────────────────────────────
+# ReplaceDialog  Excel 風「検索と置換」
+# ─────────────────────────────────────────────────────────────────────
+
+class ReplaceDialog(QDialog):
+    """モードレスの検索と置換ダイアログ。実処理は MainWindow 側（select_matches / replace_all）。"""
+
+    def __init__(self, window, parent=None):
+        super().__init__(parent)
+        self._win = window
+        self.setWindowTitle("検索と置換")
+        self.setModal(False)
+        lay = QVBoxLayout(self)
+
+        def row(label, widget):
+            w = QWidget(); h = QHBoxLayout(w); h.setContentsMargins(0, 0, 0, 0)
+            lbl = QLabel(label); lbl.setFixedWidth(70)
+            h.addWidget(lbl); h.addWidget(widget, 1)
+            lay.addWidget(w)
+
+        self.find_edit = QLineEdit()
+        self.find_edit.setPlaceholderText("検索する文字列")
+        self.repl_edit = QLineEdit()
+        self.repl_edit.setPlaceholderText("置換後の文字列（空欄で削除）")
+        row("検索:", self.find_edit)
+        row("置換後:", self.repl_edit)
+
+        self.chk_case      = QCheckBox("大文字と小文字を区別")
+        self.chk_whole     = QCheckBox("セル内容が完全に一致（検索が空なら空欄セル）")
+        self.chk_regex     = QCheckBox("正規表現を使う（置換後で \\1 等を使用可）")
+        self.chk_selection = QCheckBox("選択範囲のみ")
+        for chk in (self.chk_case, self.chk_whole, self.chk_regex, self.chk_selection):
+            lay.addWidget(chk)
+
+        self.info_label = QLabel("")
+        lay.addWidget(self.info_label)
+
+        btns = QWidget(); bl = QHBoxLayout(btns); bl.setContentsMargins(0, 0, 0, 0)
+        self.btn_find    = QPushButton("一致セルを選択")
+        self.btn_replace = QPushButton("すべて置換")
+        self.btn_close   = QPushButton("閉じる")
+        self.btn_find.clicked.connect(self.on_find)
+        self.btn_replace.clicked.connect(self.on_replace)
+        self.btn_close.clicked.connect(self.close)
+        bl.addStretch(); bl.addWidget(self.btn_find); bl.addWidget(self.btn_replace); bl.addWidget(self.btn_close)
+        lay.addWidget(btns)
+        self.resize(460, 0)
+
+    def options(self):
+        return {
+            "find":           self.find_edit.text(),
+            "replace":        self.repl_edit.text(),
+            "match_case":     self.chk_case.isChecked(),
+            "whole_cell":     self.chk_whole.isChecked(),
+            "regex":          self.chk_regex.isChecked(),
+            "selection_only": self.chk_selection.isChecked(),
+        }
+
+    def on_find(self):
+        n = self._win.select_matches(self.options())
+        if n is not None:
+            self.info_label.setText(f"一致: {n} セル")
+
+    def on_replace(self):
+        result = self._win.replace_all(self.options())
+        if result is not None:
+            changed, skipped, locked = result
+            parts = [f"置換: {changed} セル"]
+            if locked:  parts.append(f"編集不可で対象外: {locked}")
+            if skipped: parts.append(f"検証でスキップ: {skipped}")
+            self.info_label.setText(" / ".join(parts))
+
+
+# ─────────────────────────────────────────────────────────────────────
 # MainWindow
 # ─────────────────────────────────────────────────────────────────────
 
@@ -897,13 +1013,61 @@ class MainWindow(QMainWindow):
         self.status_label = QLabel("待機中")
         dp_lay.addWidget(self.status_label)
 
+        # ── Excel 風ツールバー（検索・並び替え解除・Excel 入出力）──────
+        tool_row = QWidget()
+        trl = QHBoxLayout(tool_row); trl.setContentsMargins(0, 0, 0, 0)
+        self.search_edit = QLineEdit()
+        self.search_edit.setPlaceholderText("表内を検索（全列・部分一致）")
+        self.search_edit.setClearButtonEnabled(True)
+        self.search_edit.textChanged.connect(self.on_search_changed)
+        self.row_count_label = QLabel("表示 0 / 全 0 件")
+        self.btn_clear_sort = QPushButton("並び替え解除")
+        self.btn_clear_sort.setToolTip("見出しクリックで並び替え（昇順→降順→解除）")
+        self.btn_clear_sort.clicked.connect(self.clear_sort)
+        self.btn_replace = QPushButton("置換")
+        self.btn_replace.setToolTip("検索と置換 (Ctrl+H)")
+        self.btn_replace.clicked.connect(self.show_replace_dialog)
+        self.btn_export_excel = QPushButton("Excel出力")
+        self.btn_export_excel.setToolTip("表示中の行を .xlsx に書き出し（未反映の変更は赤塗り）")
+        self.btn_export_excel.clicked.connect(self.export_excel)
+        self.btn_import_excel = QPushButton("Excel取込")
+        self.btn_import_excel.setToolTip("編集した .xlsx を読み込み、差分のみ表に反映（Undo 可）")
+        self.btn_import_excel.clicked.connect(self.import_excel)
+        trl.addWidget(QLabel("検索:"))
+        trl.addWidget(self.search_edit, 1)
+        trl.addWidget(self.row_count_label)
+        trl.addWidget(self.btn_clear_sort)
+        trl.addWidget(self.btn_replace)
+        trl.addWidget(self.btn_export_excel)
+        trl.addWidget(self.btn_import_excel)
+        dp_lay.addWidget(tool_row)
+
         self.table = QTableView()
         self.model = PropertyTableModel()
         self.proxy = ExcelFilterProxyModel()
         self.proxy.setSourceModel(self.model)
         self.table.setModel(self.proxy)
-        self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        # Excel 同様: セル単位で複数選択（Shift/Ctrl+クリック、ドラッグ）
+        self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)
+        # 見出しクリックで並び替え。初期状態は取得順のまま（並び替えなし）
+        hh = self.table.horizontalHeader()
+        hh.setSortIndicatorClearable(True)
+        hh.setSortIndicator(-1, Qt.SortOrder.AscendingOrder)
+        self.table.setSortingEnabled(True)
+        self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self.show_cell_menu)
+        for sig in (self.proxy.modelReset, self.proxy.rowsInserted, self.proxy.rowsRemoved,
+                    self.proxy.layoutChanged):
+            sig.connect(self._update_row_count)
+        if QShortcut is not None:
+            for keys, slot in ((QKeySequence.StandardKey.Copy, self.copy_selection),
+                               (QKeySequence.StandardKey.Paste, self.paste_clipboard),
+                               (QKeySequence("Ctrl+D"), self.fill_down),
+                               (QKeySequence("Ctrl+H"), self.show_replace_dialog)):
+                sc = QShortcut(keys, self.table)
+                sc.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+                sc.activated.connect(slot)
         # EditTrigger.NoEditTriggers で Qt 内部トリガーを無効化し、
         # doubleClicked シグナルから直接 edit() を呼ぶことで確実に編集を起動する
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -1293,6 +1457,297 @@ class MainWindow(QMainWindow):
             self.btn_diff.setEnabled(True)
         except Exception as e:
             append_log(f"on_archicad_selection_changed ERROR: {e}\n{traceback.format_exc()}")
+
+    # ── Excel 風の表操作（検索・並び替え・コピー/貼り付け・一括入力）──────
+
+    def _update_row_count(self, *args):
+        self.row_count_label.setText(f"表示 {self.proxy.rowCount()} / 全 {self.model.rowCount()} 件")
+
+    def on_search_changed(self, text):
+        self.proxy.set_search_text(text)
+        self._update_row_count()
+
+    def clear_sort(self):
+        """並び替えを解除して ArchiCAD から取得した順に戻す。"""
+        self.table.horizontalHeader().setSortIndicator(-1, Qt.SortOrder.AscendingOrder)
+        self.proxy.sort(-1)
+
+    def _selected_proxy_indexes(self):
+        idxs = self.table.selectionModel().selectedIndexes()
+        if not idxs:
+            cur = self.table.currentIndex()
+            idxs = [cur] if cur.isValid() else []
+        return sorted(idxs, key=lambda i: (i.row(), i.column()))
+
+    def copy_selection(self):
+        """選択セルをタブ区切りでクリップボードへ（Excel にそのまま貼り付け可能）。"""
+        idxs = self._selected_proxy_indexes()
+        if not idxs:
+            return
+        rows = sorted({i.row() for i in idxs})
+        cols = sorted({i.column() for i in idxs})
+        sel  = {(i.row(), i.column()) for i in idxs}
+        grid = [[self.proxy.index(r, c).data() if (r, c) in sel else "" for c in cols] for r in rows]
+        QApplication.clipboard().setText(table_tools.to_tsv(grid))
+        self.status_label.setText(f"コピー: {len(idxs)} セル")
+
+    def paste_clipboard(self):
+        """クリップボード（Excel 等のタブ区切り）を選択位置から貼り付け。
+
+        値が 1 つで複数セル選択中なら、選択セルすべてに同じ値を入れる（Excel と同じ）。
+        """
+        grid = table_tools.parse_tsv(QApplication.clipboard().text())
+        idxs = self._selected_proxy_indexes()
+        if not grid or not idxs:
+            return
+        if len(grid) == 1 and len(grid[0]) == 1 and len(idxs) > 1:
+            targets = [(i.row(), i.column(), grid[0][0]) for i in idxs]
+        else:
+            r0 = min(i.row() for i in idxs)
+            c0 = min(i.column() for i in idxs)
+            targets = [
+                (r0 + dr, c0 + dc, val)
+                for dr, line in enumerate(grid) for dc, val in enumerate(line)
+                if r0 + dr < self.proxy.rowCount() and c0 + dc < self.proxy.columnCount()
+            ]
+        self._apply_edits(targets, "貼り付け")
+
+    def fill_down(self):
+        """各列で選択範囲の先頭セルの値を下のセルへコピー（Excel の Ctrl+D）。"""
+        by_col = {}
+        for i in self._selected_proxy_indexes():
+            by_col.setdefault(i.column(), []).append(i.row())
+        targets = []
+        for c, rows in by_col.items():
+            rows.sort()
+            top = self.proxy.index(rows[0], c).data()
+            targets += [(r, c, top) for r in rows[1:]]
+        if not targets:
+            self.status_label.setText("下方向へコピー: 同じ列で 2 セル以上を選択してください")
+            return
+        self._apply_edits(targets, "下方向へコピー")
+
+    def bulk_input(self):
+        """選択セルに同じ値をまとめて入力。列挙型の列だけを選んでいる場合は候補から選ぶ。"""
+        idxs = [i for i in self._selected_proxy_indexes() if i.column() > 0]
+        if not idxs:
+            return
+        cols  = {i.column() for i in idxs}
+        prop  = self.model.prop_at(next(iter(cols))) if len(cols) == 1 else None
+        enums = (prop or {}).get("enums") or []
+        title, label = "一括入力", f"{len(idxs)} セルに設定する値:"
+        if enums:
+            value, ok = QInputDialog.getItem(self, title, label, enums, 0, False)
+        else:
+            value, ok = QInputDialog.getText(self, title, label)
+        if ok:
+            self._apply_edits([(i.row(), i.column(), value) for i in idxs], "一括入力")
+
+    def _apply_edits(self, proxy_targets, label):
+        """(表示上の行, 列, 値) を元モデルの位置に変換してから反映する。"""
+        # 並び替え中は編集で行が移動するため、編集前にすべて変換しておく
+        src = []
+        for r, c, v in proxy_targets:
+            si = self.proxy.mapToSource(self.proxy.index(r, c))
+            if si.isValid():
+                src.append((si.row(), si.column(), v))
+        return self._apply_source_edits(src, label)
+
+    def _apply_source_edits(self, targets, label):
+        """PropertyDefinition（editable / enums）で検証し、変更のあるセルだけを
+        1 回の Undo 操作としてまとめて反映する。戻り値: (変更セル数, スキップ理由リスト)。"""
+        valid, skipped = [], []
+        for row, col, value in targets:
+            prop = self.model.prop_at(col)
+            if prop is None:
+                skipped.append("ID 列は編集できません")
+                continue
+            ok, reason = table_tools.validate_value(prop, value)
+            if not ok:
+                skipped.append(reason)
+                continue
+            guid = self.model._elements[row]["guid"]
+            if str(self.model._values.get((guid, prop["guid"]), "")) != str(value):
+                valid.append((row, col, str(value)))
+
+        if valid:
+            self.undo_stack.beginMacro(f"{label} ({len(valid)} セル)")
+            try:
+                for row, col, value in valid:
+                    self.model.setData(self.model.index(row, col), value)
+            finally:
+                self.undo_stack.endMacro()
+            self.table.viewport().update()
+
+        msg = f"{label}: {len(valid)} セル変更"
+        if skipped:
+            msg += f" / {len(skipped)} セルはスキップ"
+        self.status_label.setText(msg)
+        if skipped:
+            uniq = list(dict.fromkeys(skipped))
+            more = f"\n… 他 {len(uniq) - 10} 種類" if len(uniq) > 10 else ""
+            QMessageBox.warning(self.data_panel, f"{label} - スキップしたセル",
+                                f"{msg}\n\n" + "\n".join(uniq[:10]) + more)
+        append_log(f"[TABLE EDIT] {msg}")
+        return len(valid), skipped
+
+    def show_cell_menu(self, pos):
+        menu = QMenu(self.table)
+        for text, slot in (("コピー\tCtrl+C", self.copy_selection),
+                           ("貼り付け\tCtrl+V", self.paste_clipboard),
+                           ("下方向へコピー\tCtrl+D", self.fill_down),
+                           ("選択セルに一括入力...", self.bulk_input),
+                           ("検索と置換...\tCtrl+H", self.show_replace_dialog)):
+            menu.addAction(text).triggered.connect(slot)
+        menu.addSeparator()
+        menu.addAction("並び替え解除").triggered.connect(self.clear_sort)
+        menu.exec(self.table.viewport().mapToGlobal(pos))
+
+    # ── 検索と置換 ───────────────────────────────────────────────────
+
+    def show_replace_dialog(self):
+        if getattr(self, "_replace_dlg", None) is None:
+            self._replace_dlg = ReplaceDialog(self, parent=self.data_panel)
+        if self.search_edit.text() and not self._replace_dlg.find_edit.text():
+            self._replace_dlg.find_edit.setText(self.search_edit.text())
+        self._replace_dlg.show()
+        self._replace_dlg.raise_()
+        self._replace_dlg.activateWindow()
+        self._replace_dlg.find_edit.setFocus()
+        return self._replace_dlg
+
+    def _find_replace_cells(self, opts):
+        """置換条件に一致するセルを探す。
+
+        戻り値: (一致セル[(表示行, 列)], 置換対象[(表示行, 列, 新しい値)], 編集不可で対象外の数)
+        不正な正規表現は警告を出して None。
+        """
+        if opts.get("selection_only"):
+            cells = [(i.row(), i.column()) for i in self._selected_proxy_indexes()]
+        else:
+            cells = [(r, c) for r in range(self.proxy.rowCount()) for c in range(self.proxy.columnCount())]
+        matches, targets, locked = [], [], 0
+        try:
+            for r, c in cells:
+                new = table_tools.replace_text(
+                    self.proxy.index(r, c).data(), opts["find"], opts["replace"],
+                    match_case=opts["match_case"], whole_cell=opts["whole_cell"], regex=opts["regex"])
+                if new is None:
+                    continue
+                matches.append((r, c))
+                prop = self.model.prop_at(c)
+                if prop is None or not table_tools.is_editable(prop):
+                    locked += 1          # ID 列・編集不可プロパティは置換しない
+                else:
+                    targets.append((r, c, new))
+        except ValueError as e:
+            QMessageBox.warning(self.data_panel, "検索と置換", str(e))
+            return None
+        return matches, targets, locked
+
+    def select_matches(self, opts):
+        """一致セルを選択状態にする（置換前の確認用）。一致数を返す。"""
+        found = self._find_replace_cells(opts)
+        if found is None:
+            return None
+        matches = found[0]
+        sel = QItemSelection()
+        for r, c in matches:
+            idx = self.proxy.index(r, c)
+            sel.select(idx, idx)
+        sm = self.table.selectionModel()
+        if matches:
+            sm.setCurrentIndex(self.proxy.index(*matches[0]), QItemSelectionModel.SelectionFlag.NoUpdate)
+            self.table.scrollTo(self.proxy.index(*matches[0]))
+        sm.select(sel, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        self.status_label.setText(f"検索: {len(matches)} セル一致")
+        return len(matches)
+
+    def replace_all(self, opts):
+        """一致セルをすべて置換（検証付き・Undo 1 回で元に戻せる）。
+
+        戻り値: (置換セル数, 検証でスキップした数, 編集不可で対象外の数)
+        """
+        found = self._find_replace_cells(opts)
+        if found is None:
+            return None
+        matches, targets, locked = found
+        if not matches:
+            self.status_label.setText("置換: 一致するセルはありません")
+            return 0, 0, 0
+        changed, skipped = self._apply_edits(targets, "置換")
+        if locked:
+            self.status_label.setText(self.status_label.text() + f" / 編集不可で対象外 {locked} セル")
+        return changed, len(skipped), locked
+
+    # ── Excel 入出力 ─────────────────────────────────────────────────
+
+    def export_excel(self):
+        """表示中（検索・フィルタ・並び替え後）の行を .xlsx に書き出す。未反映の変更は赤塗り。"""
+        if not self.model._elements:
+            QMessageBox.information(self.data_panel, "Excel出力", "出力するデータがありません。")
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            self.data_panel, "Excel出力", "BIMデータ.xlsx", "Excel ファイル (*.xlsx)")
+        if not path:
+            return
+        props = self.model._properties
+        rows = []
+        for r in range(self.proxy.rowCount()):
+            g = self.model._elements[self.proxy.mapToSource(self.proxy.index(r, 0)).row()]["guid"]
+            rows.append((g, [self.model._values.get((g, p["guid"]), "") for p in props]))
+        changed = {k for k, v in self.model._values.items()
+                   if str(v) != str(self.model._original_values.get(k))}
+        try:
+            table_tools.export_xlsx(path, props, rows, changed)
+        except Exception as e:
+            append_log(f"[EXCEL EXPORT ERROR] {e}\n{traceback.format_exc()}")
+            QMessageBox.warning(self.data_panel, "Excel出力", f"書き出しに失敗しました:\n{e}")
+            return
+        self.status_label.setText(f"Excel出力: {len(rows)} 行 → {path}")
+        append_log(f"[EXCEL EXPORT] {len(rows)} rows -> {path}")
+
+    def import_excel(self):
+        """Excel で編集した .xlsx を読み込み、現在の表と値が違うセルだけを反映する（Undo 可）。
+
+        ArchiCAD への反映は従来どおり [Archicadへ反映] で行う（ここでは表を変更するだけ）。
+        """
+        if not self.model._elements:
+            QMessageBox.information(self.data_panel, "Excel取込", "先に [データ取得] で表を表示してください。")
+            return
+        path, _ = QFileDialog.getOpenFileName(
+            self.data_panel, "Excel取込", "", "Excel ファイル (*.xlsx)")
+        if not path:
+            return
+        try:
+            values, unknown_headers = table_tools.read_xlsx(path, self.model._properties)
+        except Exception as e:
+            append_log(f"[EXCEL IMPORT ERROR] {e}\n{traceback.format_exc()}")
+            QMessageBox.warning(self.data_panel, "Excel取込", f"読み込みに失敗しました:\n{e}")
+            return
+
+        row_of = {e["guid"]: i for i, e in enumerate(self.model._elements)}
+        col_of = {p["guid"]: i + 1 for i, p in enumerate(self.model._properties)}
+        targets, missing = [], set()
+        for (g, pg), v in values.items():
+            if g not in row_of:
+                missing.add(g)
+                continue
+            if not table_tools.values_equal(self.model._values.get((g, pg), ""), v):
+                targets.append((row_of[g], col_of[pg], v))
+
+        changed, skipped = self._apply_source_edits(targets, "Excel取込")
+        notes = []
+        if missing:
+            notes.append(f"表に無い要素: {len(missing)} 行（無視）")
+        if unknown_headers:
+            notes.append("対応するプロパティが無い列: " + ", ".join(unknown_headers[:5]))
+        if not skipped:
+            QMessageBox.information(
+                self.data_panel, "Excel取込",
+                f"{changed} セルを変更しました（赤字）。\n[Archicadへ反映] で ArchiCAD に書き込みます。"
+                + ("\n\n" + "\n".join(notes) if notes else ""))
+        append_log(f"[EXCEL IMPORT] changed={changed} skipped={len(skipped)} {notes}")
 
     # ── ズーム ON/OFF ────────────────────────────────────────────────
 

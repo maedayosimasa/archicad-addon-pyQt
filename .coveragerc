@@ -1,0 +1,19 @@
+[run]
+branch = True
+source = .
+omit =
+    tests/*
+    .venv/*
+    Build/*
+    Tools/*
+    # GRC 一括書き換え用の単発スクリプト（アプリ本体ではない）
+    restore_grc.py
+    write_grc.py
+    write_grc_integrated.py
+
+[report]
+show_missing = True
+skip_empty = True
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:

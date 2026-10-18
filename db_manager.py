@@ -22,7 +22,10 @@ class DbManager:
             conn = sqlite3.connect(str(self._db_path))
             conn.row_factory = sqlite3.Row
             conn.execute("PRAGMA journal_mode=WAL")
-            conn.execute("PRAGMA foreign_keys=ON")
+            # 外部キー制約は有効にしない（SQLite 既定 = OFF）。
+            # 要素/プロパティ未登録のまま値を保存すると IntegrityError になり、
+            # Undo コマンド(redo)内で発生すると PyQt6 がアプリごと強制終了するため。
+            # 親→子の順に保存しているので整合性は呼び出し側で保たれている。
             self._local.conn = conn
         return self._local.conn
 
