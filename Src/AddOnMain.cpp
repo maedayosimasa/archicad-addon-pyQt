@@ -163,7 +163,11 @@ static void ScheduleProcessOneCommand() {
 }
 
 static GS::UniString Escape(const GS::UniString& input) {
-    GS::UniString out = input; out.ReplaceAll("\"", "\\\""); out.ReplaceAll("\n", " "); out.ReplaceAll("\r", " "); return out;
+    GS::UniString out = input; out.ReplaceAll("\"", "\\\""); out.ReplaceAll("\n", " "); out.ReplaceAll("\r", " ");
+    // JSON の文字列に入れられない制御文字（U+0000〜U+001F）は空白にする（受信側で解析できなくなるため）
+    for (UIndex i = 0; i < out.GetLength(); i++)
+        if (static_cast<GS::UniChar::Layout>(out[i]) < 0x20) out.SetChar(i, ' ');
+    return out;
 }
 
 static bool IsValidNumber(const std::string& s) {
@@ -634,10 +638,27 @@ static std::string ApplyInputChanges(const API_Guid& eg, API_Element& el, API_El
     return notApplied;
 }
 
-static API_AttributeIndex FindLayerIdx(const GS::UniString& name) {
+// プロジェクトの全レイヤの番号（削除済みは含まない）
+static GS::Array<API_AttributeIndex> GetAllLayerIndices() {
+    GS::Array<API_AttributeIndex> result;
     GS::Array<API_Attribute> layers;
     if (ACAPI_Attribute_GetAttributesByType(API_LayerID, layers) == NoError)
-        for (const auto& a : layers) if (a.header.name == name) return a.header.index;
+        for (const auto& a : layers) result.Push(a.header.index);
+    return result;
+}
+
+static std::vector<GS::UniString> GetAllLayerNames() {
+    std::vector<GS::UniString> names;
+    for (const auto& idx : GetAllLayerIndices()) {
+        const GS::UniString n = GetLayerName(idx);
+        if (n != GS::UniString("---", CC_UTF8)) names.push_back(n);
+    }
+    return names;
+}
+
+static API_AttributeIndex FindLayerIdx(const GS::UniString& name) {
+    for (const auto& idx : GetAllLayerIndices())
+        if (GetLayerName(idx) == name) return idx;
     return ACAPI_CreateAttributeIndex(0);
 }
 
@@ -1247,8 +1268,10 @@ void DoSearch(const std::string& json) {
 static std::string FmtReal(double v) { char buf[48]; snprintf(buf, sizeof(buf), "%.6g", v); return std::string(buf); }
 
 static GS::UniString GetLayerName(API_AttributeIndex idx) {
-    API_Attribute a = {}; a.header.typeID = API_LayerID; a.header.index = idx;
-    return (ACAPI_Attribute_Get(&a) == NoError) ? a.header.name : GS::UniString("---", CC_UTF8);
+    // 名前は UniString で受け取る（char 版の name は文字コード変換で化けることがある）
+    GS::UniString name;
+    API_Attribute a = {}; a.header.typeID = API_LayerID; a.header.index = idx; a.header.uniStringNamePtr = &name;
+    return (ACAPI_Attribute_Get(&a) == NoError) ? name : GS::UniString("---", CC_UTF8);
 }
 static GS::UniString GetBuildingMaterialName(API_AttributeIndex idx) {
     API_Attribute a = {}; a.header.typeID = API_BuildingMaterialID; a.header.index = idx;
@@ -1546,12 +1569,11 @@ void ResolveSchedule(const std::string& json) {
     for (const auto& s : ExtractStringArray(json, "layers")) {
         int idx = 0;
         try { idx = std::stoi(s); } catch (...) { continue; }
-        API_Attribute a; BNZeroMemory(&a, sizeof(a));
-        a.header.typeID = API_LayerID; a.header.index = ACAPI_CreateAttributeIndex(idx);
-        if (ACAPI_Attribute_Get(&a) != NoError) continue;
+        const GS::UniString layerName = GetLayerName(ACAPI_CreateAttributeIndex(idx));
+        if (layerName == GS::UniString("---", CC_UTF8)) continue;
         if (!firstL) out.Append(",");
         firstL = false;
-        out.Append(GS::UniString::Printf("\"%d\":", idx)); out.Append(JsonStr(a.header.name));
+        out.Append(GS::UniString::Printf("\"%d\":", idx)); out.Append(JsonStr(layerName));
     }
     out.Append("}}");
     WriteExternalLog("resolve_schedule: " + std::to_string(found) + "/" + std::to_string(wanted) + " properties");
@@ -1860,12 +1882,11 @@ static void AppendElemParamDefs(GS::UniString& out, const API_Element& elem) {
         out.Append(",{\"guid\":\"elem:layer\",\"name\":\"レイヤ名\",\"group\":\"");
         out.Append(GS::UniString(grp, CC_UTF8));
         out.Append("\",\"editable\":true,\"valueType\":3,\"collectionType\":0,\"enums\":[");
-        GS::Array<API_Attribute> layers;
-        if (ACAPI_Attribute_GetAttributesByType(API_LayerID, layers) == NoError) {
-            for (UInt32 k = 0; k < layers.GetSize(); k++) {
-                if (k > 0) out.Append(",");
-                out.Append(JsonStr(layers[k].header.name));
-            }
+        bool firstLayer = true;
+        for (const auto& name : GetAllLayerNames()) {
+            if (!firstLayer) out.Append(",");
+            out.Append(JsonStr(name));
+            firstLayer = false;
         }
         out.Append("]}");
     }

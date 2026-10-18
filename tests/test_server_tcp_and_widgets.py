@@ -311,3 +311,13 @@ def test_handle_client_routes_site_summary(qapp):
     spy.signals.site_summary_received.connect(sig.append)
     _deliver(spy, _lines({"type": "site_summary", "elements": [], "projectInfo": []}))
     assert sig and sig[0]["type"] == "site_summary"
+
+
+def test_handle_client_accepts_control_characters_in_strings(qapp):
+    # レイヤ名などに制御文字（タブ以外の U+0001 等）が混ざっても定義を受け取れる（要素抽出が止まらない）
+    spy = SignalSpy()
+    body = ('{"type":"property_definitions","definitions":[{"guid":"elem:layer","enums":["A\x01B","C\x1fD"]}]}\n'
+            ).encode("utf-8")
+    _deliver(spy, body)
+    assert spy.names() == ["definitions_received"]
+    assert spy.events[0][1]["definitions"][0]["enums"] == ["A\x01B", "C\x1fD"]

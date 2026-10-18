@@ -618,7 +618,9 @@ class TcpServerThread(threading.Thread):
                     continue
                 append_log(f"[RECV RAW] {raw[:1000]}")
                 try:
-                    payload = json.loads(raw)
+                    # strict=False: 文字列中の制御文字（レイヤ名・GDL 文字列などに混ざることがある）を許す。
+                    # 1 文字でも解析に失敗すると応答全体が失われ「取得中」のまま止まるため。
+                    payload = json.loads(raw, strict=False)
                     if "data" in payload and "type" not in payload:
                         payload = payload["data"]
                     t = payload.get("type")
@@ -644,6 +646,9 @@ class TcpServerThread(threading.Thread):
                     elif t == "project_info_result":  self.signals.project_info_result_received.emit(payload)
                     else:
                         append_log(f"[UNKNOWN TYPE] {t}")
+                except json.JSONDecodeError as e:
+                    around = raw[max(0, e.pos - 80):e.pos + 80]
+                    append_log(f"[JSON ERROR] {e} / 前後: {around!r}")
                 except Exception as e:
                     append_log(f"[JSON ERROR] {e}")
 
