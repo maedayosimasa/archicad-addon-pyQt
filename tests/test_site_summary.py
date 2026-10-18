@@ -162,7 +162,48 @@ def test_summary_sheets_export(tmp_path):
     path = tmp_path / "site.xlsx"
     table_tools.export_sheets(path, ss.summary_sheets(ss.build_site_summary(payload())))
     wb = load_workbook(path)
-    assert wb.sheetnames == ["集計結果", "合計", "用途地域", "境界線", "道路", "プロジェクト情報"]
+    assert wb.sheetnames == ["集計結果", "合計", "用途地域", "境界線", "道路",
+                             "延焼ライン", "延焼ライン詳細", "プロジェクト情報"]
     assert [c.value for c in wb["集計結果"][2]] == ["建蔽率", "60.00%", "36.77%", "適合"]
     assert [c.value for c in wb["境界線"][2]] == [1, 1, 49, "道路境界線"]
     assert wb["道路"]["A2"].value == "北側道路"
+
+
+
+# ── 延焼ライン ─────────────────────────────────────────────────────
+
+FIRE_OBJ = {"guid": "F1", "libPart": "延焼ライン", "floor": 0, "story": "1FL", "layer": "敷地-延焼",
+            "category": "fire",
+            "params": {"vertexXArray": [0.0, 3.0, 3.0], "vertexYArray": [0.0, 0.0, 4.0], "numVertex": 3,
+                       "OffsetType": "隣棟間延焼ライン(両側)", "dist": 3.0,
+                       "arr": list(range(12)), "flag": True},
+            "descs": {}}
+FIRE_BY_NAME = {"guid": "F2", "libPart": "営_延焼のおそれ_01", "floor": 1, "params": {}, "descs": {"iType": "片側"}}
+FIRE_LINE = {"guid": "F3", "category": "fire", "kind": "line", "libPart": "ポリライン", "floor": 0,
+             "story": "1FL", "layer": "延焼ライン", "length": 12.5, "points": 4, "params": {}, "descs": {}}
+
+
+def test_fire_lines_are_collected():
+    s = ss.build_site_summary(payload(elements=[SITE, ROAD, LABEL, FIRE_OBJ, FIRE_BY_NAME, FIRE_LINE]))
+    assert len(s["sites"]) == 1 and len(s["roads"]) == 1
+    f1, f2, f3 = s["fire_lines"]
+    assert (f1["name"], f1["story"], f1["layer"], f1["type"]) == ("延焼ライン", "1FL", "敷地-延焼", "隣棟間延焼ライン(両側)")
+    assert f1["length"] == pytest.approx(7.0) and f1["points"] == 3
+    assert (f2["story"], f2["type"], f2["length"], f2["points"]) == ("1", "片側", None, None)
+    assert (f3["length"], f3["points"], f3["type"]) == (12.5, 4, None)
+    rows = ss.fire_rows(s["fire_lines"])
+    assert rows[0] == [1, "延焼ライン", "1FL", "敷地-延焼", "隣棟間延焼ライン(両側)", "7.000m", 3]
+    assert rows[1][3:] == ["---", "片側", "---", "---"]
+    assert ss.fire_rows(s["fire_lines"], rounded=True)[1][5] == "---"
+    detail = dict((r[2], r[3]) for r in ss.fire_detail_rows(s["fire_lines"]) if r[0] == 1)
+    assert detail["dist"] == "3" and detail["flag"] == "True"
+    assert detail["arr"].endswith("…（全 12 個）") and detail["arr"].startswith("[0, 1, 2")
+
+
+def test_no_fire_lines():
+    s = ss.build_site_summary(payload())
+    assert s["fire_lines"] == [] and ss.fire_rows([]) == [] and ss.fire_detail_rows([]) == []
+
+
+def test_fmt_param():
+    assert ss.fmt_param(None) == "" and ss.fmt_param(0.1 + 0.2) == "0.3" and ss.fmt_param("a") == "a"

@@ -144,6 +144,8 @@ static const char* const kSiteManagerTypeKey = "SiteManager";
 static GS::UniString JsonStr(const GS::UniString& s);   // JSON 文字列リテラル（定義は後方）
 void ResolveSchedule(const std::string& json);           // 一覧表の列・条件の解決（定義は後方）
 void SetProjectInfo(const std::string& json);            // プロジェクト情報の更新（定義は後方）
+static std::map<short, GS::UniString> GetRawStoryNames();  // フロア番号 → フロア名（定義は後方）
+static GS::UniString GetLayerName(API_AttributeIndex idx);  // レイヤ名（定義は後方）
 
 static void ScheduleProcessOneCommand() {
     const GSErrCode err = ACAPI_AddOnAddOnCommunication_CallFromEventLoop(
@@ -632,6 +634,13 @@ static std::string ApplyInputChanges(const API_Guid& eg, API_Element& el, API_El
     return notApplied;
 }
 
+static API_AttributeIndex FindLayerIdx(const GS::UniString& name) {
+    GS::Array<API_Attribute> layers;
+    if (ACAPI_Attribute_GetAttributesByType(API_LayerID, layers) == NoError)
+        for (const auto& a : layers) if (a.header.name == name) return a.header.index;
+    return ACAPI_CreateAttributeIndex(0);
+}
+
 enum class ConflictPolicy { AbortAll, SkipConflicts, ForceOverwrite };
 struct ElementSyncResult { std::string guid; std::string status; std::string reason; UInt32 currentStamp = 0; };
 
@@ -657,6 +666,7 @@ static ElementSyncResult ApplyElementChanges_Internal(const std::string& guidStr
     }
     API_Element updateElem = element; API_Element mask = {}; ACAPI_ELEMENT_MASK_CLEAR(mask); bool elementChanged = false;
     std::vector<std::pair<std::string,std::string>> colMemoReqs, beamMemoReqs, inputReqs;
+    std::string inputNotApplied;   // 反映できなかった項目（理由を結果に返す）
     GS::Array<API_PropertyDefinition> propDefsToUpdate; GS::HashTable<API_Guid, ChangeData> propValueMap;
     GS::Array<API_Guid> classItemsToAdd; bool hasElementIdChange = false; GS::UniString newElementId;
     API_RenovationStatusType newRenovationStatus = API_DefaultStatus;
@@ -674,6 +684,12 @@ static ElementSyncResult ApplyElementChanges_Internal(const std::string& guidStr
             const std::string& key = data.propId;
             const std::string& val = data.value;
             if (IsInputKey(key)) { inputReqs.emplace_back(key, val); continue; }
+            if (key == "elem:layer") {   // レイヤ名 → レイヤ番号（見つからなければ変更しない）
+                const API_AttributeIndex li = FindLayerIdx(GS::UniString(val.c_str(), CC_UTF8));
+                if (li.IsPositive()) { updateElem.header.layer = li; ACAPI_ELEMENT_MASK_SET(mask, API_Elem_Head, layer); elementChanged = true; }
+                else { inputNotApplied += "elem:layer(レイヤ「" + val + "」が見つかりません) "; }
+                continue;
+            }
             switch (updateElem.header.type.typeID) {
                 case API_WallID:
                     if (key == "elem:height" && IsValidNumber(val)) { updateElem.wall.height = std::stod(val); ACAPI_ELEMENT_MASK_SET(mask, API_WallType, height); elementChanged = true; }
@@ -755,9 +771,8 @@ static ElementSyncResult ApplyElementChanges_Internal(const std::string& guidStr
             }
         }
     }
-    std::string inputNotApplied;
     if (!inputReqs.empty())
-        inputNotApplied = ApplyInputChanges(eg, updateElem, mask, elementChanged, inputReqs, pendingMemo, pendingMemoMask);
+        inputNotApplied += ApplyInputChanges(eg, updateElem, mask, elementChanged, inputReqs, pendingMemo, pendingMemoMask);
     if (!inputNotApplied.empty()) WriteExternalLog("APPLY INPUT not applied: " + inputNotApplied);
     bool anyApplied = false, opError = false;
     {
@@ -1251,6 +1266,14 @@ static GS::UniString GetLibPartName(Int32 libInd) {
     return GS::UniString(lp.docu_UName);
 }
 
+// 延焼ライン関連の GDL（Archicad 29 の敷地マネージャー: 延焼ライン / みなし境界線 / FireSpreading*、
+// または事務所ライブラリ等で名前に「延焼」を含むもの）
+static bool IsFireSpreadLibPart(const GS::UniString& libName) {
+    return libName.Contains(GS::UniString("延焼", CC_UTF8)) ||
+           libName.Contains(GS::UniString("みなし境界", CC_UTF8)) ||
+           libName.BeginsWith("FireSpreading");
+}
+
 // SiteManager.apx に埋め込まれている配置用 GDL オブジェクト名（拡張子なし）
 static bool IsSiteManagerLibPart(const GS::UniString& libName) {
     static const char* const kNames[] = {
@@ -1260,7 +1283,7 @@ static bool IsSiteManagerLibPart(const GS::UniString& libName) {
     GS::UniString n = libName;
     if (n.EndsWith(".gsm")) n.Delete(n.GetLength() - 4, 4);
     for (const char* k : kNames) if (n == GS::UniString(k, CC_UTF8)) return true;
-    return false;
+    return IsFireSpreadLibPart(n);
 }
 
 static GS::Array<API_Guid> GetSiteManagerElements() {
@@ -1279,7 +1302,7 @@ static GS::Array<API_Guid> GetSiteManagerElements() {
             isSite.Add(li, site);
             std::string n((const char*)name.ToCStr(CC_UTF8));
             if (site) siteNames += (siteNames.empty() ? "" : ", ") + n;
-            else if (++otherCount <= 40) otherNames += (otherNames.empty() ? "" : ", ") + n;
+            else if (++otherCount <= 200) otherNames += (otherNames.empty() ? "" : ", ") + n;
         }
         if (isSite[li]) result.Push(g);
     }
@@ -1564,16 +1587,71 @@ void SetProjectInfo(const std::string& json) {
     EnqueueResult(std::string((const char*)out.ToCStr(CC_UTF8)));
 }
 
+static GS::UniString StoryNameOf(const std::map<short, GS::UniString>& stories, short floorInd) {
+    auto it = stories.find(floorInd);
+    return it != stories.end() ? it->second : GS::UniString::Printf("%d", (int)floorInd);
+}
+
+// 線・ポリライン・円弧で描かれた延焼ライン（レイヤ名に「延焼」を含むもの）
+static void AppendFireSpreadLines(GS::UniString& out, const std::map<short, GS::UniString>& stories, int& count) {
+    const GS::UniString key("延焼", CC_UTF8);
+    const API_ElemTypeID types[] = { API_LineID, API_PolyLineID, API_ArcID };
+    for (API_ElemTypeID t : types) {
+        GS::Array<API_Guid> all;
+        if (ACAPI_Element_GetElemList(API_ElemType(t), &all) != NoError) continue;
+        for (const auto& g : all) {
+            API_Element el; BNZeroMemory(&el, sizeof(el)); el.header.guid = g;
+            if (ACAPI_Element_Get(&el) != NoError) continue;
+            if (!GetLayerName(el.header.layer).Contains(key)) continue;
+            double length = 0.0;
+            int nPts = 0;
+            const char* typeName = "線";
+            if (t == API_LineID) {
+                length = std::hypot(el.line.endC.x - el.line.begC.x, el.line.endC.y - el.line.begC.y); nPts = 2;
+            } else if (t == API_ArcID) {
+                typeName = "円弧";
+                length = el.arc.r * (el.arc.whole ? 2.0 * 3.14159265358979323846 : std::abs(el.arc.endAng - el.arc.begAng)); nPts = 2;
+            } else {
+                typeName = "ポリライン";
+                API_ElementMemo memo; BNZeroMemory(&memo, sizeof(memo));
+                if (ACAPI_Element_GetMemo(g, &memo, APIMemoMask_Polygon) == NoError && memo.coords != nullptr) {
+                    const Int32 n = el.polyLine.poly.nCoords;   // coords は 1 始まり
+                    for (Int32 k = 1; k < n; k++)
+                        length += std::hypot((*memo.coords)[k + 1].x - (*memo.coords)[k].x,
+                                             (*memo.coords)[k + 1].y - (*memo.coords)[k].y);
+                    nPts = n;
+                }
+                ACAPI_DisposeElemMemoHdls(&memo);
+            }
+            if (count++ > 0) out.Append(",");
+            out.Append("{\"guid\":\""); out.Append(APIGuid2GSGuid(g).ToUniString());
+            out.Append("\",\"category\":\"fire\",\"kind\":\"line\",\"libPart\":");
+            out.Append(JsonStr(GS::UniString(typeName, CC_UTF8)));
+            out.Append(",\"floor\":"); out.Append(GS::UniString::Printf("%d", (int)el.header.floorInd));
+            out.Append(",\"story\":"); out.Append(JsonStr(StoryNameOf(stories, el.header.floorInd)));
+            out.Append(",\"layer\":"); out.Append(JsonStr(GetLayerName(el.header.layer)));
+            out.Append(",\"length\":"); out.Append(GS::UniString::Printf("%.6f", length));
+            out.Append(",\"points\":"); out.Append(GS::UniString::Printf("%d", nPts));
+            out.Append(",\"params\":{},\"descs\":{}}");
+        }
+    }
+}
+
 void ExportSiteSummary() {
     GS::UniString out("{\"type\":\"site_summary\",\"elements\":[");
     GS::Array<API_Guid> guids = GetSiteManagerElements();
+    const std::map<short, GS::UniString> stories = GetRawStoryNames();
+    int written = 0;
     for (UInt32 i = 0; i < guids.GetSize(); i++) {
         API_Element el; BNZeroMemory(&el, sizeof(el)); el.header.guid = guids[i];
         if (ACAPI_Element_Get(&el) != NoError) continue;
-        if (i > 0) out.Append(",");
+        if (written++ > 0) out.Append(",");
         out.Append("{\"guid\":\""); out.Append(APIGuid2GSGuid(guids[i]).ToUniString());
         out.Append("\",\"libPart\":"); out.Append(JsonStr(GetLibPartName(el.object.libInd)));
         out.Append(",\"floor\":"); out.Append(GS::UniString::Printf("%d", (int)el.header.floorInd));
+        out.Append(",\"story\":"); out.Append(JsonStr(StoryNameOf(stories, el.header.floorInd)));
+        out.Append(",\"layer\":"); out.Append(JsonStr(GetLayerName(el.header.layer)));
+        if (IsFireSpreadLibPart(GetLibPartName(el.object.libInd))) out.Append(",\"category\":\"fire\"");
         GS::UniString params("{"), descs("{");
         bool firstP = true, firstD = true;
         API_ElementMemo memo; BNZeroMemory(&memo, sizeof(memo));
@@ -1599,6 +1677,9 @@ void ExportSiteSummary() {
         out.Append(",\"descs\":"); out.Append(descs); out.Append("}");
         out.Append("}");
     }
+    const int objectCount = written;
+    AppendFireSpreadLines(out, stories, written);
+    WriteExternalLog("site_summary: fire-spread lines drawn on 延焼 layers = " + std::to_string(written - objectCount));
     // プロジェクト情報（敷地マネージャーの集計結果・許容値はここに書き込まれている）
     out.Append("],\"projectInfo\":[");
     GS::Array<GS::ArrayFB<GS::UniString, 3>> autotexts;
@@ -1775,7 +1856,19 @@ static void AppendElemParamDefs(GS::UniString& out, const API_Element& elem) {
         out.Append("}");
     };
     addP("elem:type",  "要素タイプ", 3, false);
-    addP("elem:layer", "レイヤ名",   3, false);
+    {   // レイヤ名: 編集可。候補はプロジェクトの全レイヤ（表ではプルダウンで選ぶ）
+        out.Append(",{\"guid\":\"elem:layer\",\"name\":\"レイヤ名\",\"group\":\"");
+        out.Append(GS::UniString(grp, CC_UTF8));
+        out.Append("\",\"editable\":true,\"valueType\":3,\"collectionType\":0,\"enums\":[");
+        GS::Array<API_Attribute> layers;
+        if (ACAPI_Attribute_GetAttributesByType(API_LayerID, layers) == NoError) {
+            for (UInt32 k = 0; k < layers.GetSize(); k++) {
+                if (k > 0) out.Append(",");
+                out.Append(JsonStr(layers[k].header.name));
+            }
+        }
+        out.Append("]}");
+    }
     switch (elem.header.type.typeID) {
         case API_WallID:
             addP("elem:height",          "高さ",                  2, true);

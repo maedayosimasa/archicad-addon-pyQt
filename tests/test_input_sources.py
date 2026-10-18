@@ -369,3 +369,30 @@ def test_export_excel_passes_color_columns(loaded, monkeypatch, tmp_path):
     w.export_excel()
     assert seen["computed"] == {"elem:H"}
     assert seen["inputs"] == {"elem:in:height", "elem:in:length", "elem:in:topLink"}
+
+
+# ── レイヤ（簡易版で既定の取得・編集項目） ─────────────────────────
+
+LAYER_PROP = {"guid": "elem:layer", "name": "レイヤ名", "group": "要素設定パラメータ", "editable": True,
+              "valueType": 3, "collectionType": 0, "enums": ["躯体", "仕上", "敷地"]}
+
+
+def test_layer_is_default_simple_key():
+    assert "elem:layer" in server.SIMPLE_KEYS
+
+
+def test_layer_edit_uses_layer_list_and_strict_policy(main_window):
+    w = main_window
+    w.current_condition_id = w.db.save_condition([0], {"Wall": True})
+    w.current_elements = [ELEMS[0]]
+    w.current_props = [LAYER_PROP]
+    w.on_values({"values": [{"guid": GW, "modiStamp": 10, "props": {"elem:layer": "躯体"}}]})
+    m = w.model
+    assert m.flags(m.index(0, 1)) & Qt.ItemFlag.ItemIsEditable
+    assert isinstance(w.table.itemDelegateForColumn(1), server.EnumComboBoxDelegate)   # プルダウン
+    n, skipped = w._apply_source_edits([(0, 1, "存在しないレイヤ")], "貼り付け", warn=False)
+    assert n == 0 and "候補にありません" in skipped[0]
+    assert m.setData(m.index(0, 1), "仕上")
+    w.sync_data()
+    ch = w._pending_changes[0]
+    assert (ch["propId"], ch["value"], ch["group"]) == ("elem:layer", "仕上", "parameter")

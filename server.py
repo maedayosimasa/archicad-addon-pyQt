@@ -1045,6 +1045,8 @@ class SiteSummaryDialog(QDialog):
         self.tbl_bounds    = self._table(["敷地", "No", "長さ", "境界線タイプ"])
         self.tbl_roads     = self._table(["道路名", "種別", "道路線", "境界線タイプ", "長さ"])
         self.tbl_project   = self._table(["項目", "キー", "値"])
+        self.tbl_fire      = self._table(site_summary.FIRE_HEADERS)
+        self.tbl_fire_detail = self._table(site_summary.FIRE_DETAIL_HEADERS)
 
         summary_tab = QWidget(); sl = QVBoxLayout(summary_tab)
         for title, tbl in (("用途地域", self.tbl_districts), ("集計結果", self.tbl_totals),
@@ -1054,6 +1056,11 @@ class SiteSummaryDialog(QDialog):
         self.tabs.addTab(summary_tab, "集計結果")
         self.tabs.addTab(self.tbl_bounds, "境界線")
         self.tabs.addTab(self.tbl_roads, "道路")
+        fire_tab = QWidget(); fl = QVBoxLayout(fire_tab)
+        for title, tbl in (("延焼ライン", self.tbl_fire), ("パラメータ（GDL オブジェクト）", self.tbl_fire_detail)):
+            lbl = QLabel(title); lbl.setStyleSheet("font-weight: bold;")
+            fl.addWidget(lbl); fl.addWidget(tbl)
+        self.tabs.addTab(fire_tab, "延焼ライン")
         self.tabs.addTab(self.tbl_project, "プロジェクト情報")
         lay.addWidget(self.tabs)
 
@@ -1105,7 +1112,11 @@ class SiteSummaryDialog(QDialog):
             [r["name"] or "---", r["type"] or "---", r["property"] or "---",
              r["boundaryType"] or "---", site_summary.fmt_len(r["length"])] for r in summary["roads"]])
         self._fill(self.tbl_project, summary["project_all"])
-        notes = [f"敷地オブジェクト {len(summary['sites'])} 件 / 道路境界線 {len(summary['roads'])} 件"]
+        fires = summary.get("fire_lines", [])
+        self._fill(self.tbl_fire, site_summary.fire_rows(fires))
+        self._fill(self.tbl_fire_detail, site_summary.fire_detail_rows(fires))
+        notes = [f"敷地オブジェクト {len(summary['sites'])} 件 / 道路境界線 {len(summary['roads'])} 件"
+                 f" / 延焼ライン {len(fires)} 件"]
         if summary["computed_site_area"] is not None:
             notes.append(f"敷地形状から計算した面積: {site_summary.fmt_area(summary['computed_site_area'])}")
         if summary["missing_totals"]:

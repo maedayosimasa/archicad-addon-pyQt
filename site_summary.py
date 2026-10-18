@@ -12,6 +12,10 @@ import re
 
 SITE_LIBPART = "敷地オブジェクト"
 ROAD_LIBPART = "道路境界線"
+# 延焼ライン関連（Archicad 29 の敷地マネージャー: 延焼ライン / みなし境界線 / FireSpreading*、
+# 名前に「延焼」を含むライブラリ部品、レイヤ名に「延焼」を含む線・ポリライン・円弧）
+FIRE_KEYWORDS = ("延焼", "みなし境界", "FireSpreading")
+DETAIL_ARRAY_MAX = 10   # 詳細表で配列パラメータを並べる最大個数
 
 # プロジェクト情報のうち「集計結果」として表示する項目（説明文と一致させる）
 PROJECT_KEYS = [
@@ -149,6 +153,55 @@ def _build_road(el):
     }
 
 
+def is_fire_element(el):
+    return el.get("category") == "fire" or any(k in str(el.get("libPart", "")) for k in FIRE_KEYWORDS)
+
+
+def fmt_param(value):
+    """GDL パラメータ値を 1 セル分の文字列に（配列は先頭 DETAIL_ARRAY_MAX 個）。"""
+    if isinstance(value, list):
+        head = ", ".join(fmt_param(v) for v in value[:DETAIL_ARRAY_MAX])
+        more = f" …（全 {len(value)} 個）" if len(value) > DETAIL_ARRAY_MAX else ""
+        return f"[{head}]{more}"
+    if isinstance(value, bool):
+        return "True" if value else "False"
+    if isinstance(value, float):
+        return f"{value:.6g}"
+    return "" if value is None else str(value)
+
+
+def _fire_type(el):
+    """延焼ラインの種類（例: 隣棟間延焼ライン(両側)）。名前に Type を含むパラメータの表示値。"""
+    descs, params = el.get("descs", {}), el.get("params", {})
+    for k, v in descs.items():
+        if "type" in k.lower() and v:
+            return str(v)
+    for k, v in params.items():
+        if "type" in k.lower() and isinstance(v, str) and v:
+            return v
+    return None
+
+
+def _build_fire(el):
+    p = el.get("params", {})
+    if el.get("kind") == "line":                   # 線・ポリライン・円弧で描かれたもの
+        length, points = el.get("length"), el.get("points")
+    else:                                         # GDL オブジェクト: 頂点配列があれば折れ線の長さ
+        xs, ys = _vertices(p)
+        length = sum(_edge_lengths(xs, ys, closed=False)) if len(xs) >= 2 else None
+        points = len(xs) or None
+    return {
+        "guid":   el.get("guid", ""),
+        "name":   el.get("libPart", "") or "---",
+        "story":  el.get("story") or str(el.get("floor", "")),
+        "layer":  el.get("layer", ""),
+        "type":   _fire_type(el),
+        "length": float(length) if isinstance(length, (int, float)) else None,
+        "points": points,
+        "params": [[k, fmt_param(v)] for k, v in p.items()],
+    }
+
+
 def _judge_row(label, allowed, planned, is_ratio):
     """パレットの「項目 / 許容 / 計画 / 判定」1 行。比率は適合判定、面積は差分を出す。"""
     fmt = fmt_percent if is_ratio else fmt_area
@@ -172,6 +225,7 @@ def build_site_summary(payload):
 
     sites = [_build_site(e) for e in elements if e.get("libPart") == SITE_LIBPART]
     roads = [_build_road(e) for e in elements if e.get("libPart") == ROAD_LIBPART]
+    fires = [_build_fire(e) for e in elements if is_fire_element(e)]
 
     computed_area = (sum(s["area"] for s in sites) if sites else None) or None   # 0 は未計算扱い
     site_area = parse_number(project.get("敷地面積の合計")) or computed_area
@@ -212,6 +266,7 @@ def build_site_summary(payload):
     return {
         "sites": sites,
         "roads": roads,
+        "fire_lines": fires,
         "districts": district_rows,
         "totals": totals,
         "check": check,
@@ -232,11 +287,37 @@ def summary_sheets(summary):
     ]
     road_rows = [[r["name"], r["type"] or "---", r["property"] or "---",
                   r["boundaryType"] or "---", round(r["length"], 3)] for r in summary["roads"]]
+    fires = summary.get("fire_lines", [])
     return [
         ("集計結果", ["項目", "許容", "計画", "判定"], summary["check"]),
         ("合計", ["項目", "値"], summary["totals"]),
         ("用途地域", ["用途地域", "面積"], summary["districts"]),
         ("境界線", ["敷地", "No", "長さ(m)", "境界線タイプ"], boundary_rows),
         ("道路", ["道路名", "種別", "道路線", "境界線タイプ", "長さ(m)"], road_rows),
+        ("延焼ライン", FIRE_HEADERS, fire_rows(fires, rounded=True)),
+        ("延焼ライン詳細", FIRE_DETAIL_HEADERS, fire_detail_rows(fires)),
         ("プロジェクト情報", ["項目", "キー", "値"], summary["project_all"]),
     ]
+
+
+FIRE_HEADERS        = ["No", "名前", "フロア", "レイヤ", "種類", "長さ(m)", "頂点数"]
+FIRE_DETAIL_HEADERS = ["No", "名前", "パラメータ", "値"]
+
+
+def fire_rows(fires, rounded=False):
+    """延焼ラインの一覧（画面は単位付き、Excel は数値）。"""
+    rows = []
+    for i, f in enumerate(fires, start=1):
+        length = f["length"]
+        if rounded:
+            length = round(length, 3) if length is not None else "---"
+        else:
+            length = fmt_len(length)
+        rows.append([i, f["name"], f["story"] or "---", f["layer"] or "---", f["type"] or "---",
+                     length, f["points"] if f["points"] is not None else "---"])
+    return rows
+
+
+def fire_detail_rows(fires):
+    """延焼ライン（GDL オブジェクト）のパラメータ一覧。"""
+    return [[i, f["name"], k, v] for i, f in enumerate(fires, start=1) for k, v in f["params"]]

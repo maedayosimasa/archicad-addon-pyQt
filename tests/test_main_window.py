@@ -927,6 +927,21 @@ def test_site_summary_button_and_dialog(main_window, monkeypatch, tmp_path):
     assert path.exists() and "Excel出力" in dlg.info_label.text()
 
 
+def test_site_summary_shows_fire_lines(main_window):
+    from tests.test_site_summary import FIRE_LINE, FIRE_OBJ, payload
+    w = main_window
+    p = payload()
+    p["elements"] = p["elements"] + [FIRE_OBJ, FIRE_LINE]
+    w.on_site_summary(p)
+    dlg = w._site_dlg
+    assert dlg.tbl_fire.rowCount() == 2
+    assert dlg.tbl_fire.item(0, 4).text() == "隣棟間延焼ライン(両側)"
+    assert dlg.tbl_fire.item(1, 5).text() == "12.500m"
+    assert dlg.tbl_fire_detail.rowCount() == len(FIRE_OBJ["params"])
+    assert "延焼ライン 2 件" in dlg.info_label.text()
+    assert "延焼ライン" in [dlg.tabs.tabText(i) for i in range(dlg.tabs.count())]
+
+
 def test_site_summary_without_site_and_missing_totals(main_window):
     w = main_window
     w.on_site_summary({"elements": [], "projectInfo": []})
