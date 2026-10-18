@@ -148,6 +148,16 @@ INPUT_KEYS = [
     "elem:in:baseOffset", "elem:in:topLink", "elem:in:topOffset", "elem:in:sill",
 ]
 SIMPLE_KEYS = SIMPLE_KEYS + INPUT_KEYS
+# 自動計算の列 → その結果の元になる入力元（ダブルクリックで開く「入力元の編集」で強調する）
+COMPUTED_INPUTS = {
+    "elem:W":         ["elem:in:width"],
+    "elem:L":         ["elem:in:length", "elem:in:depth"],
+    "elem:H":         ["elem:in:height", "elem:in:topLink", "elem:in:topOffset"],
+    "elem:elevation": ["elem:in:baseOffset", "elem:in:sill"],
+}
+COMPUTED_BG = "#ECEFF4"   # 自動計算の列（閲覧のみ）
+INPUT_BG    = "#FFF8D6"   # 入力元の列（ここを編集）
+INPUT_HINT  = "単位なしはメートル（600mm・60cm も可）。上部リンクは何階上か（0 = リンクなし）"
 
 # 要素タイプのキー → 条件設定ツリーの表示名（無いものはキーをそのまま表示）
 ELEMENT_TYPE_LABELS = {
@@ -347,6 +357,13 @@ class PropertyTableModel(QAbstractTableModel):
             flag = self._stamp_flags.get(guid, self.STAMP_OK)
             if flag == self.STAMP_STALE:   return QColor("#FFFACD")
             if flag == self.STAMP_UNKNOWN: return QColor("#F0F0F0")
+            # 自動計算の列は青灰、入力できる入力元のセルは薄い黄色（Excel の入力欄の感覚）
+            if col > 0:
+                prop = self._properties[col - 1]
+                if prop["guid"] in COMPUTED_INPUTS:
+                    return QColor(COMPUTED_BG)
+                if prop["guid"] in INPUT_KEYS and self.is_cell_editable(guid, prop):
+                    return QColor(INPUT_BG)
             return None
 
         if role == Qt.ItemDataRole.FontRole:
@@ -364,7 +381,7 @@ class PropertyTableModel(QAbstractTableModel):
                             f"  取得時       : {cf['orig_val']}\n"
                             f"  ArchiCAD現在 : {cf['ac_val']}\n"
                             f"  あなたの編集 : {cf['user_val']}")
-                return None
+                return self.column_hint(prop_guid, guid)
             parts = []
             conf = self._conflicts.get(guid)
             if conf:
@@ -499,9 +516,28 @@ class PropertyTableModel(QAbstractTableModel):
         """表の列番号 → プロパティ定義（ID 列は None）。"""
         return self._properties[col - 1] if 0 < col <= len(self._properties) else None
 
+    def column_hint(self, prop_guid, element_guid=None):
+        """自動計算・入力元の列の説明（セル・見出しのツールチップ）。"""
+        if prop_guid in COMPUTED_INPUTS:
+            return "自動計算の結果（閲覧のみ）\nダブルクリックで、この結果の元になる入力元を編集できます"
+        if prop_guid in INPUT_KEYS:
+            if element_guid is not None and \
+                    str(self._values.get((element_guid, prop_guid), "")) == table_tools.NOT_APPLICABLE:
+                return "この要素タイプには無い入力元です（対象外）"
+            return f"入力元（ここを編集 → 反映後に自動計算の列が更新されます）\n{INPUT_HINT}"
+        return None
+
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
-        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
-            return "ID" if section == 0 else self._properties[section - 1]["name"]
+        if orientation != Qt.Orientation.Horizontal:
+            return None
+        if role == Qt.ItemDataRole.DisplayRole:
+            if section == 0:
+                return "ID"
+            prop = self._properties[section - 1]
+            # 自動計算の列は見出しでも分かるように「＝」を付ける（入力元は「入力 …」）
+            return f"＝{prop['name']}" if prop["guid"] in COMPUTED_INPUTS else prop["name"]
+        if role == Qt.ItemDataRole.ToolTipRole and 0 < section <= len(self._properties):
+            return self.column_hint(self._properties[section - 1]["guid"])
         return None
 
 
@@ -883,6 +919,104 @@ class ReplaceDialog(QDialog):
             if locked:  parts.append(f"編集不可で対象外: {locked}")
             if skipped: parts.append(f"検証でスキップ: {skipped}")
             self.info_label.setText(" / ".join(parts))
+
+
+# ─────────────────────────────────────────────────────────────────────
+# InputSourceDialog  自動計算の結果と、その元になる入力元を並べて編集する
+# ─────────────────────────────────────────────────────────────────────
+
+class InputSourceDialog(QDialog):
+    """1 要素分の「自動計算の結果（閲覧のみ）」と「入力元（編集可）」を並べて表示する。
+
+    computed: [(名前, 値, 強調するか)]
+    fields:   [(プロパティ定義, 現在値, 強調するか)]（対象外は渡さない）
+    閉じた後: action = "apply"（values() を表へ入力） / "goto"（goto_key の列へ移動） / None
+    """
+
+    def __init__(self, title, computed, fields, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("入力元の編集")
+        self.action   = None
+        self._fields  = fields
+        self._edits   = {}
+        self.goto_key = next((p["guid"] for p, _v, rel in fields if rel),
+                             fields[0][0]["guid"] if fields else None)
+        lay = QVBoxLayout(self)
+        head = QLabel(title)
+        head.setStyleSheet("font-weight:bold;")
+        lay.addWidget(head)
+
+        box_c = QGroupBox("自動計算の結果（閲覧のみ・反映後に更新）")
+        box_c.setStyleSheet(GROUP_BOX_STYLE)
+        gc = QVBoxLayout(box_c)
+        for name, value, rel in computed:
+            lbl = QLabel(f"{name}:  {value}")
+            lbl.setStyleSheet(f"background:{COMPUTED_BG}; padding:2px 6px;"
+                              + ("font-weight:bold;" if rel else "color:#555;"))
+            gc.addWidget(lbl)
+        lay.addWidget(box_c)
+
+        box_i = QGroupBox("入力元（ここを変更 → ［反映］で Archicad に送ると自動計算が更新されます）")
+        box_i.setStyleSheet(GROUP_BOX_STYLE)
+        gi = QVBoxLayout(box_i)
+        for prop, value, rel in fields:
+            w = QWidget(); h = QHBoxLayout(w); h.setContentsMargins(0, 0, 0, 0)
+            lbl = QLabel(("▶ " if rel else "　") + prop.get("name", prop["guid"]))
+            lbl.setMinimumWidth(230)
+            if rel:
+                lbl.setStyleSheet("font-weight:bold;")
+            edit = QLineEdit(str(value))
+            edit.setStyleSheet(f"background:{INPUT_BG};" + ("font-weight:bold;" if rel else ""))
+            h.addWidget(lbl); h.addWidget(edit, 1)
+            gi.addWidget(w)
+            self._edits[prop["guid"]] = edit
+        lay.addWidget(box_i)
+        first = self._edits.get(self.goto_key)
+        if first is not None:
+            first.setFocus(); first.selectAll()
+
+        hint = QLabel("▶ はダブルクリックした自動計算の元になる項目。" + INPUT_HINT)
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color:#555;")
+        lay.addWidget(hint)
+        self.error_label = QLabel("")
+        self.error_label.setStyleSheet("color:#C00000;")
+        self.error_label.setWordWrap(True)
+        lay.addWidget(self.error_label)
+
+        btns = QWidget(); bl = QHBoxLayout(btns); bl.setContentsMargins(0, 0, 0, 0)
+        self.btn_apply  = QPushButton("表に入力")
+        self.btn_goto   = QPushButton("表の入力列へ移動")
+        self.btn_cancel = QPushButton("キャンセル")
+        self.btn_apply.setDefault(True)
+        self.btn_apply.clicked.connect(self.on_apply)
+        self.btn_goto.clicked.connect(self.on_goto)
+        self.btn_cancel.clicked.connect(self.reject)
+        bl.addStretch(); bl.addWidget(self.btn_apply); bl.addWidget(self.btn_goto); bl.addWidget(self.btn_cancel)
+        lay.addWidget(btns)
+        self.resize(520, 0)
+
+    def values(self):
+        return {k: e.text() for k, e in self._edits.items()}
+
+    def on_apply(self):
+        errors = []
+        for prop, current, _rel in self._fields:
+            v = self._edits[prop["guid"]].text()
+            if v == str(current):
+                continue
+            ok, reason = table_tools.validate_value(prop, v, current)
+            if not ok:
+                errors.append(reason)
+        if errors:
+            self.error_label.setText("\n".join(errors))
+            return
+        self.action = "apply"
+        self.accept()
+
+    def on_goto(self):
+        self.action = "goto"
+        self.accept()
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -2252,11 +2386,77 @@ class MainWindow(QMainWindow):
         self.table.viewport().update()
 
     def _on_table_double_clicked(self, index):
-        """ダブルクリックで編集を起動（EditTrigger.NoEditTriggers を補完）"""
+        """ダブルクリックで編集を起動（EditTrigger.NoEditTriggers を補完）。
+        自動計算の列は閲覧のみなので、代わりに入力元の編集ダイアログを開く。"""
         if index.column() == 0:
             return
         append_log(f"[DBLCLICK] proxy row={index.row()} col={index.column()}")
+        src  = self.proxy.mapToSource(index)
+        prop = self.model.prop_at(src.column())
+        if prop is not None and prop["guid"] in COMPUTED_INPUTS:
+            self.open_input_sources(src.row(), prop["guid"])
+            return
         self.table.edit(index)
+
+    def open_input_sources_for_current(self):
+        """右クリックメニュー用: 現在のセルの要素で入力元の編集を開く。"""
+        idx = self.table.currentIndex()
+        if not idx.isValid():
+            self.status_label.setText("入力元の編集: 先に要素の行を選んでください")
+            return
+        src  = self.proxy.mapToSource(idx)
+        prop = self.model.prop_at(src.column())
+        self.open_input_sources(src.row(), prop["guid"] if prop else None)
+
+    def open_input_sources(self, row, computed_key=None):
+        """1 要素分の自動計算の結果と入力元をダイアログで表示し、変更を表に入力する（取り消し 1 回分）。"""
+        if not (0 <= row < len(self.model._elements)):
+            return
+        g      = self.model._elements[row]["guid"]
+        props  = self.model._properties
+        col_of = {p["guid"]: i + 1 for i, p in enumerate(props)}
+
+        def val(k):
+            return str(self.model._values.get((g, k), ""))
+
+        inputs = [k for k in INPUT_KEYS if k in col_of]
+        if not inputs:
+            QMessageBox.information(
+                self.data_panel, "入力元の編集",
+                "この表には入力元（「入力 …」）の列がありません。\n"
+                "条件設定の［プロパティ設定］で基本情報の「入力 …」を選んでからデータ取得してください。")
+            return
+        related = COMPUTED_INPUTS.get(computed_key, [])
+        fields  = [(props[col_of[k] - 1], val(k), k in related)
+                   for k in inputs if val(k) != table_tools.NOT_APPLICABLE]
+        if not fields:
+            QMessageBox.information(self.data_panel, "入力元の編集",
+                                    "この要素タイプには、この表で編集できる入力元がありません。")
+            return
+        fields.sort(key=lambda f: not f[2])       # 関係する入力元を上に
+        computed = [(props[col_of[k] - 1]["name"], val(k), k == computed_key)
+                    for k in COMPUTED_INPUTS if k in col_of]
+        parts = [val(k) for k in ("builtin:element_id", "elem:type") if k in col_of and val(k)]
+        title = "要素: " + (" / ".join(parts) if parts else g[:8])
+
+        dlg = InputSourceDialog(title, computed, fields, self.data_panel)
+        dlg.exec()
+        if dlg.action == "goto":
+            self.goto_cell(row, col_of[dlg.goto_key])
+        elif dlg.action == "apply":
+            targets = [(row, col_of[k], v) for k, v in dlg.values().items()]
+            self._apply_source_edits(targets, "入力元の編集")
+
+    def goto_cell(self, row, col):
+        """表のセル（ソース行・列）を選択して見える位置までスクロールする。"""
+        idx = self.proxy.mapFromSource(self.model.index(row, col))
+        if not idx.isValid():
+            self.status_label.setText("移動先の行は検索・フィルタで非表示になっています")
+            return False
+        self.table.setCurrentIndex(idx)
+        self.table.scrollTo(idx, QAbstractItemView.ScrollHint.PositionAtCenter)
+        self.table.setFocus()
+        return True
 
     # ── テーブルクリック・ArchiCAD 選択連動 ─────────────────────────
 
@@ -2468,6 +2668,8 @@ class MainWindow(QMainWindow):
                            ("選択セルに一括入力...", self.bulk_input),
                            ("検索と置換...\tCtrl+H", self.show_replace_dialog)):
             menu.addAction(text).triggered.connect(slot)
+        menu.addSeparator()
+        menu.addAction("入力元を編集（自動計算の元）...").triggered.connect(self.open_input_sources_for_current)
         menu.addSeparator()
         menu.addAction("並び替え解除").triggered.connect(self.clear_sort)
         menu.exec(self.table.viewport().mapToGlobal(pos))

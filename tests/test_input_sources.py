@@ -201,3 +201,121 @@ def test_refresh_ignores_unknown_elements_and_db_error(loaded, monkeypatch):
     ]})
     assert ("OTHER", "elem:H") not in w.model._values
     assert w.model._values[(GS, "elem:H")] == "0.250"
+
+
+# ── 自動計算と入力元の見分け・入力元の編集ダイアログ ─────────────────
+
+def test_header_and_colors_distinguish_computed_and_input(loaded):
+    m = loaded.model
+    _, ch = _cell(loaded, GW, "elem:H")
+    _, ci = _cell(loaded, GW, "elem:in:height")
+    assert m.headerData(ch, Qt.Orientation.Horizontal) == "＝高さ H (m)"
+    assert m.headerData(ci, Qt.Orientation.Horizontal) == "入力 高さ"
+    assert "自動計算" in m.headerData(ch, Qt.Orientation.Horizontal, Qt.ItemDataRole.ToolTipRole)
+    assert "入力元" in m.headerData(ci, Qt.Orientation.Horizontal, Qt.ItemDataRole.ToolTipRole)
+    assert m.headerData(0, Qt.Orientation.Vertical) is None
+    m._stamp_flags = {GW: m.STAMP_OK, GS: m.STAMP_OK}
+    bg = lambda g, pg: m.data(m.index(*_cell(loaded, g, pg)), Qt.ItemDataRole.BackgroundRole)
+    assert bg(GW, "elem:H").name().upper() == server.COMPUTED_BG
+    assert bg(GW, "elem:in:height").name().upper() == server.INPUT_BG
+    assert bg(GS, "elem:in:length") is None                 # 対象外は色なし（灰色文字）
+    tip = lambda g, pg: m.data(m.index(*_cell(loaded, g, pg)), Qt.ItemDataRole.ToolTipRole)
+    assert "ダブルクリック" in tip(GW, "elem:H")
+    assert "対象外" in tip(GS, "elem:in:length")
+    assert "単位なしはメートル" in tip(GW, "elem:in:height")
+
+
+def _stub_dialog(monkeypatch, action, values=None, seen=None):
+    def fake_exec(dlg):
+        if seen is not None:
+            seen.append(dlg)
+        for k, v in (values or {}).items():
+            dlg._edits[k].setText(v)
+        if action == "apply":
+            dlg.on_apply()
+        elif action == "goto":
+            dlg.on_goto()
+        return 0
+    monkeypatch.setattr(server.InputSourceDialog, "exec", fake_exec)
+
+
+def test_double_click_computed_opens_dialog_and_applies(loaded, monkeypatch):
+    w = loaded
+    seen = []
+    _stub_dialog(monkeypatch, "apply", {"elem:in:height": "2500mm"}, seen)
+    edited = []
+    monkeypatch.setattr(w.table, "edit", lambda idx: edited.append(idx))
+    r, c = _cell(w, GW, "elem:H")
+    w._on_table_double_clicked(w.proxy.mapFromSource(w.model.index(r, c)))
+    assert not edited                                       # 閲覧のみの列は直接編集しない
+    dlg = seen[0]
+    assert list(dlg._edits)[0] == "elem:in:height"          # 関係する入力元が先頭
+    assert dlg.goto_key == "elem:in:height"
+    assert w.model._values[(GW, "elem:in:height")] == "2.500"
+    assert w.undo_stack.count() == 1
+
+
+def test_dialog_skips_not_applicable_inputs(loaded, monkeypatch):
+    seen = []
+    _stub_dialog(monkeypatch, None, seen=seen)
+    r, _ = _cell(loaded, GS, "elem:H")
+    loaded.open_input_sources(r, "elem:H")
+    assert set(seen[0]._edits) == {"elem:in:height"}        # スラブ: 長さ・上部リンクは対象外
+
+
+def test_dialog_invalid_value_stays_open(loaded, monkeypatch):
+    seen = []
+    _stub_dialog(monkeypatch, "apply", {"elem:in:height": "高い"}, seen)
+    r, _ = _cell(loaded, GW, "elem:H")
+    loaded.open_input_sources(r, "elem:H")
+    assert seen[0].action is None and "解釈できません" in seen[0].error_label.text()
+    assert loaded.model._values[(GW, "elem:in:height")] == "3.000"
+
+
+def test_dialog_goto_moves_to_input_column(loaded, monkeypatch):
+    w = loaded
+    _stub_dialog(monkeypatch, "goto")
+    r, _ = _cell(w, GW, "elem:H")
+    w.open_input_sources(r, "elem:H")
+    cur = w.proxy.mapToSource(w.table.currentIndex())
+    assert (cur.row(), cur.column()) == _cell(w, GW, "elem:in:height")
+
+
+def test_goto_cell_hidden_by_filter(loaded, monkeypatch):
+    from PyQt6.QtCore import QModelIndex
+    w = loaded
+    monkeypatch.setattr(w.proxy, "mapFromSource", lambda idx: QModelIndex())   # フィルタで非表示
+    assert not w.goto_cell(0, 1)
+    assert "非表示" in w.status_label.text()
+
+
+def test_dialog_without_input_columns(main_window):
+    w = main_window
+    w.current_condition_id = w.db.save_condition([0], {"Wall": True})
+    w.current_elements = [ELEMS[0]]
+    w.current_props = [PROPS[0]]
+    w.on_values(_payload())
+    w.open_input_sources(0, "elem:H")
+    assert w.msgbox.kinds()[-1] == "information"
+    assert "入力元" in w.msgbox.calls[-1][2]
+    w.open_input_sources(99)                                # 範囲外は何もしない
+
+
+def test_dialog_when_all_inputs_not_applicable(loaded):
+    for k in ("elem:in:height",):
+        loaded.model._values[(GS, k)] = NA
+    r, _ = _cell(loaded, GS, "elem:H")
+    loaded.open_input_sources(r, "elem:H")
+    assert "編集できる入力元がありません" in loaded.msgbox.calls[-1][2]
+
+
+def test_context_menu_entry_opens_for_current_cell(loaded, monkeypatch):
+    w = loaded
+    calls = []
+    monkeypatch.setattr(w, "open_input_sources", lambda row, key=None: calls.append((row, key)))
+    w.open_input_sources_for_current()                      # 未選択
+    assert not calls and "行を選んで" in w.status_label.text()
+    r, c = _cell(w, GW, "elem:in:length")
+    w.table.setCurrentIndex(w.proxy.mapFromSource(w.model.index(r, c)))
+    w.open_input_sources_for_current()
+    assert calls == [(r, "elem:in:length")]

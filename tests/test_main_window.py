@@ -1073,7 +1073,8 @@ def test_simple_mode_values_display(main_window):
         "elem:classification": "Archicad分類: 壁 壁"}}]})
     m = w.model
     assert [m.headerData(c, Qt.Orientation.Horizontal) for c in range(m.columnCount())] == [
-        "ID", "ID", "要素タイプ", "レイヤ名", "幅 W (m)", "長さ L (m)", "高さ H (m)", "レベル 底面 (m)", "フロア", "分類"]
+        "ID", "ID", "要素タイプ", "レイヤ名", "＝幅 W (m)", "＝長さ L (m)", "＝高さ H (m)", "＝レベル 底面 (m)",
+        "フロア", "分類"]
     assert m.index(0, 4).data() == "0.200" and m.index(0, 9).data() == "Archicad分類: 壁 壁"
     # 基本情報は閲覧のみ
     assert not (m.flags(m.index(0, 4)) & Qt.ItemFlag.ItemIsEditable)
