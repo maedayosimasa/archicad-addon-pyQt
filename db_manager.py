@@ -1,10 +1,14 @@
 import sqlite3
+import sys
 import json
 import threading
 from pathlib import Path
 from datetime import datetime
 
-DB_PATH = Path(__file__).resolve().parent / "bim_manager.db"
+# 配布用の server.exe（PyInstaller）では exe のあるフォルダ、開発時はこのファイルのフォルダに保存
+_APP_DIR = (Path(sys.executable).resolve().parent if getattr(sys, "frozen", False)
+            else Path(__file__).resolve().parent)
+DB_PATH = _APP_DIR / "bim_manager.db"
 
 
 class DbManager:

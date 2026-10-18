@@ -31,12 +31,31 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
+// --- 実行環境: PyQt サーバーとデータファイル（XML・ログ・DB）のあるフォルダ ---
+// 配布版: アドオン(.apx) と同じフォルダ（または親フォルダ）の BIMServer\server.exe
+// 開発版: 親フォルダをたどって見つかった server.py（python で起動）
+static std::wstring g_serverDir;   // 末尾は '\'。見つからなければ空
+static std::wstring g_serverExe;   // 配布版の server.exe（開発版では空）
+static std::wstring g_serverPy;    // 開発版の server.py（配布版では空）
+
+static bool FileExistsW(const std::wstring& path) {
+    const DWORD a = GetFileAttributesW(path.c_str());
+    return a != INVALID_FILE_ATTRIBUTES && !(a & FILE_ATTRIBUTE_DIRECTORY);
+}
+
+static std::wstring LogFilePath() {
+    if (!g_serverDir.empty()) return g_serverDir + L"server_log.txt";
+    wchar_t tmp[MAX_PATH] = {};
+    const DWORD n = GetTempPathW(MAX_PATH, tmp);
+    return (n > 0 ? std::wstring(tmp) : std::wstring(L".\\")) + L"maedaAddOnPyqt_log.txt";
+}
+
 // --- [DEBUG]: 外部ログ出力関数の実装 ---
 void WriteExternalLog(const std::string& message) {
     static std::mutex logMutex;
     std::lock_guard<std::mutex> lock(logMutex);
     try {
-        std::ofstream logFile("C:\\AC28_AddOnProject\\archicad-addon-pyQt\\server_log.txt", std::ios_base::app);
+        std::ofstream logFile(LogFilePath(), std::ios_base::app);
         if (logFile.is_open()) {
             auto now = std::chrono::system_clock::now();
             auto in_time_t = std::chrono::system_clock::to_time_t(now);
@@ -2422,23 +2441,32 @@ static std::string WstrToLogStr(const std::wstring& ws) {
     return s;
 }
 
-static std::wstring FindProjectDirW() {
+// アドオンの場所から親フォルダを最大 6 階層たどり、BIMServer\server.exe（配布版）か
+// server.py（開発版）を探す。見つかったフォルダに XML・ログ・DB を置く
+static void ResolveServerLocation() {
     IO::Location loc;
-    if (ACAPI_GetOwnLocation(&loc) != NoError) return L"";
+    if (ACAPI_GetOwnLocation(&loc) != NoError) return;
     for (int i = 0; i < 6; i++) {
         loc.DeleteLastLocalName();
-        IO::Location t = loc;
-        t.AppendToLocal(IO::Name("server.py"));
-        bool ex = false;
-        if (IO::fileSystem.Contains(t, &ex) == NoError && ex) {
-            GS::UniString p;
-            loc.ToPath(&p);
-            std::wstring ws((const wchar_t*)p.ToUStr().Get());
-            if (!ws.empty() && ws.back() != L'\\' && ws.back() != L'/') ws += L'\\';
-            return ws;
+        GS::UniString p;
+        loc.ToPath(&p);
+        std::wstring dir((const wchar_t*)p.ToUStr().Get());
+        if (dir.empty()) break;
+        if (dir.back() != L'\\' && dir.back() != L'/') dir += L'\\';
+        if (FileExistsW(dir + L"BIMServer\\server.exe")) {
+            g_serverDir = dir + L"BIMServer\\"; g_serverExe = g_serverDir + L"server.exe"; g_serverPy.clear();
+            return;
+        }
+        if (FileExistsW(dir + L"server.py")) {
+            g_serverDir = dir; g_serverPy = dir + L"server.py"; g_serverExe.clear();
+            return;
         }
     }
-    return L"";
+}
+
+static std::wstring FindProjectDirW() {
+    if (g_serverDir.empty()) ResolveServerLocation();
+    return g_serverDir;
 }
 
 static bool ReadFileToUniString(const std::wstring& wpath, GS::UniString& out) {
@@ -2919,7 +2947,7 @@ void StartCommandListener() {
     stopListener = false;
     listenerThread = std::thread([]() {
         listenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP); if (listenSocket == INVALID_SOCKET) return;
-        sockaddr_in svc{}; svc.sin_family = AF_INET; svc.sin_addr.s_addr = INADDR_ANY; svc.sin_port = htons(5001);
+        sockaddr_in svc{}; svc.sin_family = AF_INET; svc.sin_addr.s_addr = htonl(INADDR_LOOPBACK); svc.sin_port = htons(5001);   // PC 内部のみ（外部から接続させない）
         if (bind(listenSocket, (SOCKADDR*)&svc, sizeof(svc)) == SOCKET_ERROR) { closesocket(listenSocket); listenSocket = INVALID_SOCKET; return; }
         listen(listenSocket, 5); WriteExternalLog("Command listener started on port 5001");
         while (!stopListener) {
@@ -2965,15 +2993,18 @@ void StartCommandListener() {
 
 void StartPythonServer() {
     if (serverProcessHandle) { DWORD e; if (GetExitCodeProcess(serverProcessHandle, &e) && e == STILL_ACTIVE) return; CloseHandle(serverProcessHandle); serverProcessHandle = NULL; }
-    IO::Location loc; if (ACAPI_GetOwnLocation(&loc) == NoError) {
-        for (int i = 0; i < 5; i++) {
-            loc.DeleteLastLocalName(); IO::Location t = loc; t.AppendToLocal(IO::Name("server.py"));
-            bool ex; if (IO::fileSystem.Contains(t, &ex) == NoError && ex) {
-                GS::UniString p; t.ToPath(&p); std::wstring c = L"python \"" + std::wstring((const wchar_t*)p.ToUStr().Get()) + L"\"";
-                STARTUPINFO si = {sizeof(si)}; PROCESS_INFORMATION pi;
-                if (CreateProcess(NULL, (wchar_t*)c.data(), NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) { serverProcessHandle = pi.hProcess; CloseHandle(pi.hThread); WriteExternalLog("Started Python server process"); break; }
-            }
-        }
+    if (g_serverDir.empty()) ResolveServerLocation();
+    std::wstring cmd;
+    if (!g_serverExe.empty())     cmd = L"\"" + g_serverExe + L"\"";            // 配布版（Python 不要）
+    else if (!g_serverPy.empty()) cmd = L"python \"" + g_serverPy + L"\"";     // 開発版（PATH 上の python）
+    else { WriteExternalLog("StartPythonServer: server.exe / server.py not found"); return; }
+    STARTUPINFOW si = {sizeof(si)}; PROCESS_INFORMATION pi = {};
+    if (CreateProcessW(NULL, (wchar_t*)cmd.data(), NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL,
+                       g_serverDir.c_str(), &si, &pi)) {
+        serverProcessHandle = pi.hProcess; CloseHandle(pi.hThread);
+        WriteExternalLog(std::string("Started ") + (g_serverExe.empty() ? "python server.py" : "server.exe"));
+    } else {
+        WriteExternalLog("StartPythonServer: CreateProcess failed err=" + std::to_string(GetLastError()));
     }
 }
 
@@ -2996,7 +3027,7 @@ extern "C" {
     API_AddonType CheckEnvironment(API_EnvirParams* envir) { RSGetIndString(&envir->addOnInfo.name, AddOnInfoID, 1, ACAPI_GetOwnResModule()); RSGetIndString(&envir->addOnInfo.description, AddOnInfoID, 2, ACAPI_GetOwnResModule()); return APIAddon_Normal; }
     GSErrCode RegisterInterface(void) { GSErrCode err = ACAPI_MenuItem_RegisterMenu(AddOnMenuID, 0, MenuCode_UserDef, MenuFlag_Default); if (err == NoError) err = ACAPI_AddOnAddOnCommunication_RegisterSupportedService(EventLoopDispatcherCmdID, EventLoopDispatcherCmdVersion); return err; }
     GSErrCode Initialize(void) {
-        WSAData wsa; WSAStartup(MAKEWORD(2,2), &wsa); ACAPI_KeepInMemory(true); stopSender = false; senderThread = std::thread(SenderLoop); LogLoadedAddOnBinary(); StartCommandListener(); StartPythonServer();
+        WSAData wsa; WSAStartup(MAKEWORD(2,2), &wsa); ACAPI_KeepInMemory(true); ResolveServerLocation(); stopSender = false; senderThread = std::thread(SenderLoop); LogLoadedAddOnBinary(); StartCommandListener(); StartPythonServer();
         GSErrCode err = ACAPI_MenuItem_InstallMenuHandler(AddOnMenuID, MenuCommandHandler);
         if (err == NoError) err = ACAPI_AddOnIntegration_InstallModulCommandHandler(EventLoopDispatcherCmdID, EventLoopDispatcherCmdVersion, EventLoopCommandHandler);
         ACAPI_Notification_CatchSelectionChange(OnSelectionChanged);

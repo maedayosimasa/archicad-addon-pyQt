@@ -10,8 +10,11 @@ from collections import deque
 from pathlib import Path
 
 # ── ロギングをインポート前に有効化（クラッシュ原因を必ず記録する）────────────
+# 配布用の server.exe（PyInstaller）では exe のあるフォルダ、開発時は server.py のフォルダを基準にする
+APP_DIR = (Path(sys.executable).resolve().parent if getattr(sys, "frozen", False)
+           else Path(__file__).resolve().parent)
 # BIM_LOG_DIR 環境変数でログ出力先を差し替え可能（テスト時に本番ログを汚さないため）
-_LOG_DIR       = Path(os.environ.get("BIM_LOG_DIR") or Path(__file__).resolve().parent)
+_LOG_DIR       = Path(os.environ.get("BIM_LOG_DIR") or APP_DIR)
 LOG_PATH       = _LOG_DIR / "server_log.txt"
 FAULT_LOG_PATH = _LOG_DIR / "fault_log.txt"
 # ウィンドウの大きさ・位置を次回起動時に復元するための保存先
@@ -1469,7 +1472,7 @@ class MainWindow(QMainWindow):
         self._start_floor_polling()
 
         # dialog_order.json
-        _order_file = Path(__file__).resolve().parent / "dialog_order.json"
+        _order_file = APP_DIR / "dialog_order.json"
         try:
             with _order_file.open(encoding="utf-8") as _f:
                 _order_cfg = json.load(_f)
