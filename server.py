@@ -482,6 +482,7 @@ class CommunicationSignals(QObject):
     selection_changed            = pyqtSignal(dict)
     site_summary_received        = pyqtSignal(dict)
     schedule_resolved_received   = pyqtSignal(dict)
+    project_info_result_received = pyqtSignal(dict)
     show_window                  = pyqtSignal()
     error_occurred               = pyqtSignal(str)
 
@@ -564,6 +565,7 @@ class TcpServerThread(threading.Thread):
                     elif t == "current_floor":        self.signals.current_floor_received.emit(payload)
                     elif t == "site_summary":         self.signals.site_summary_received.emit(payload)
                     elif t == "schedule_resolved":    self.signals.schedule_resolved_received.emit(payload)
+                    elif t == "project_info_result":  self.signals.project_info_result_received.emit(payload)
                     else:
                         append_log(f"[UNKNOWN TYPE] {t}")
                 except Exception as e:
@@ -884,11 +886,16 @@ class SiteSummaryDialog(QDialog):
         btns = QWidget(); bl = QHBoxLayout(btns); bl.setContentsMargins(0, 0, 0, 0)
         self.btn_refresh = QPushButton("再取得")
         self.btn_export  = QPushButton("Excel出力")
+        self.btn_import  = QPushButton("Excel取込（プロジェクト情報）")
+        self.btn_import.setToolTip("出力した Excel の「プロジェクト情報」シートで編集した値を Archicad に書き込みます")
         self.btn_close   = QPushButton("閉じる")
         self.btn_refresh.clicked.connect(self._win.request_site_summary)
         self.btn_export.clicked.connect(self.export_excel)
+        self.btn_import.clicked.connect(self.import_excel)
         self.btn_close.clicked.connect(self.close)
-        bl.addStretch(); bl.addWidget(self.btn_refresh); bl.addWidget(self.btn_export); bl.addWidget(self.btn_close)
+        bl.addStretch()
+        for btn in (self.btn_refresh, self.btn_export, self.btn_import, self.btn_close):
+            bl.addWidget(btn)
         lay.addWidget(btns)
 
     @staticmethod
@@ -935,16 +942,66 @@ class SiteSummaryDialog(QDialog):
     def export_excel(self):
         if not self._summary:
             return
-        path, _ = QFileDialog.getSaveFileName(self, "Excel出力", "敷地情報.xlsx", "Excel ファイル (*.xlsx)")
+        path = self._win.excel_save_path(self, "Excel出力", "敷地情報")
+        if not path:
+            return
+        sheets = site_summary.summary_sheets(self._summary)
+        try:
+            table_tools.export_sheets(path, sheets)
+            check = table_tools.read_sheet(path, sheets[-1][0])   # 書いたファイルを読み直して確認
+        except Exception as e:
+            append_log(f"[SITE EXPORT ERROR] {e}\n{traceback.format_exc()}")
+            QMessageBox.warning(self, "Excel出力", self._win.excel_error_text(e, writing=True))
+            return
+        if len(check) - 1 != len(sheets[-1][2]):
+            QMessageBox.warning(self, "Excel出力", f"書き出した内容を確認できませんでした。\n{path}")
+            return
+        self.info_label.setText(self.info_label.text() + f"\nExcel出力: {path}")
+        QMessageBox.information(self, "Excel出力",
+                                f"{len(sheets)} シートを書き出しました。\n{path}\n\n"
+                                "「プロジェクト情報」シートの値を編集すると、［Excel取込］で Archicad に反映できます。")
+
+    def import_excel(self):
+        """「プロジェクト情報」シートの値のうち、現在と違うものを確認後に Archicad へ書き込む。"""
+        if not self._summary:
+            return
+        path = self._win.excel_open_path(self, "Excel取込（プロジェクト情報）")
         if not path:
             return
         try:
-            table_tools.export_sheets(path, site_summary.summary_sheets(self._summary))
+            rows = table_tools.read_sheet(path, "プロジェクト情報")
         except Exception as e:
-            append_log(f"[SITE EXPORT ERROR] {e}\n{traceback.format_exc()}")
-            QMessageBox.warning(self, "Excel出力", f"書き出しに失敗しました:\n{e}")
+            append_log(f"[SITE IMPORT ERROR] {e}\n{traceback.format_exc()}")
+            QMessageBox.warning(self, "Excel取込", self._win.excel_error_text(e, writing=False)
+                                if isinstance(e, PermissionError) else f"読み込みに失敗しました:\n{e}")
             return
-        self.info_label.setText(self.info_label.text() + f"\nExcel出力: {path}")
+        current = {k: (d, v) for d, k, v in self._summary["project_all"]}
+        changes, unknown = [], []
+        for row in rows[1:]:
+            if len(row) < 3 or not row[1]:
+                continue
+            desc, key, value = row[0], row[1], row[2]
+            if key not in current:
+                unknown.append(desc or key)
+                continue
+            if not table_tools.values_equal(current[key][1], value):
+                changes.append({"key": key, "desc": current[key][0] or desc, "old": current[key][1], "new": value})
+        note = f"\n\nプロジェクト情報に無い項目（無視）: {', '.join(unknown[:5])}" if unknown else ""
+        if not changes:
+            QMessageBox.information(self, "Excel取込", "プロジェクト情報に変更はありませんでした。" + note)
+            return
+        lines = "\n".join(f"  {c['desc']}: {c['old'] or '（空）'} → {c['new'] or '（空）'}" for c in changes[:15])
+        more = f"\n  … 他 {len(changes) - 15} 件" if len(changes) > 15 else ""
+        if QMessageBox.question(
+                self, "プロジェクト情報の更新",
+                f"Archicad のプロジェクト情報を {len(changes)} 件更新します（Archicad の取り消しで戻せます）。\n"
+                f"{lines}{more}{note}\n\n更新しますか？",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        ) != QMessageBox.StandardButton.Yes:
+            self.info_label.setText(self.info_label.text() + "\nExcel取込: 中止しました")
+            return
+        self._win.set_project_info(changes)
+        self.info_label.setText(self.info_label.text() + f"\nプロジェクト情報を {len(changes)} 件更新中...")
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -1100,6 +1157,13 @@ class DataPanel(QWidget):
         self.closed.emit(self)
 
 
+# 条件設定ウィンドウのグループ枠（① 条件を指定して取得 / ② 別の方法で取得）
+GROUP_BOX_STYLE = (
+    "QGroupBox { font-weight: bold; color: #1a5276; border: 1px solid #9FB0C2; border-radius: 4px;"
+    " margin-top: 10px; padding-top: 6px; }"
+    "QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 4px; }"
+)
+
 # データ表示・編集の表の見た目（Excel 風）
 TABLE_HEADER_COLOR    = "#D6E0EB"   # タイトル行（列見出し）: 少し濃い青灰色
 TABLE_ALTERNATE_COLOR = "#EEF3F8"   # 1 行おきの縞模様: ごく薄い青灰色
@@ -1186,6 +1250,7 @@ class MainWindow(QMainWindow):
         self.signals.current_floor_received.connect(self.on_current_floor)
         self.signals.site_summary_received.connect(self.on_site_summary)
         self.signals.schedule_resolved_received.connect(self.on_schedule_resolved)
+        self.signals.project_info_result_received.connect(self.on_project_info_result)
         self._schedule_jobs = {}     # reqId -> 一覧表の取得ジョブ（列の解決 → 要素 → 値）
         self._schedule_dlg  = None
         self._site_dlg = None
@@ -1591,8 +1656,6 @@ class MainWindow(QMainWindow):
         se_lay.addWidget(lbl_extract)
         se_lay.addWidget(self.filter_tree)
         se_lay.addWidget(self.btn_search)
-        se_lay.addWidget(self.btn_site_summary)
-        se_lay.addWidget(self.btn_schedules)
 
         # ── 右半分：プロパティ設定 ──
         sect_prop = QWidget()
@@ -1624,7 +1687,23 @@ class MainWindow(QMainWindow):
         h_split.addWidget(sect_extract)
         h_split.addWidget(sect_prop)
         h_split.setSizes([1, 1])   # 等分で初期表示
-        c_lay.addWidget(h_split)
+
+        # ── グループ①: 条件を指定して取得（要素抽出 → プロパティ設定 → データ取得）──
+        self.grp_condition = QGroupBox("① 条件を指定して取得　（階・要素タイプ → 要素を抽出 → プロパティ → データ取得）")
+        self.grp_condition.setStyleSheet(GROUP_BOX_STYLE)
+        g1 = QVBoxLayout(self.grp_condition)
+        g1.setContentsMargins(6, 6, 6, 6)
+        g1.addWidget(h_split)
+        c_lay.addWidget(self.grp_condition, 1)
+
+        # ── グループ②: 別の方法で取得（条件設定とは独立して使える）──
+        self.grp_other = QGroupBox("② 別の方法で取得　（上の条件設定とは関係なく使えます）")
+        self.grp_other.setStyleSheet(GROUP_BOX_STYLE)
+        g2 = QHBoxLayout(self.grp_other)
+        g2.setContentsMargins(6, 6, 6, 6)
+        g2.addWidget(self.btn_site_summary, 1)
+        g2.addWidget(self.btn_schedules, 1)
+        c_lay.addWidget(self.grp_other, 0)
 
         # 条件設定パネル下部：データ取得状態ラベル（1行・固定高さ）
         self.condition_status_label = QLabel("待機中")
@@ -2245,7 +2324,7 @@ class MainWindow(QMainWindow):
                 src.append((si.row(), si.column(), v))
         return self._apply_source_edits(src, label)
 
-    def _apply_source_edits(self, targets, label):
+    def _apply_source_edits(self, targets, label, warn=True):
         """PropertyDefinition（editable / enums）で検証し、変更のあるセルだけを
         1 回の Undo 操作としてまとめて反映する。戻り値: (変更セル数, スキップ理由リスト)。"""
         valid, skipped = [], []
@@ -2275,7 +2354,7 @@ class MainWindow(QMainWindow):
         if skipped:
             msg += f" / {len(skipped)} セルはスキップ"
         self.status_label.setText(msg)
-        if skipped:
+        if skipped and warn:
             uniq = list(dict.fromkeys(skipped))
             more = f"\n… 他 {len(uniq) - 10} 種類" if len(uniq) > 10 else ""
             QMessageBox.warning(self.data_panel, f"{label} - スキップしたセル",
@@ -2345,6 +2424,28 @@ class MainWindow(QMainWindow):
         self._site_dlg.show()
         self._site_dlg.raise_()
         append_log(f"[SITE SUMMARY] sites={len(summary['sites'])} roads={len(summary['roads'])}")
+
+    # ── プロジェクト情報の更新（敷地情報の Excel 取込）──────────────────
+
+    def set_project_info(self, changes):
+        """changes: [{"key", "new", ...}]。キー・値は 16 進（UTF-8）で送る（任意の文字を安全に渡すため）。"""
+        self.send_to_ac_async({
+            "command":   "set_project_info",
+            "keysHex":   [schedules.to_hex(c["key"]) for c in changes],
+            "valuesHex": [schedules.to_hex(str(c["new"])) for c in changes],
+        })
+        append_log(f"[PROJECT INFO] update {len(changes)} items")
+
+    def on_project_info_result(self, data):
+        ok, failed = data.get("set", 0), data.get("failed", [])
+        parent = self._site_dlg if self._site_dlg is not None else self
+        if failed:
+            QMessageBox.warning(parent, "プロジェクト情報の更新",
+                                f"{ok} 件を更新しました。\n更新できなかった項目（Archicad が変更を許可しない項目など）:\n  "
+                                + "\n  ".join(failed[:10]))
+        else:
+            QMessageBox.information(parent, "プロジェクト情報の更新", f"{ok} 件を Archicad に書き込みました。")
+        self.request_site_summary()   # 最新の値で敷地情報を表示し直す
 
     # ── 連動一覧表から取得（列の解決 → 要素 → 値 → 条件で絞り込み → 表示）────
 
@@ -2576,13 +2677,43 @@ class MainWindow(QMainWindow):
 
     # ── Excel 入出力 ─────────────────────────────────────────────────
 
+    # ── Excel 共通（保存先の記憶・エラーの分かりやすい表示）──────────────
+
+    def excel_save_path(self, parent, title, default_name):
+        """保存先を選ぶ。既定名はウィンドウ名から作り、前回のフォルダを開く。キャンセルは None。"""
+        s = self._settings()
+        start = os.path.join(s.value("excel/last_dir", "") or "", table_tools.safe_file_name(default_name))
+        path, _ = QFileDialog.getSaveFileName(parent, title, start, "Excel ファイル (*.xlsx)")
+        if not path:
+            return None
+        if not path.lower().endswith(".xlsx"):
+            path += ".xlsx"
+        s.setValue("excel/last_dir", os.path.dirname(path))
+        return path
+
+    def excel_open_path(self, parent, title):
+        s = self._settings()
+        path, _ = QFileDialog.getOpenFileName(parent, title, s.value("excel/last_dir", "") or "",
+                                              "Excel ファイル (*.xlsx)")
+        if not path:
+            return None
+        s.setValue("excel/last_dir", os.path.dirname(path))
+        return path
+
+    @staticmethod
+    def excel_error_text(e, writing):
+        if isinstance(e, PermissionError):
+            return ("ファイルが Excel などで開かれているため" + ("書き込めません" if writing else "読み込めません")
+                    + "。\nExcel でそのファイルを閉じてから、もう一度実行してください。")
+        return f"{'書き出し' if writing else '読み込み'}に失敗しました:\n{e}"
+
     def export_excel(self):
         """表示中（検索・フィルタ・並び替え後）の行を .xlsx に書き出す。未反映の変更は赤塗り。"""
         if not self.model._elements:
             QMessageBox.information(self.data_panel, "Excel出力", "出力するデータがありません。")
             return
-        path, _ = QFileDialog.getSaveFileName(
-            self.data_panel, "Excel出力", "BIMデータ.xlsx", "Excel ファイル (*.xlsx)")
+        path = self.excel_save_path(self.data_panel, "Excel出力",
+                                    self.data_panel.windowTitle().split("  (")[0] or "BIMデータ")
         if not path:
             return
         props = self.model._properties
@@ -2594,53 +2725,88 @@ class MainWindow(QMainWindow):
                    if str(v) != str(self.model._original_values.get(k))}
         try:
             table_tools.export_xlsx(path, props, rows, changed)
+            written = table_tools.count_data_rows(path)   # 書いたファイルを読み直して確認
         except Exception as e:
             append_log(f"[EXCEL EXPORT ERROR] {e}\n{traceback.format_exc()}")
-            QMessageBox.warning(self.data_panel, "Excel出力", f"書き出しに失敗しました:\n{e}")
+            QMessageBox.warning(self.data_panel, "Excel出力", self.excel_error_text(e, writing=True))
             return
-        self.status_label.setText(f"Excel出力: {len(rows)} 行 → {path}")
+        if written != len(rows):
+            QMessageBox.warning(self.data_panel, "Excel出力",
+                                f"書き出した行数が一致しません（表示 {len(rows)} 行 / ファイル {written} 行）。\n{path}")
+            return
+        hidden = len(self.model._elements) - len(rows)
+        note = f"（検索・フィルタで非表示の {hidden} 行は出力していません）" if hidden else ""
+        self.status_label.setText(f"Excel出力: {len(rows)} 行 × {len(props)} 列 → {path}")
+        QMessageBox.information(self.data_panel, "Excel出力",
+                                f"{len(rows)} 行 × {len(props)} 列を書き出しました。{note}\n{path}\n\n"
+                                "編集後は［Excel取込］で読み込めます（GUID 列と見出しはそのままにしてください）。")
         append_log(f"[EXCEL EXPORT] {len(rows)} rows -> {path}")
 
     def import_excel(self):
-        """Excel で編集した .xlsx を読み込み、現在の表と値が違うセルだけを反映する（Undo 可）。
+        """Excel で編集した .xlsx を読み込み、現在の表と値が違うセルだけを確認後に反映する（Undo 可）。
 
         ArchiCAD への反映は従来どおり [Archicadへ反映] で行う（ここでは表を変更するだけ）。
         """
         if not self.model._elements:
             QMessageBox.information(self.data_panel, "Excel取込", "先に [データ取得] で表を表示してください。")
             return
-        path, _ = QFileDialog.getOpenFileName(
-            self.data_panel, "Excel取込", "", "Excel ファイル (*.xlsx)")
+        path = self.excel_open_path(self.data_panel, "Excel取込")
         if not path:
             return
         try:
             values, unknown_headers = table_tools.read_xlsx(path, self.model._properties)
         except Exception as e:
             append_log(f"[EXCEL IMPORT ERROR] {e}\n{traceback.format_exc()}")
-            QMessageBox.warning(self.data_panel, "Excel取込", f"読み込みに失敗しました:\n{e}")
+            QMessageBox.warning(self.data_panel, "Excel取込", self.excel_error_text(e, writing=False))
             return
 
         row_of = {e["guid"]: i for i, e in enumerate(self.model._elements)}
         col_of = {p["guid"]: i + 1 for i, p in enumerate(self.model._properties)}
-        targets, missing = [], set()
+        valid, skipped, missing = [], [], set()
+        per_column = {}
         for (g, pg), v in values.items():
             if g not in row_of:
                 missing.add(g)
                 continue
-            if not table_tools.values_equal(self.model._values.get((g, pg), ""), v):
-                targets.append((row_of[g], col_of[pg], v))
+            if table_tools.values_equal(self.model._values.get((g, pg), ""), v):
+                continue
+            prop = self.model.prop_at(col_of[pg])
+            ok, reason = table_tools.validate_value(prop, v)
+            if not ok:
+                skipped.append(reason)
+                continue
+            valid.append((row_of[g], col_of[pg], v))
+            per_column[prop.get("name", pg)] = per_column.get(prop.get("name", pg), 0) + 1
 
-        changed, skipped = self._apply_source_edits(targets, "Excel取込")
         notes = []
+        if skipped:
+            uniq = list(dict.fromkeys(skipped))
+            notes.append(f"取り込めないセル: {len(skipped)}（編集不可・候補外）\n  " + "\n  ".join(uniq[:8])
+                         + (f"\n  … 他 {len(uniq) - 8} 種類" if len(uniq) > 8 else ""))
         if missing:
-            notes.append(f"表に無い要素: {len(missing)} 行（無視）")
+            notes.append(f"表に無い要素: {len(missing)} 行（無視します）")
         if unknown_headers:
             notes.append("対応するプロパティが無い列: " + ", ".join(unknown_headers[:5]))
-        if not skipped:
-            QMessageBox.information(
-                self.data_panel, "Excel取込",
-                f"{changed} セルを変更しました（赤字）。\n[Archicadへ反映] で ArchiCAD に書き込みます。"
-                + ("\n\n" + "\n".join(notes) if notes else ""))
+        note_txt = ("\n\n" + "\n".join(notes)) if notes else ""
+
+        if not valid:
+            QMessageBox.information(self.data_panel, "Excel取込", "表と違う値（変更）はありませんでした。" + note_txt)
+            self.status_label.setText("Excel取込: 変更なし")
+            return
+        detail = "\n".join(f"  {name}: {n} セル" for name, n in list(per_column.items())[:12])
+        if QMessageBox.question(
+                self.data_panel, "Excel取込の確認",
+                f"{len(valid)} セルを表に反映します（赤字になります。Undo で戻せます）。\n{detail}{note_txt}\n\n"
+                "反映しますか？",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        ) != QMessageBox.StandardButton.Yes:
+            self.status_label.setText("Excel取込: 中止しました")
+            return
+        changed, _ = self._apply_source_edits(valid, "Excel取込", warn=False)
+        QMessageBox.information(
+            self.data_panel, "Excel取込",
+            f"{changed} セルを変更しました（赤字）。\n[Archicadへ反映] で ArchiCAD に書き込みます。")
+        append_log(f"[EXCEL IMPORT] changed={changed} skipped={len(skipped)} missing={len(missing)}")
         append_log(f"[EXCEL IMPORT] changed={changed} skipped={len(skipped)} {notes}")
 
     # ── ズーム ON/OFF ────────────────────────────────────────────────

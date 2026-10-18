@@ -143,6 +143,7 @@ static GS::Array<API_Guid> GetSiteManagerElements();
 static const char* const kSiteManagerTypeKey = "SiteManager";
 static GS::UniString JsonStr(const GS::UniString& s);   // JSON 文字列リテラル（定義は後方）
 void ResolveSchedule(const std::string& json);           // 一覧表の列・条件の解決（定義は後方）
+void SetProjectInfo(const std::string& json);            // プロジェクト情報の更新（定義は後方）
 
 static void ScheduleProcessOneCommand() {
     const GSErrCode err = ACAPI_AddOnAddOnCommunication_CallFromEventLoop(
@@ -761,6 +762,7 @@ void ExecuteBatch(const CommandBatch& batch) {
         else if (cmd.find("\"get_values\"") != std::string::npos) ExportValues(cmd);
         else if (cmd.find("\"get_site_summary\"") != std::string::npos) ExportSiteSummary();
         else if (cmd.find("\"resolve_schedule\"") != std::string::npos) ResolveSchedule(cmd);
+        else if (cmd.find("\"set_project_info\"") != std::string::npos) SetProjectInfo(cmd);
         else if (cmd.find("\"select_elements\"") != std::string::npos) {
             GS::Array<API_Guid> guids = ExtractGuids(cmd, "guids");
             WriteExternalLog("select_elements: " + std::to_string(guids.GetSize()) + " guid(s)");
@@ -1293,6 +1295,35 @@ void ResolveSchedule(const std::string& json) {
     }
     out.Append("}}");
     WriteExternalLog("resolve_schedule: " + std::to_string(found) + "/" + std::to_string(wanted) + " properties");
+    EnqueueResult(std::string((const char*)out.ToCStr(CC_UTF8)));
+}
+
+// 敷地情報の Excel 取込: プロジェクト情報（自動テキスト）をキー指定で更新（1 回の取り消し操作）
+// 入力: keysHex / valuesHex（UTF-8 の 16 進。任意の文字を安全に受け取るため）
+void SetProjectInfo(const std::string& json) {
+    const std::vector<std::string> keys = ExtractStringArray(json, "keysHex");
+    const std::vector<std::string> vals = ExtractStringArray(json, "valuesHex");
+    int ok = 0;
+    std::vector<std::string> failed;
+    ACAPI_CallUndoableCommand("プロジェクト情報の更新（Excel取込）", [&]() -> GSErrCode {
+        for (size_t i = 0; i < keys.size() && i < vals.size(); i++) {
+            const std::string k = HexToUtf8(keys[i]);
+            const GS::UniString key(k.c_str(), CC_UTF8);
+            const GS::UniString value(HexToUtf8(vals[i]).c_str(), CC_UTF8);
+            if (!k.empty() && ACAPI_AutoText_SetAnAutoText(&key, &value) == NoError) ok++;
+            else failed.push_back(k);
+        }
+        return NoError;
+    });
+    GS::UniString out("{\"type\":\"project_info_result\",\"set\":");
+    out.Append(GS::UniString::Printf("%d", ok));
+    out.Append(",\"failed\":[");
+    for (size_t i = 0; i < failed.size(); i++) {
+        if (i) out.Append(",");
+        out.Append(JsonStr(GS::UniString(failed[i].c_str(), CC_UTF8)));
+    }
+    out.Append("]}");
+    WriteExternalLog("set_project_info: ok=" + std::to_string(ok) + " failed=" + std::to_string(failed.size()));
     EnqueueResult(std::string((const char*)out.ToCStr(CC_UTF8)));
 }
 

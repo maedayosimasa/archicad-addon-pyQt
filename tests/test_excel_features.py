@@ -251,7 +251,7 @@ def test_export_excel_cancel_empty_and_error(main_window, win, monkeypatch, tmp_
                         staticmethod(lambda *a, **k: (str(tmp_path / "x.xlsx"), "")))
     monkeypatch.setattr(table_tools, "export_xlsx", lambda *a, **k: (_ for _ in ()).throw(PermissionError("開いています")))
     win.export_excel()
-    assert win.msgbox.calls[-1][0] == "warning" and "開いています" in win.msgbox.calls[-1][2]
+    assert win.msgbox.calls[-1][0] == "warning" and "閉じてから" in win.msgbox.calls[-1][2]   # Excel で開いている
 
 
 def test_export_import_without_data(main_window):
@@ -281,7 +281,9 @@ def test_excel_roundtrip_import_applies_only_diffs(win, monkeypatch, tmp_path):
     assert v[(G[0], "P-W")] == "301" and v[(G[1], "P-W")] == "20" and v[(G[2], "P-F")] == "2時間"
     assert v[(G[3], "P-A")] == "5"
     assert win.undo_stack.count() == 1 and win.undo_stack.text(0).startswith("Excel取込 (2 セル)")
-    assert win.msgbox.calls[-1][0] == "warning"           # 面積をスキップした警告
+    confirm = next(c for c in win.msgbox.calls if c[0] == "question")
+    assert "2 セルを表に反映" in confirm[2] and "取り込めないセル: 1" in confirm[2]   # 面積（編集不可）は確認時に表示
+    assert win.msgbox.calls[-1][0] == "information"
 
     # 取込後の [Archicadへ反映] は変更セルのみを送る
     win.sync_data()
@@ -299,9 +301,11 @@ def test_import_reports_unknown_columns_and_missing_rows(win, monkeypatch, tmp_p
     wb.save(path)
     monkeypatch.setattr(server.QFileDialog, "getOpenFileName", staticmethod(lambda *a, **k: (str(path), "")))
     win.import_excel()
+    confirm = next(c for c in win.msgbox.calls if c[0] == "question")
+    assert "1 セルを表に反映" in confirm[2]
+    assert "表に無い要素: 1 行" in confirm[2] and "謎の列" in confirm[2]   # 注意点は反映前の確認に表示
     kind, _, text = win.msgbox.calls[-1]
     assert kind == "information" and "1 セルを変更" in text
-    assert "表に無い要素: 1 行" in text and "謎の列" in text
 
 
 def test_import_cancel_and_broken_file(win, monkeypatch, tmp_path):

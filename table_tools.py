@@ -201,6 +201,36 @@ def export_sheets(path, sheets):
     wb.save(path)
 
 
+def read_sheet(path, sheet_name):
+    """指定シートを [[セル文字列, ...], ...]（1 行目＝見出しを含む）で読む。シートが無ければ ValueError。"""
+    wb = load_workbook(path, read_only=True, data_only=True)
+    try:
+        if sheet_name not in wb.sheetnames:
+            raise ValueError(f"シート「{sheet_name}」が見つかりません（このアドオンで出力したファイルか確認してください）")
+        return [[_from_excel_cell(v) for v in row] for row in wb[sheet_name].iter_rows(values_only=True)]
+    finally:
+        wb.close()
+
+
+INVALID_FILE_CHARS = re.compile(r'[\\/:*?"<>|\r\n\t]+')
+
+
+def safe_file_name(title, ext=".xlsx", default="BIMデータ"):
+    """ウィンドウ名などから Windows で使えるファイル名を作る。"""
+    name = INVALID_FILE_CHARS.sub("_", str(title or "")).strip(" ._") or default
+    return name[:120] + ext
+
+
+def count_data_rows(path):
+    """export_xlsx で書いたファイルの要素行数（書き込み確認用）。"""
+    wb = load_workbook(path, read_only=True)
+    try:
+        ws = wb[DATA_SHEET] if DATA_SHEET in wb.sheetnames else wb.worksheets[0]
+        return max(0, sum(1 for r in ws.iter_rows(values_only=True) if r and r[0]) - 1)
+    finally:
+        wb.close()
+
+
 def read_xlsx(path, props):
     """export_xlsx 形式（または GUID 列 + プロパティ名ヘッダの表）を読み込む。
 

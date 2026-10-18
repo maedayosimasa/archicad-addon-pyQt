@@ -1348,3 +1348,16 @@ def test_sync_cancel_and_error_restore(loaded, no_timers, monkeypatch):
     w.set_button_busy(w.btn_get_values); w.set_button_busy(w.btn_search)
     w.on_error("接続できません")                               # エラー時はすべて戻す
     assert w._busy_buttons == {}
+
+def test_condition_window_groups(main_window):
+    """① 条件を指定して取得（要素抽出・プロパティ設定・データ取得）と ② 別の方法で取得 を分けて配置。"""
+    w = main_window
+    g1, g2 = w.grp_condition, w.grp_other
+    assert g1.title().startswith("① 条件を指定して取得") and g2.title().startswith("② 別の方法で取得")
+    for child in (w.filter_tree, w.btn_search, w.prop_tree, w.prop_mode_combo, w.btn_get_values):
+        assert g1.isAncestorOf(child) and not g2.isAncestorOf(child)
+    for child in (w.btn_site_summary, w.btn_schedules):
+        assert g2.isAncestorOf(child) and not g1.isAncestorOf(child)
+    lay = w.centralWidget().layout()
+    order = [lay.itemAt(i).widget() for i in range(lay.count())]
+    assert order.index(g1) < order.index(g2) < order.index(w.condition_status_label)   # ① → ② → 状態表示
