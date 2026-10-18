@@ -3,8 +3,8 @@
 #include "ResourceIds.hpp"
 
 'MDID' 32500 "Add-On Identifier" {
-	930179925
-	99967209
+	ADDON_MDID_DEVELOPER_ID
+	ADDON_MDID_LOCAL_ID
 }
 
 /* Main Dialog Layout $2014 構成取得 / キャンセル */

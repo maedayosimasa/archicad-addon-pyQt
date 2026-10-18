@@ -94,7 +94,8 @@ static short GetActualStory() {
     GSErrCode err = ACAPI_ProjectSetting_GetStorySettings(&si);
     short f = -1;
     if (err == NoError) f = si.actStory;
-    if (si.data) { BMKillPtr(reinterpret_cast<GSPtr*>(&si.data)); si.data = nullptr; }
+    // data は API_StoryType** (ハンドル) → BMKillHandle で解放（BMKillPtr はヒープ破壊→クラッシュ）
+    if (si.data != nullptr) BMKillHandle(reinterpret_cast<GSHandle*>(&si.data));
     return f;
 }
 
@@ -110,7 +111,8 @@ static std::atomic<bool> g_selectingFromPyQt(false);
 
 static constexpr GSType EventLoopDispatcherCmdID = 'EVLP';
 static constexpr Int32 EventLoopDispatcherCmdVersion = 1;
-static const API_ModulID OwnModuleID = { 11, 11 };
+// RFIX/AddOnFix.grc の 'MDID' と必ず一致させる（ResourceIds.hpp で一元管理）
+static const API_ModulID OwnModuleID = { ADDON_MDID_DEVELOPER_ID, ADDON_MDID_LOCAL_ID };
 
 struct ElementTypeInfo { API_ElemTypeID id; const char* key; };
 static const ElementTypeInfo SupportedTypes[] = {
@@ -1180,7 +1182,9 @@ void ExportValues(const std::string& json) {
                               defFull.collectionType == API_PropertyMultipleChoiceEnumerationCollectionType);
                 }
                 std::string propGuidStr = std::string((const char*)APIGuid2GSGuid(ps[j].definition.guid).ToUniString().ToCStr(CC_UTF8));
-                {
+                // value は status==HasValue の時のみ有効（NotAvailable/NotEvaluated は中身不定）
+                // 不定値を GetPropertyValueString に渡すと APICore 内でクラッシュするため必ず確認
+                if (ps[j].status == API_Property_HasValue) {
                     GS::UniString tmp;
                     GSErrCode gErr = ACAPI_Property_GetPropertyValueString(ps[j], &tmp);
                     if (gErr == NoError && !tmp.IsEmpty() && tmp[0] != '<') v = tmp;

@@ -86,7 +86,9 @@ static void FillElementDetails (const API_Guid& guid, ElementInfo& info)
         for (const auto& def : definitions) {
             if (def.name == "ID" || def.name == "Element ID" || def.name.Contains(GS::UniString("ID"))) {
                 GS::Array<API_Property> properties;
-                if (ACAPI_Element_GetPropertyValues (guid, {def}, properties) == NoError && !properties.IsEmpty()) {
+                // status!=HasValue の value は不定 → GetPropertyValueString でクラッシュするため除外
+                if (ACAPI_Element_GetPropertyValues (guid, {def}, properties) == NoError && !properties.IsEmpty() &&
+                    properties[0].status == API_Property_HasValue) {
                     ACAPI_Property_GetPropertyValueString (properties[0], &info.elementID);
                 }
                 break;

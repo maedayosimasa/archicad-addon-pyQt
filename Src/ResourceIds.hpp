@@ -6,6 +6,11 @@
 #define ID_ADDON_INFO               32000
 #define ID_ADDON_MENU               32500
 
+// Add-On Identifier (MDID) — RFIX/AddOnFix.grc と AddOnMain.cpp (OwnModuleID) で共用
+// ※ 片方だけ変えると CallFromEventLoop が自分に届かずコマンドが一切実行されない
+#define ADDON_MDID_DEVELOPER_ID     930179925
+#define ADDON_MDID_LOCAL_ID         99967209
+
 // Main Dialog (32501) — 構成取得 / キャンセル の2ボタン
 #define ID_ADDON_DLG                32501
 #define ID_SEARCH_DIALOG            32501
