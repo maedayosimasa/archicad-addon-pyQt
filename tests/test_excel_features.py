@@ -415,3 +415,19 @@ def test_replace_menu_and_shortcut(win, monkeypatch):
     monkeypatch.setattr(server.QMenu, "exec", lambda menu, *a: texts.extend(a.text() for a in menu.actions()))
     win.show_cell_menu(QPoint(1, 1))
     assert "検索と置換...\tCtrl+H" in texts
+
+
+def test_excel_like_table_style(win):
+    """タイトル行は少し濃い色、データ行は 1 行おきに薄い色（縞模様）。"""
+    t = win.table
+    assert t.alternatingRowColors()
+    css = t.styleSheet()
+    assert server.TABLE_HEADER_COLOR in css and "QHeaderView::section:horizontal" in css
+    assert f"alternate-background-color: {server.TABLE_ALTERNATE_COLOR}" in css
+    # 色付きセル（変更・確認済など）はモデルの色が優先され、縞模様で上書きされない
+    win.model._change_status[G[0]] = 2
+    assert win.model.index(0, 1).data(Qt.ItemDataRole.BackgroundRole).name() == "#c8f0c8"
+    assert win.model.index(1, 1).data(Qt.ItemDataRole.BackgroundRole) is None   # 無色 → 縞模様が出る
+    # 新しく開いたデータウィンドウにも同じ見た目
+    other = win._create_data_panel()
+    assert other.table.alternatingRowColors() and other.table.styleSheet() == css

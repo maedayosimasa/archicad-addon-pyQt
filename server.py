@@ -1100,6 +1100,21 @@ class DataPanel(QWidget):
         self.closed.emit(self)
 
 
+# データ表示・編集の表の見た目（Excel 風）
+TABLE_HEADER_COLOR    = "#D6E0EB"   # タイトル行（列見出し）: 少し濃い青灰色
+TABLE_ALTERNATE_COLOR = "#EEF3F8"   # 1 行おきの縞模様: ごく薄い青灰色
+TABLE_STYLE = (
+    f"QTableView {{ alternate-background-color: {TABLE_ALTERNATE_COLOR}; background-color: #FFFFFF;"
+    f" gridline-color: #C8D2DC; }}"
+    f"QHeaderView::section:horizontal {{ background-color: {TABLE_HEADER_COLOR}; color: #1F2D3A;"
+    f" font-weight: bold; padding: 3px 6px; border: none;"
+    f" border-right: 1px solid #B4C2D0; border-bottom: 1px solid #9FB0C2; }}"
+    f"QHeaderView::section:vertical {{ background-color: {TABLE_HEADER_COLOR}; padding: 0 4px;"
+    f" border: none; border-bottom: 1px solid #C8D2DC; border-right: 1px solid #9FB0C2; }}"
+    f"QTableCornerButton::section {{ background-color: {TABLE_HEADER_COLOR}; border: none; }}"
+)
+
+
 # 作業中のデータウィンドウに委譲する MainWindow の属性（self.model 等はアクティブなウィンドウのもの）
 PANEL_ATTRS = frozenset({
     "status_label", "search_edit", "row_count_label", "btn_clear_sort", "btn_replace",
@@ -1298,6 +1313,10 @@ class MainWindow(QMainWindow):
         p.proxy = ExcelFilterProxyModel()
         p.proxy.setSourceModel(p.model)
         p.table.setModel(p.proxy)
+        # 見やすさ: タイトル行（列見出し）を少し濃く、データ行は 1 行おきに薄い色（縞模様）。
+        # 変更（赤）・確認済（緑）・競合などモデルが色を付けたセルはその色が優先される
+        p.table.setAlternatingRowColors(True)
+        p.table.setStyleSheet(TABLE_STYLE)
         # Excel 同様: セル単位で複数選択（Shift/Ctrl+クリック、ドラッグ）
         p.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         p.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)
