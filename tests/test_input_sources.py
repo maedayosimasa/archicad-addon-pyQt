@@ -319,3 +319,53 @@ def test_context_menu_entry_opens_for_current_cell(loaded, monkeypatch):
     w.table.setCurrentIndex(w.proxy.mapFromSource(w.model.index(r, c)))
     w.open_input_sources_for_current()
     assert calls == [(r, "elem:in:length")]
+
+
+# ── Excel 出力の色分け ────────────────────────────────────────────
+
+def test_export_xlsx_colors_computed_and_inputs(tmp_path):
+    from openpyxl import load_workbook
+    path = tmp_path / "c.xlsx"
+    props = [{"guid": "elem:H", "name": "高さ H"}, {"guid": "elem:in:height", "name": "入力 高さ"},
+             {"guid": "elem:in:length", "name": "入力 長さ"}, {"guid": "P", "name": "その他"}]
+    rows = [("G1", ["3.000", "3.000", NA, "x"]), ("G2", ["2.000", "2.500", "5.000", "y"])]
+    table_tools.export_xlsx(path, props, rows, changed={("G2", "elem:in:height")}, lock_guid=True,
+                            computed={"elem:H"}, inputs={"elem:in:height", "elem:in:length"})
+    wb = load_workbook(path)
+    ws = wb[table_tools.DATA_SHEET]
+    color = lambda c: c.fill.start_color.rgb[-6:] if c.fill.fill_type else None
+    assert color(ws["B1"]) == "D5DCE6" and color(ws["C1"]) == "FFE699" and color(ws["E1"]) is None
+    assert color(ws["B2"]) == "ECEFF4" and color(ws["C2"]) == "FFF8D6"
+    assert color(ws["D2"]) is None and ws["D2"].font.color.rgb[-6:] == "808080"   # 対象外
+    assert color(ws["C3"]) == "FFC7CE"                                            # 変更ありは赤が優先
+    assert color(ws["E2"]) is None
+    # シート保護: 自動計算・対象外はロックのまま、入力元・その他は編集可
+    assert ws["B2"].protection.locked and ws["D2"].protection.locked
+    assert not ws["C2"].protection.locked and not ws["E2"].protection.locked
+    assert table_tools.LEGEND_SHEET in wb.sheetnames
+    legend = [r[0] for r in wb[table_tools.LEGEND_SHEET].iter_rows(values_only=True)]
+    assert "自動計算の結果（閲覧のみ）" in legend and "入力元（ここを編集）" in legend
+    # 取込は従来どおり（凡例シートがあってもデータシートを読む）
+    values, unknown = table_tools.read_xlsx(path, props)
+    assert values[("G2", "elem:in:height")] == "2.5" and not unknown
+
+
+def test_export_xlsx_without_input_columns_has_no_legend(tmp_path):
+    from openpyxl import load_workbook
+    path = tmp_path / "n.xlsx"
+    table_tools.export_xlsx(path, [{"guid": "P", "name": "p"}], [("G1", ["1"])])
+    assert table_tools.LEGEND_SHEET not in load_workbook(path).sheetnames
+
+
+def test_export_excel_passes_color_columns(loaded, monkeypatch, tmp_path):
+    w = loaded
+    seen = {}
+    monkeypatch.setattr(w, "excel_save_path", lambda *a: str(tmp_path / "w.xlsx"))
+    orig = table_tools.export_xlsx
+    def spy(*a, **k):
+        seen.update(k)
+        return orig(*a, **k)
+    monkeypatch.setattr(table_tools, "export_xlsx", spy)
+    w.export_excel()
+    assert seen["computed"] == {"elem:H"}
+    assert seen["inputs"] == {"elem:in:height", "elem:in:length", "elem:in:topLink"}

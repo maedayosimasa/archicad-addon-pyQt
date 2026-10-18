@@ -3043,7 +3043,10 @@ class MainWindow(QMainWindow):
         lock_guid = self.excel_option(EXCEL_LOCK_GUID_KEY)
         hide_guid = self.excel_option(EXCEL_HIDE_GUID_KEY)
         try:
-            table_tools.export_xlsx(path, props, rows, changed, lock_guid=lock_guid, hide_guid=hide_guid)
+            # 表と同じ色分け（自動計算 = 青灰 / 入力元 = 薄い黄色）
+            guids = {p["guid"] for p in props}
+            table_tools.export_xlsx(path, props, rows, changed, lock_guid=lock_guid, hide_guid=hide_guid,
+                                    computed=guids & set(COMPUTED_INPUTS), inputs=guids & set(INPUT_KEYS))
             written = table_tools.count_data_rows(path)   # 書いたファイルを読み直して確認
         except Exception as e:
             append_log(f"[EXCEL EXPORT ERROR] {e}\n{traceback.format_exc()}")
@@ -3057,7 +3060,7 @@ class MainWindow(QMainWindow):
         note = f"（検索・フィルタで非表示の {hidden} 行は出力していません）" if hidden else ""
         guid_notes = []
         if lock_guid:
-            guid_notes.append("GUID 列と見出し行は編集不可（シート保護・パスワードなし）")
+            guid_notes.append("GUID 列と見出し行は編集不可（自動計算の列・対象外のセルも。シート保護・パスワードなし）")
         if hide_guid:
             guid_notes.append("GUID 列は非表示")
         if guid_notes:

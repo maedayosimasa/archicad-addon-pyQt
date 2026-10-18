@@ -22,6 +22,13 @@ CHANGED_FILL = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="
 CHANGED_FONT = Font(color="9C0006", bold=True)
 HEADER_FONT  = Font(bold=True)
 UNLOCKED     = Protection(locked=False)
+# 表（PyQt）と同じ色分け: 自動計算 = 青灰（閲覧のみ）、入力元 = 薄い黄色（ここを編集）
+COMPUTED_FILL        = PatternFill(start_color="ECEFF4", end_color="ECEFF4", fill_type="solid")
+INPUT_FILL           = PatternFill(start_color="FFF8D6", end_color="FFF8D6", fill_type="solid")
+COMPUTED_HEADER_FILL = PatternFill(start_color="D5DCE6", end_color="D5DCE6", fill_type="solid")
+INPUT_HEADER_FILL    = PatternFill(start_color="FFE699", end_color="FFE699", fill_type="solid")
+NA_FONT              = Font(color="808080")
+LEGEND_SHEET         = "凡例"
 
 _NUMBER_RE = re.compile(r"^-?(0|[1-9]\d*)(\.\d+)?$")
 
@@ -190,14 +197,18 @@ def _from_excel_cell(value):
     return str(value)
 
 
-def export_xlsx(path, props, rows, changed=frozenset(), lock_guid=False, hide_guid=False):
+def export_xlsx(path, props, rows, changed=frozenset(), lock_guid=False, hide_guid=False,
+                computed=frozenset(), inputs=frozenset()):
     """テーブルを .xlsx に書き出す。
 
     props:     [{"guid", "name", ...}]（列順）
     rows:      [(element_guid, [値, ...])]（表示順）
     changed:   {(element_guid, prop_guid)} — 赤塗りするセル（未反映の変更）
     lock_guid: GUID 列と見出し行を編集不可にする（シート保護。値のセルは編集可のまま、パスワードなし）
+               自動計算の列と「(対象外)」のセルも編集不可のままにする
     hide_guid: GUID 列を非表示にする（取込時は非表示のままでも照合に使う）
+    computed:  自動計算の列（プロパティ GUID）→ 青灰色
+    inputs:    入力元の列（プロパティ GUID）→ 薄い黄色（"(対象外)" のセルは灰色文字・色なし）
     """
     wb = Workbook()
     ws = wb.active
@@ -205,12 +216,27 @@ def export_xlsx(path, props, rows, changed=frozenset(), lock_guid=False, hide_gu
     ws.append([GUID_HEADER] + [p.get("name", p["guid"]) for p in props])
     for c in ws[1]:
         c.font = HEADER_FONT
+    for ci, p in enumerate(props):
+        if p["guid"] in computed:
+            ws.cell(row=1, column=ci + 2).fill = COMPUTED_HEADER_FILL
+        elif p["guid"] in inputs:
+            ws.cell(row=1, column=ci + 2).fill = INPUT_HEADER_FILL
+    read_only_cells = set()   # シート保護時もロックしたままにするセル
     for guid, values in rows:
         ws.append([guid] + [_to_excel_cell(v) for v in values])
         r = ws.max_row
         for ci, p in enumerate(props):
+            cell = ws.cell(row=r, column=ci + 2)
+            if p["guid"] in computed:
+                cell.fill = COMPUTED_FILL
+                read_only_cells.add((r, ci + 2))
+            elif p["guid"] in inputs:
+                if str(values[ci]) == NOT_APPLICABLE:
+                    cell.font = NA_FONT
+                    read_only_cells.add((r, ci + 2))
+                else:
+                    cell.fill = INPUT_FILL
             if (guid, p["guid"]) in changed:
-                cell = ws.cell(row=r, column=ci + 2)
                 cell.fill = CHANGED_FILL
                 cell.font = CHANGED_FONT
     ws.freeze_panes = "B2"
@@ -225,7 +251,8 @@ def export_xlsx(path, props, rows, changed=frozenset(), lock_guid=False, hide_gu
         # 値のセルだけロック解除し、シートを保護 → GUID 列と見出し行だけが編集不可になる
         for row in ws.iter_rows(min_row=2, min_col=2, max_col=len(props) + 1):
             for cell in row:
-                cell.protection = UNLOCKED
+                if (cell.row, cell.column) not in read_only_cells:
+                    cell.protection = UNLOCKED
         prot = ws.protection
         prot.sheet = True
         # 保護中でもフィルター・列幅/書式の変更・行の挿入は許可（False = 許可）
@@ -235,12 +262,41 @@ def export_xlsx(path, props, rows, changed=frozenset(), lock_guid=False, hide_gu
         prot.formatCells = False
         prot.sort = False
 
+    if computed or inputs:
+        _add_legend(wb, lock_guid)
+
     meta = wb.create_sheet(PROPS_SHEET)
     meta.append(["column", "property_guid", "name"])
     for ci, p in enumerate(props):
         meta.append([ci + 2, p["guid"], p.get("name", "")])
     meta.sheet_state = "hidden"
     wb.save(path)
+
+
+def _add_legend(wb, locked):
+    """色分けの説明シート。"""
+    lg = wb.create_sheet(LEGEND_SHEET)
+    lg.append(["色", "意味"])
+    for c in lg[1]:
+        c.font = HEADER_FONT
+    items = [
+        (COMPUTED_FILL, None, "自動計算の結果（閲覧のみ）",
+         "Archicad が入力元から計算した値。変更しても取り込まれません" +
+         ("（編集不可）" if locked else "")),
+        (INPUT_FILL, None, "入力元（ここを編集）",
+         "変更して［Excel取込］→［反映］すると、自動計算の結果が更新されます。単位なしはメートル（600mm も可）"),
+        (None, NA_FONT, NOT_APPLICABLE, "その要素タイプには無い入力元（取り込まれません）"),
+        (CHANGED_FILL, CHANGED_FONT, "変更あり", "まだ Archicad に反映していない変更"),
+    ]
+    for fill, font, label, desc in items:
+        lg.append([label, desc])
+        cell = lg.cell(row=lg.max_row, column=1)
+        if fill is not None:
+            cell.fill = fill
+        if font is not None:
+            cell.font = font
+    lg.column_dimensions["A"].width = 30
+    lg.column_dimensions["B"].width = 90
 
 
 def export_sheets(path, sheets):
