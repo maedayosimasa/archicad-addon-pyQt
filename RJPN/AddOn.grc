@@ -13,10 +13,9 @@
 }
 
 'STR#' ID_ADDON_DLG "Dialog Text List" {
-/* [  1] */ "maeda 検索アドオン "
-/* [  2] */ "検索開始 "
+/* [  1] */ "BIM管理 アドオン "
+/* [  2] */ "構成取得 "
 /* [  3] */ "キャンセル "
-/* [  4] */ "構成取得 "
 }
 
 'STR#' ID_RESULT_DIALOG "Result Dialog Text" {

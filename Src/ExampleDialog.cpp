@@ -61,14 +61,12 @@ ExampleDialog& ExampleDialog::GetInstance ()
 
 ExampleDialog::ExampleDialog () :
     DG::Palette (ACAPI_GetOwnResModule (), ID_SEARCH_DIALOG, ACAPI_GetOwnResModule (), PaletteGuid ()),
-    searchButton (GetReference (), SearchButtonID),
-    cancelButton (GetReference (), CancelButtonID),
-    getConfigButton (GetReference (), GetConfigButtonID)
+    getConfigButton (GetReference (), GetConfigButtonID),
+    cancelButton (GetReference (), CancelButtonID)
 {
     Attach (*this);
-    searchButton.Attach (*this);
-    cancelButton.Attach (*this);
     getConfigButton.Attach (*this);
+    cancelButton.Attach (*this);
     BeginEventProcessing ();
 }
 
@@ -76,18 +74,16 @@ ExampleDialog::~ExampleDialog ()
 {
     EndEventProcessing ();
     Detach (*this);
-    searchButton.Detach (*this);
-    cancelButton.Detach (*this);
     getConfigButton.Detach (*this);
+    cancelButton.Detach (*this);
 }
 
 void ExampleDialog::PanelOpened (const DG::PanelOpenEvent&)
 {
     GSResModule res = ACAPI_GetOwnResModule ();
     this->SetTitle (RSGetIndString (ID_ADDON_DLG, 1, res));
-    searchButton.SetText (RSGetIndString (ID_ADDON_DLG, 2, res));
+    getConfigButton.SetText (RSGetIndString (ID_ADDON_DLG, 2, res));
     cancelButton.SetText (RSGetIndString (ID_ADDON_DLG, 3, res));
-    getConfigButton.SetText (RSGetIndString (ID_ADDON_DLG, 4, res));
 }
 
 void ExampleDialog::PanelCloseRequested (const DG::PanelCloseRequestEvent&, bool* accepted)
@@ -100,12 +96,9 @@ void ExampleDialog::PanelCloseRequested (const DG::PanelCloseRequestEvent&, bool
 
 void ExampleDialog::ButtonClicked (const DG::ButtonClickEvent& ev)
 {
-    if (ev.GetSource () == &searchButton) {
-        // [INFO]: 検索処理はSocket経由で自動化されました
-    } else if (ev.GetSource () == &cancelButton) {
+    if (ev.GetSource () == &cancelButton) {
         Hide ();
     } else if (ev.GetSource () == &getConfigButton) {
-        ACAPI_WriteReport("Configuration request triggered.", true);
         StartPythonServer ();
         EnqueueProjectConfiguration ();
         Hide ();

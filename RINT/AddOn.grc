@@ -13,10 +13,9 @@
 }
 
 'STR#' ID_ADDON_DLG "Dialog Text List" {
-/* [  1] */ "maeda Search AddOn"
-/* [  2] */ "Search"
+/* [  1] */ "BIM Manager AddOn"
+/* [  2] */ "Get Configuration"
 /* [  3] */ "Cancel"
-/* [  4] */ "Get Configuration"
 }
 
 'STR#' ID_RESULT_DIALOG "Result Dialog Text" {

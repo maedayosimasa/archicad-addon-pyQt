@@ -80,8 +80,27 @@ static std::thread listenerThread;
 static SOCKET listenSocket = INVALID_SOCKET;
 static std::atomic<bool> stopListener(false);
 
-// フロア追跡: 非ゼロ優先スティッキー（GoToView副作用で上書きされない）
-static short s_lastKnownFloor = 0;
+// フロア追跡: -1=未確定, 0+=有効フロアインデックス（1FL=0, 2FL=1, ...）
+static short s_lastKnownFloor = -1;
+// ToggleBIMOverride実行中はGoToViewの副作用でs_lastKnownFloorが汚染されないよう保護するフラグ
+static std::atomic<bool> g_bimOverrideInProgress(false);
+
+// ACAPI_ProjectSetting_GetStorySettings で「現在2Dで表示中のフロア」を取得
+// API_WindowInfo.index / GetCurrentDatabase はスレッド問わず常に0を返すため使用不可
+// actStory は ArchiCAD が内部管理する正確なアクティブフロア番号を返す
+static short GetActualStory() {
+    API_StoryInfo si = {};
+    BNZeroMemory(&si, sizeof(si));
+    GSErrCode err = ACAPI_ProjectSetting_GetStorySettings(&si);
+    short f = -1;
+    if (err == NoError) f = si.actStory;
+    if (si.data) { BMKillPtr(reinterpret_cast<GSPtr*>(&si.data)); si.data = nullptr; }
+    return f;
+}
+
+// 前方宣言（FindStoryGuid / GoToFloorByIndex は後方で定義）
+static bool FindStoryGuid(API_NavigatorItem& parent, short targetFloor, API_Guid& foundGuid);
+static GSErrCode GoToFloorByIndex(short floorIndex);
 
 static std::mutex sendMutex;
 static std::deque<std::string> sendQueue;
@@ -579,15 +598,12 @@ static void BringAcToFront() {
 }
 
 static GSErrCode OnSelectionChanged(const API_Neig* selElemNeig) {
-    // ArchiCAD がアクティブな状態でのみ発火 → 正確なフロアを取得できる
-    {
-        API_WindowInfo wi = {};
-        if (ACAPI_Window_GetCurrentWindow(&wi) == NoError && wi.typeID == APIWind_FloorPlanID) {
-            short f = (short)wi.index;
-            if (f != 0 || s_lastKnownFloor == 0) { // 非ゼロ優先スティッキー
-                if (f != s_lastKnownFloor) WriteExternalLog("OnSelectionChanged: floor=" + std::to_string(f));
-                s_lastKnownFloor = f;
-            }
+    // BIMオーバーライド処理中はGoToViewの副作用を無視
+    if (!g_bimOverrideInProgress) {
+        short f = GetActualStory();
+        if (f >= 0 && f != s_lastKnownFloor) {
+            WriteExternalLog("OnSelectionChanged: actStory=" + std::to_string(f));
+            s_lastKnownFloor = f;
         }
     }
     if (g_selectingFromPyQt) return NoError;
@@ -691,13 +707,10 @@ void ExecuteBatch(const CommandBatch& batch) {
         EnqueueResult(finalJson);
         }
  else if (batch.type == "other") {
-        // コマンド処理の最初にフロアを更新（非ゼロ優先スティッキー）
-        {
-            API_WindowInfo wi = {};
-            if (ACAPI_Window_GetCurrentWindow(&wi) == NoError && wi.typeID == APIWind_FloorPlanID) {
-                short f = (short)wi.index;
-                if (f != 0 || s_lastKnownFloor == 0) s_lastKnownFloor = f;
-            }
+        // コマンド処理のたびに actStory で正確なフロアを取得
+        if (!g_bimOverrideInProgress) {
+            short f = GetActualStory();
+            if (f >= 0) s_lastKnownFloor = f;
         }
         const std::string& cmd = batch.rawJson;
         if (cmd.find("\"ready\"") != std::string::npos) EnqueueProjectConfiguration();
@@ -731,7 +744,6 @@ void ExecuteBatch(const CommandBatch& batch) {
         }
         else if (cmd.find("\"zoom_to_element\"") != std::string::npos) {
             GS::Array<API_Guid> guids = ExtractGuids(cmd, "guids");
-            // zoomFactor を JSON から抽出（デフォルト 1.5）
             double zoomFactor = 1.5;
             size_t fPos = cmd.find("\"zoomFactor\":");
             if (fPos != std::string::npos) {
@@ -754,22 +766,74 @@ void ExecuteBatch(const CommandBatch& batch) {
                     ACAPI_Selection_Select(sel, true);
                     g_selectingFromPyQt = false;
                 }
-                // 要素にズーム
-                GSErrCode ze = ACAPI_View_ZoomToElements(&guids);
-                WriteExternalLog("zoom_to_element: ZoomToElements=" + std::to_string(ze));
-                // 余白倍率を常に適用（1.0未満=より拡大, 1.0超=余白を広げる）
-                if (ze == NoError && std::abs(zoomFactor - 1.0) > 0.05) {
-                    API_Box zb = {};
-                    if (ACAPI_View_GetZoom(&zb) == NoError) {
-                        double cx = (zb.xMin + zb.xMax) / 2.0;
-                        double cy = (zb.yMin + zb.yMax) / 2.0;
-                        double hw = (zb.xMax - zb.xMin) / 2.0 * zoomFactor;
-                        double hh = (zb.yMax - zb.yMin) / 2.0 * zoomFactor;
-                        zb.xMin = cx - hw; zb.xMax = cx + hw;
-                        zb.yMin = cy - hh; zb.yMax = cy + hh;
-                        ACAPI_View_Zoom(&zb);
-                        WriteExternalLog("zoom_to_element: box expanded x" + std::to_string(zoomFactor));
+
+                // ── 要素データから直接2D境界ボックスを計算 ──────────────────
+                // GetZoom は非同期タイミング問題で旧Boxを返すため使用しない
+                double xMin = 1e18, yMin = 1e18, xMax = -1e18, yMax = -1e18;
+                bool hasBounds = false;
+
+                for (UInt32 i = 0; i < guids.GetSize(); i++) {
+                    API_Element el = {};
+                    BNZeroMemory(&el, sizeof(API_Element));
+                    el.header.guid = guids[i];
+                    if (ACAPI_Element_Get(&el) != NoError) continue;
+
+                    double ex1 = 0, ey1 = 0, ex2 = 0, ey2 = 0;
+                    bool ok = false;
+
+                    switch (el.header.type.typeID) {
+                        case API_WallID: {
+                            double t = std::max({el.wall.thickness, el.wall.thickness1, 0.1}) * 0.5;
+                            ex1 = std::min(el.wall.begC.x, el.wall.endC.x) - t;
+                            ex2 = std::max(el.wall.begC.x, el.wall.endC.x) + t;
+                            ey1 = std::min(el.wall.begC.y, el.wall.endC.y) - t;
+                            ey2 = std::max(el.wall.begC.y, el.wall.endC.y) + t;
+                            ok = true; break;
+                        }
+                        case API_BeamID: {
+                            double pad = 0.3;
+                            ex1 = std::min(el.beam.begC.x, el.beam.endC.x) - pad;
+                            ex2 = std::max(el.beam.begC.x, el.beam.endC.x) + pad;
+                            ey1 = std::min(el.beam.begC.y, el.beam.endC.y) - pad;
+                            ey2 = std::max(el.beam.begC.y, el.beam.endC.y) + pad;
+                            ok = true; break;
+                        }
+                        case API_ColumnID: {
+                            double pad = 0.5;
+                            ex1 = el.column.origoPos.x - pad; ey1 = el.column.origoPos.y - pad;
+                            ex2 = el.column.origoPos.x + pad; ey2 = el.column.origoPos.y + pad;
+                            ok = true; break;
+                        }
+                        default:
+                            break;  // Slab/Zone等はフォールバック
                     }
+
+                    if (ok) {
+                        xMin = std::min(xMin, ex1); xMax = std::max(xMax, ex2);
+                        yMin = std::min(yMin, ey1); yMax = std::max(yMax, ey2);
+                        hasBounds = true;
+                    }
+                }
+
+                if (hasBounds) {
+                    // 要素座標から直接ビューBox計算（タイミング問題なし）
+                    double cx = (xMin + xMax) / 2.0;
+                    double cy = (yMin + yMax) / 2.0;
+                    double hw = (xMax - xMin) / 2.0 * zoomFactor;
+                    double hh = (yMax - yMin) / 2.0 * zoomFactor;
+                    if (hw < 0.5) hw = 0.5;
+                    if (hh < 0.5) hh = 0.5;
+                    API_Box vb = {};
+                    vb.xMin = cx - hw; vb.xMax = cx + hw;
+                    vb.yMin = cy - hh; vb.yMax = cy + hh;
+                    ACAPI_View_Zoom(&vb);
+                    WriteExternalLog("zoom_to_element: direct cx=" + std::to_string(cx)
+                                   + " cy=" + std::to_string(cy)
+                                   + " hw=" + std::to_string(hw) + " hh=" + std::to_string(hh));
+                } else {
+                    // Slab/Zone等: ZoomToElements のみ使用（余白拡大なし）
+                    GSErrCode ze = ACAPI_View_ZoomToElements(&guids);
+                    WriteExternalLog("zoom_to_element: fallback ZoomToElements=" + std::to_string(ze));
                 }
                 BringAcToFront();
             }
@@ -785,23 +849,15 @@ void ExecuteBatch(const CommandBatch& batch) {
         else if (cmd.find("\"set_change_status\"") != std::string::npos) SetChangeStatus(cmd);
         else if (cmd.find("\"setup_bim_override\"") != std::string::npos) SetupBIMOverride(cmd);
         else if (cmd.find("\"get_current_floor\"") != std::string::npos) {
-            // GetCurrentWindow はPyQtフォーカス時に常にindex=0を返す
-            // GetCurrentDatabase はデータベース追跡のため正確なフロアを返す可能性がある
-            API_DatabaseInfo dbInfo = {};
-            GSErrCode dbErr = ACAPI_Database_GetCurrentDatabase(&dbInfo);
-            API_WindowInfo winInfo = {};
-            GSErrCode wErr = ACAPI_Window_GetCurrentWindow(&winInfo);
-            short floorNum = 0;
-            if (dbErr == NoError && dbInfo.typeID == APIWind_FloorPlanID)
-                floorNum = (short)dbInfo.index;
-            WriteExternalLog("get_current_floor: DB_err=" + std::to_string(dbErr)
-                           + " DB_type=" + std::to_string((int)dbInfo.typeID)
-                           + " DB_idx=" + std::to_string((int)dbInfo.index)
-                           + " WIN_err=" + std::to_string(wErr)
-                           + " WIN_idx=" + std::to_string((int)winInfo.index)
-                           + " result=" + std::to_string(floorNum)
+            // GetActualStory() で API_StoryInfo.actStory を取得（現在2D表示中のフロア）
+            short floorNum = GetActualStory();
+            if (floorNum >= 0 && !g_bimOverrideInProgress) s_lastKnownFloor = floorNum;
+            bool valid = (floorNum >= 0);
+            WriteExternalLog("get_current_floor: actStory=" + std::to_string(floorNum)
                            + " lastKnown=" + std::to_string(s_lastKnownFloor));
-            GS::UniString out; out.Printf("{\"type\":\"current_floor\",\"floor\":%d}", (int)floorNum);
+            GS::UniString out;
+            out.Printf("{\"type\":\"current_floor\",\"floor\":%d,\"valid\":%s}",
+                       (int)floorNum, valid ? "true" : "false");
             EnqueueResult(std::string((const char*)out.ToCStr(CC_UTF8)));
         }
         else if (cmd.find("\"apply_bim_override\"") != std::string::npos) {
@@ -813,6 +869,21 @@ void ExecuteBatch(const CommandBatch& batch) {
             int fl = -1;
             size_t fp = cmd.find("\"floor\""); if (fp != std::string::npos) { size_t cp = cmd.find(":", fp); if (cp != std::string::npos) try { fl = std::stoi(cmd.substr(cp + 1)); } catch(...){} }
             ToggleBIMOverride(cmd, false, fl);
+        }
+        else if (cmd.find("\"goto_floor\"") != std::string::npos) {
+            // 指定フロアの平面図ウィンドウに切り替え（GoToFloorByIndex 使用）
+            int fl = -999;
+            size_t fp = cmd.find("\"floor\"");
+            if (fp != std::string::npos) {
+                size_t cp = cmd.find(":", fp);
+                if (cp != std::string::npos) try { fl = std::stoi(cmd.substr(cp + 1)); } catch(...) {}
+            }
+            if (fl > -999) {
+                GSErrCode ge = GoToFloorByIndex((short)fl);
+                WriteExternalLog("goto_floor: floor=" + std::to_string(fl) + " err=" + std::to_string(ge));
+            } else {
+                WriteExternalLog("goto_floor: invalid floor in cmd");
+            }
         }
     }
 }
@@ -1628,19 +1699,17 @@ void SetupBIMOverride(const std::string& /*json*/, bool silent) {
 // reset時: 保存したフロア + override に戻す。フロアが既知なら GoToView は1回のみ。
 // GoToView後に即Deleteするとオーバーライドがリバートするため次回呼び出し時に削除。
 static std::vector<API_Guid> s_allCloneGuids;
-static short          s_capturedFloor    = 0;      // apply_bim_override 時のフロア
+static short          s_capturedFloor    = -1;     // apply_bim_override 時のフロア (-1=未確定)
 // "上書きなし" をデフォルト値として保持。clone が BIM変更管理 を引き継いでも上書きしない。
 static GS::UniString  s_capturedOverride("上書きなし", CC_UTF8);
 
 static GSErrCode OnWindowOrFloorChanged(API_NotifyEventID /*notifID*/, Int32 /*param*/) {
-    API_WindowInfo winInfo = {};
-    if (ACAPI_Window_GetCurrentWindow(&winInfo) == NoError && winInfo.typeID == APIWind_FloorPlanID) {
-        short f = (short)winInfo.index;
-        // 非ゼロ優先スティッキー: GoToView(story0)の副作用でゼロに上書きされるのを防ぐ
-        if (f != 0 || s_lastKnownFloor == 0) {
-            s_lastKnownFloor = f;
-            WriteExternalLog("OnWindowOrFloorChanged: floor=" + std::to_string(f));
-        }
+    // BIMオーバーライド処理中はGoToViewの副作用を無視
+    if (g_bimOverrideInProgress) return NoError;
+    short f = GetActualStory();
+    if (f >= 0 && f != s_lastKnownFloor) {
+        WriteExternalLog("OnWindowOrFloorChanged: actStory=" + std::to_string(f));
+        s_lastKnownFloor = f;
     }
     return NoError;
 }
@@ -1681,6 +1750,28 @@ static bool FindStoryGuid(API_NavigatorItem& parent, short targetFloor, API_Guid
     return false;
 }
 
+// 指定フロアに GoToView で移動（ProjectMap から Story GUID を検索してナビゲート）
+static GSErrCode GoToFloorByIndex(short floorIndex) {
+    API_NavigatorSet projSet = {}; BNZeroMemory(&projSet, sizeof(projSet)); projSet.mapId = API_ProjectMap;
+    Int32 setId = 0;
+    if (ACAPI_Navigator_GetNavigatorSet(&projSet, &setId) != NoError) return Error;
+    API_NavigatorItem projRoot = {}; BNZeroMemory(&projRoot, sizeof(projRoot));
+    projRoot.guid = projSet.rootGuid; projRoot.mapId = API_ProjectMap;
+    API_Guid storyGuid = {}; BNZeroMemory(&storyGuid, sizeof(storyGuid));
+    if (!FindStoryGuid(projRoot, floorIndex, storyGuid)) {
+        WriteExternalLog("GoToFloorByIndex: story not found floor=" + std::to_string(floorIndex));
+        // フォールバック: ChangeCurrentDatabase
+        API_DatabaseInfo dbInfo = {}; BNZeroMemory(&dbInfo, sizeof(dbInfo));
+        dbInfo.typeID = APIWind_FloorPlanID; dbInfo.index = floorIndex;
+        return ACAPI_Database_ChangeCurrentDatabase(&dbInfo);
+    }
+    GS::UniString gs = APIGuidToString(storyGuid);
+    std::string gsStr((const char*)gs.ToCStr(CC_UTF8));
+    GSErrCode ge = ACAPI_View_GoToView(gsStr.c_str());
+    WriteExternalLog("GoToFloorByIndex: floor=" + std::to_string(floorIndex) + " err=" + std::to_string(ge));
+    return ge;
+}
+
 // ProjectMap の全ストーリー GUID を収集（floorNum 昇順で返す）
 static void CollectAllStoryGuids(API_NavigatorItem& parent, std::vector<std::pair<short, API_Guid>>& out) {
     GS::Array<API_NavigatorItem> children;
@@ -1710,18 +1801,17 @@ void ToggleBIMOverride(const std::string& /*json*/, bool enable, int pythonFloor
     short gotoFloor = 0;
 
     if (enable) {
-        API_DatabaseInfo dbInfo = {};
-        GSErrCode dbErr = ACAPI_Database_GetCurrentDatabase(&dbInfo);
-        short dbFloor = (dbErr == NoError && dbInfo.typeID == APIWind_FloorPlanID) ? (short)dbInfo.index : 0;
-        WriteExternalLog("ToggleBIMOverride apply: DB_err=" + std::to_string(dbErr)
-                       + " DB_type=" + std::to_string((int)dbInfo.typeID)
-                       + " DB_idx=" + std::to_string(dbFloor)
+        // GetActualStory() で API_StoryInfo.actStory を取得（現在2D表示中のフロア）
+        // GetCurrentDatabase/GetCurrentWindow はスレッド問わず常に0を返すため使用しない
+        short actualStory = GetActualStory();
+        WriteExternalLog("ToggleBIMOverride apply: actStory=" + std::to_string(actualStory)
                        + " lastKnown=" + std::to_string(s_lastKnownFloor)
-                       + " pythonFloor=" + std::to_string(pythonFloor));
-        // 優先順: GetCurrentDatabase → s_lastKnownFloor → pythonFloor
-        if (dbFloor != 0)        s_capturedFloor = dbFloor;
-        else if (s_lastKnownFloor != 0) s_capturedFloor = s_lastKnownFloor;
-        else if (pythonFloor > 0)       s_capturedFloor = (short)pythonFloor;
+                       + " pythonFloor=" + std::to_string(pythonFloor)
+                       + " prevCaptured=" + std::to_string(s_capturedFloor));
+        // 優先順: actStory(最信頼) → s_lastKnownFloor → pythonFloor
+        if (actualStory >= 0)        s_capturedFloor = actualStory;
+        else if (s_lastKnownFloor >= 0) s_capturedFloor = s_lastKnownFloor;
+        else if (pythonFloor >= 0)    s_capturedFloor = (short)pythonFloor;
         // s_capturedOverride は clone 後に読み取る（下記）
         targetOverride = kComboName;
         gotoFloor      = s_capturedFloor;
@@ -1801,8 +1891,10 @@ void ToggleBIMOverride(const std::string& /*json*/, bool enable, int pythonFloor
         }
     };
 
-    if (gotoFloor != 0) {
-        // ── 単一フロアモード: フリッカーなし ──
+    // GoToView実行中はOnWindowOrFloorChangedがs_lastKnownFloorを上書きしないよう保護
+    g_bimOverrideInProgress = true;
+    if (gotoFloor >= 0) {
+        // ── 単一フロアモード: 0(=1FL) も有効 ──
         WriteExternalLog("ToggleBIMOverride: single-floor mode floor=" + std::to_string(gotoFloor));
         DoGoToViewForFloor(gotoFloor);
     } else {
@@ -1818,6 +1910,7 @@ void ToggleBIMOverride(const std::string& /*json*/, bool enable, int pythonFloor
         if (enable && !stories.empty())
             s_capturedFloor = stories.back().first;
     }
+    g_bimOverrideInProgress = false;
     } // scope
 
 done:
@@ -1919,7 +2012,7 @@ extern "C" {
         ACAPI_ProjectOperation_CatchProjectEvent(APINotify_Open | APINotify_New, OnProjectEvent);
         // フロア変更を追跡（PyQt フォーカス時でも正しいフロアを保持するため）
         ACAPI_ProjectOperation_CatchProjectEvent(APINotify_ChangeWindow | APINotify_ChangeFloor, OnWindowOrFloorChanged);
-        { API_WindowInfo wi = {}; if (ACAPI_Window_GetCurrentWindow(&wi) == NoError && wi.typeID == APIWind_FloorPlanID) s_lastKnownFloor = (short)wi.index; }
+        { short f = GetActualStory(); if (f >= 0) { s_lastKnownFloor = f; WriteExternalLog("Initialize: actStory=" + std::to_string(f)); } }
         // AddOnマネージャーからリロード時など、プロジェクトが既に開いていれば即時セットアップ
         { GS::Array<API_Guid> chk;
           for (const auto& t : SupportedTypes)

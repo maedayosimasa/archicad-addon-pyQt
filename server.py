@@ -325,10 +325,15 @@ class PropertyTableModel(QAbstractTableModel):
                 for col_i, prop in enumerate(self._properties):
                     if prop["guid"] == prop_guid:
                         idx = self.index(row, col_i + 1)
-                        self.dataChanged.emit(idx, idx)
+                        self.dataChanged.emit(idx, idx, [
+                            Qt.ItemDataRole.DisplayRole,
+                            Qt.ItemDataRole.EditRole,
+                            Qt.ItemDataRole.ForegroundRole,
+                        ])
                         return
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+        append_log(f"[SETDATA] row={index.row()} col={index.column()} role={role} valid={index.isValid()}")
         if not (index.isValid() and role == Qt.ItemDataRole.EditRole):
             return False
         row, col = index.row(), index.column()
@@ -338,15 +343,19 @@ class PropertyTableModel(QAbstractTableModel):
         pg      = self._properties[col - 1]["guid"]
         old_val = str(self._values.get((g, pg), ""))
         new_val = str(value)
+        append_log(f"[SETDATA] g={g[:8]} pg={pg[:8]} old={old_val!r} new={new_val!r} stack={self._undo_stack is not None}")
         if new_val == old_val:
+            append_log("[SETDATA] no change → skip")
             return False
-        if self._undo_stack and self._db and self._session_id:
+        if self._undo_stack is not None and self._db is not None and self._session_id is not None:
             cmd = EditValueCommand(
                 self, self._db, self._session_id,
                 g, pg, old_val, new_val, self._current_condition_id,
             )
             self._undo_stack.push(cmd)   # redo() が自動呼ばれ set_value_direct + DB 保存
+            append_log(f"[SETDATA] pushed to undo_stack canUndo={self._undo_stack.canUndo()}")
         else:
+            append_log(f"[SETDATA] fallback direct (stack={self._undo_stack} db={self._db} sid={self._session_id})")
             self.set_value_direct(g, pg, new_val)
         return True
 
@@ -518,6 +527,7 @@ class EnumComboBoxDelegate(QStyledItemDelegate):
             editor.setCurrentIndex(idx)
 
     def setModelData(self, editor, model, index):
+        append_log(f"[DELEGATE Enum] setModelData col={index.column()} val={editor.currentText()!r}")
         model.setData(index, editor.currentText(), Qt.ItemDataRole.EditRole)
 
     def updateEditorGeometry(self, editor, option, index):
@@ -526,6 +536,7 @@ class EnumComboBoxDelegate(QStyledItemDelegate):
 
 class PlaceholderClearDelegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
+        append_log(f"[DELEGATE Plain] createEditor col={index.column()}")
         return super().createEditor(parent, option, index)
 
     def setEditorData(self, editor, index):
@@ -534,8 +545,10 @@ class PlaceholderClearDelegate(QStyledItemDelegate):
             editor.setText(val)
 
     def setModelData(self, editor, model, index):
-        if hasattr(editor, "text"):
-            model.setData(index, editor.text(), Qt.ItemDataRole.EditRole)
+        val = editor.text() if hasattr(editor, "text") else None
+        append_log(f"[DELEGATE Plain] setModelData col={index.column()} val={val!r}")
+        if val is not None:
+            model.setData(index, val, Qt.ItemDataRole.EditRole)
         else:
             super().setModelData(editor, model, index)
 
@@ -708,23 +721,25 @@ class MainWindow(QMainWindow):
         self.model._session_id  = self.session_id
 
         # ⑤ Undo/Redo ボタン ←→ Undo スタック 自動連動
-        self.undo_stack.canUndoChanged.connect(self.btn_undo.setEnabled)
-        self.undo_stack.canRedoChanged.connect(self.btn_redo.setEnabled)
+        self.undo_stack.canUndoChanged.connect(lambda can: self.btn_undo.setEnabled(can))
+        self.undo_stack.canRedoChanged.connect(lambda can: self.btn_redo.setEnabled(can))
         self.undo_stack.undoTextChanged.connect(
             lambda t: self.btn_undo.setText(f"戻る: {t}" if t else "戻る (Undo)")
         )
         self.undo_stack.redoTextChanged.connect(
             lambda t: self.btn_redo.setText(f"進む: {t}" if t else "進む (Redo)")
         )
-        self.btn_undo.clicked.connect(self.undo_stack.undo)
-        self.btn_redo.clicked.connect(self.undo_stack.redo)
+        self.btn_undo.clicked.connect(self._do_undo)
+        self.btn_redo.clicked.connect(self._do_redo)
+        # undo/redo 後にテーブル全体を再描画して表示を同期させる
+        self.undo_stack.indexChanged.connect(lambda _: self.table.viewport().update())
 
         # Ctrl+Z / Ctrl+Y キーボードショートカット（QShortcut が利用可能な場合のみ）
         if QShortcut is not None:
             _sc_undo = QShortcut(QKeySequence.StandardKey.Undo, self.data_panel)
-            _sc_undo.activated.connect(self.undo_stack.undo)
+            _sc_undo.activated.connect(self._do_undo)
             _sc_redo = QShortcut(QKeySequence.StandardKey.Redo, self.data_panel)
-            _sc_redo.activated.connect(self.undo_stack.redo)
+            _sc_redo.activated.connect(self._do_redo)
 
         # シグナル接続
         self.signals = CommunicationSignals()
@@ -754,7 +769,8 @@ class MainWindow(QMainWindow):
         self._click_prev_status      = 0
         self._current_element_type   = ""
         self._pending_bim_restore    = False
-        self._last_archicad_floor    = 0
+        self._last_archicad_floor    = None  # None=未確定, 0+=有効(0=1FL)
+        self._floor_before_op        = None  # None=操作外, 0+=有効フロア
         self._pyqt_active            = False
         self._start_floor_polling()
 
@@ -886,7 +902,12 @@ class MainWindow(QMainWindow):
         self.proxy = ExcelFilterProxyModel()
         self.proxy.setSourceModel(self.model)
         self.table.setModel(self.proxy)
-        self.table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        # EditTrigger.NoEditTriggers で Qt 内部トリガーを無効化し、
+        # doubleClicked シグナルから直接 edit() を呼ぶことで確実に編集を起動する
+        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.table.doubleClicked.connect(self._on_table_double_clicked)
         self.table.horizontalHeader().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.table.horizontalHeader().customContextMenuRequested.connect(self.show_filter_menu)
         dp_lay.addWidget(self.table)
@@ -953,13 +974,13 @@ class MainWindow(QMainWindow):
         self.btn_zoom_toggle.toggled.connect(self._on_zoom_toggle)
         lbl_zoom = QLabel("余白:")
         self.zoom_slider = QSlider(Qt.Orientation.Horizontal)
-        # 値 50～500 → 5.0x～50.0x（÷10）
-        self.zoom_slider.setRange(50, 500)
-        self.zoom_slider.setValue(300)       # デフォルト 30.0x
-        self.zoom_slider.setTickInterval(50)
+        # 値 10～50 → 1.0x～5.0x（÷10）  ※倍率=ビューBox拡大率
+        self.zoom_slider.setRange(10, 50)
+        self.zoom_slider.setValue(15)        # デフォルト 1.5x
+        self.zoom_slider.setTickInterval(5)
         self.zoom_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.zoom_slider.setFixedWidth(180)
-        self.zoom_factor_label = QLabel("30.0x")
+        self.zoom_factor_label = QLabel("1.5x")
         self.zoom_factor_label.setFixedWidth(40)
         self.zoom_slider.valueChanged.connect(
             lambda v: self.zoom_factor_label.setText(f"{v / 10.0:.1f}x")
@@ -1193,6 +1214,25 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "エラー", f"差分取得失敗: {e}")
             append_log(f"[DIFF ERROR] {e}")
 
+    # ── Undo / Redo ─────────────────────────────────────────────────
+
+    def _do_undo(self):
+        self.undo_stack.undo()
+        self.model.refresh_view()
+        self.table.viewport().update()
+
+    def _do_redo(self):
+        self.undo_stack.redo()
+        self.model.refresh_view()
+        self.table.viewport().update()
+
+    def _on_table_double_clicked(self, index):
+        """ダブルクリックで編集を起動（EditTrigger.NoEditTriggers を補完）"""
+        if index.column() == 0:
+            return
+        append_log(f"[DBLCLICK] proxy row={index.row()} col={index.column()}")
+        self.table.edit(index)
+
     # ── テーブルクリック・ArchiCAD 選択連動 ─────────────────────────
 
     def on_table_clicked(self, index):
@@ -1360,7 +1400,7 @@ class MainWindow(QMainWindow):
     # ── BIM 表現の上書き ─────────────────────────────────────────────
 
     def toggle_bim_override(self):
-        floor = self._last_archicad_floor
+        floor = self._last_archicad_floor if self._last_archicad_floor is not None else -1
         append_log(f"[OVERRIDE] floor={floor} active={self._pyqt_active}")
         if self.btn_bim_override.isChecked():
             self.btn_bim_override.setText("変更強調 ON")
@@ -1404,6 +1444,11 @@ class MainWindow(QMainWindow):
                 self.status_label.setText(f"変更強調 {label}: {view_count}ビュー更新")
             else:
                 self.status_label.setText(f"変更強調エラー: {data.get('reason', '')}")
+            # BIMオーバーライドが全フロアをループするため、操作前のフロアに戻す
+            if self._floor_before_op is not None:
+                append_log(f"[FLOOR RESTORE] goto_floor={self._floor_before_op}")
+                self.send_to_ac_async({"command": "goto_floor", "floor": self._floor_before_op})
+                self._floor_before_op = None
 
     # ── ChangeStatus 管理 ────────────────────────────────────────────
 
@@ -1433,6 +1478,7 @@ class MainWindow(QMainWindow):
             return
         self._pending_status_change = {"guids": list(guids), "value": 0}
         self._pending_bim_restore   = True   # 完了後に表現の上書きセットを解除
+        self._floor_before_op       = self._last_archicad_floor  # リセット前フロアを保存
         self.send_to_ac_async({"command": "set_change_status", "guids": guids, "status": 0})
         self.status_label.setText(f"全件リセット中: {len(guids)}件...")
 
@@ -1454,8 +1500,9 @@ class MainWindow(QMainWindow):
                 # 全件リセット完了 → 表現の上書きセットを解除
                 if self._pending_bim_restore:
                     self._pending_bim_restore = False
-                    floor = self._last_archicad_floor
-                    self.send_to_ac_async({"command": "remove_bim_override", "floor": floor})
+                    floor = self._floor_before_op if self._floor_before_op is not None else self._last_archicad_floor
+                    cmd_floor = floor if floor is not None else -1
+                    self.send_to_ac_async({"command": "remove_bim_override", "floor": cmd_floor})
                     self.btn_bim_override.setChecked(False)
                     self.btn_bim_override.setText("変更強調 OFF")
                     append_log(f"[RESET-ALL] BIM override removed floor={floor}")
@@ -1522,6 +1569,7 @@ class MainWindow(QMainWindow):
         self._pre_verify_original = dict(self.model._original_values)
         self._pre_verify_stamps   = dict(self.model._stamps)
         self._verifying_stamps    = True
+        self._floor_before_op     = self._last_archicad_floor   # 反映前フロアを保存
         self.btn_sync.setEnabled(False)
         changed_guids = list({c["guid"]   for c in changes})
         changed_props = list({c["propId"] for c in changes if c.get("propId")})
@@ -1730,7 +1778,10 @@ class MainWindow(QMainWindow):
 
             # 成功件数があれば BIM変更管理（表現の上書き）を自動適用
             if sc > 0:
-                self.send_to_ac_async({"command": "apply_bim_override"})
+                floor = self._floor_before_op if self._floor_before_op is not None else self._last_archicad_floor
+                cmd_floor = floor if floor is not None else -1
+                self.send_to_ac_async({"command": "apply_bim_override", "floor": cmd_floor})
+                append_log(f"[APPLY OVERRIDE] floor={cmd_floor}")
                 self.btn_bim_override.setChecked(True)
                 self.btn_bim_override.setText("変更強調 ON")
                 append_log(f"[SYNC] BIM override auto-applied (sc={sc})")
@@ -1774,13 +1825,20 @@ class MainWindow(QMainWindow):
             append_log(f"[FLOOR POLL FAIL] {e}")
 
     def on_current_floor(self, data):
-        floor = data.get("floor", 0)
-        append_log(f"[FLOOR UPDATE] raw={floor} stored={self._last_archicad_floor}")
-        # 非ゼロ優先スティッキー: 0はArchiCADがfocusを失った際の誤値の可能性があるため
-        # 非ゼロの値が来たときのみ更新し、最後に確認した有効フロアを保持する
-        if floor > 0:
+        floor = data.get("floor", -1)
+        valid = data.get("valid", None)
+        # valid フラグがある場合はそれを使用（C++が「フロアプランかどうか」を明示）
+        # valid フラグがない場合は非ゼロを有効とみなす（後方互換）
+        if valid is True:
+            # C++ が valid=True を明示 → 0(=1FL) を含む全フロアが有効
             self._last_archicad_floor = floor
-            append_log(f"[FLOOR STORED] floor={floor}")
+            append_log(f"[FLOOR UPDATE] floor={floor}")
+        elif valid is None and floor > 0:
+            # 旧プロトコル（valid なし）: 非ゼロのみ信用
+            self._last_archicad_floor = floor
+            append_log(f"[FLOOR UPDATE] floor={floor} (legacy)")
+        else:
+            append_log(f"[FLOOR UPDATE] skip floor={floor} valid={valid} stored={self._last_archicad_floor}")
 
     # ── TCP 送信 ─────────────────────────────────────────────────────
 

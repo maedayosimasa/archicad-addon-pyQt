@@ -23,9 +23,8 @@ private:
     virtual void PanelCloseRequested (const DG::PanelCloseRequestEvent& ev, bool* accepted) override;
     virtual void ButtonClicked (const DG::ButtonClickEvent& ev) override;
 
-    DG::Button searchButton;
-    DG::Button cancelButton;
     DG::Button getConfigButton;
+    DG::Button cancelButton;
 };
 
 #endif

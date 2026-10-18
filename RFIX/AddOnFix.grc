@@ -3,16 +3,14 @@
 #include "ResourceIds.hpp"
 
 'MDID' 32500 "Add-On Identifier" {
-	11
-	11
+	930179925
+	99967209
 }
 
-/* Main Dialog Layout */
-'GDLG' ID_ADDON_DLG Palette | close | noGrow 40 40 450 150 "" {
-    /* [  1] */ Button      330 110  90  25  LargePlain ""   /* Search */
-	/* [  2] */ Button      230 110  90  25  LargePlain ""   /* Cancel */
-    /* [  3] */ Separator    10 100 430  2               /* Separator */
-    /* [  4] */ Button       10  10 430  35  LargePlain ""   /* Get Configuration */
+/* Main Dialog Layout $2014 構成取得 / キャンセル */
+'GDLG' ID_ADDON_DLG Palette | close | noGrow 40 40 300 70 "" {
+    /* [  1] */ Button       10  15 185  40  LargePlain ""   /* Get Configuration */
+    /* [  2] */ Button      205  15  85  40  LargePlain ""   /* Cancel */
 }
 
 /* Result Dialog Layout (Required by ResultDialog.cpp) */

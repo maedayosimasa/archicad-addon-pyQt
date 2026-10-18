@@ -4,3 +4,11 @@ Build/*
 out/*
 CMakeUserPresets.json
 APIDevKit-*/
+
+# Python / tools
+.mypy_cache/
+.venv/
+__pycache__/
+# SQLite temp files
+*.db-shm
+*.db-wal
