@@ -90,7 +90,6 @@ def main_window(qapp, tmp_path, monkeypatch, msgbox):
     win.sent = sent
     win.msgbox = msgbox
     yield win
+    win.close()          # データウィンドウもすべて閉じ、DB も閉じる
     win.db.close()
-    win.data_panel.close()
-    win.close()
     win.deleteLater()

@@ -1577,7 +1577,11 @@ void ExportValues(const std::string& json) {
         else if (s.size() > 4 && s.substr(0, 4) == "gdl:") { gdlKeys.push_back(s); }
         else { try { API_PropertyDefinition d = {}; d.guid = GSGuid2APIGuid(GS::Guid(s.c_str())); if (ACAPI_Property_GetPropertyDefinition(d) == NoError) pDefs.Push(d); } catch (...) {} }
     }
-    GS::UniString out = "{\"type\":\"property_values\",\"values\":[";
+    GS::UniString out = "{\"type\":\"property_values\",";
+    // 要求番号をそのまま返す（Python 側で複数のデータウィンドウのどれ宛ての応答か判別する）
+    const std::string reqId = GetV(json, "reqId");
+    if (!reqId.empty()) { out.Append("\"reqId\":"); out.Append(JsonStr(GS::UniString(reqId.c_str(), CC_UTF8))); out.Append(","); }
+    out.Append("\"values\":[");
     for (UInt32 i = 0; i < guids.GetSize(); i++) {
         if (i > 0) out.Append(","); API_Elem_Head h = {}; h.guid = guids[i]; ACAPI_Element_GetHeader(&h);
         out.Append("{\"guid\":\""); out.Append(APIGuid2GSGuid(guids[i]).ToUniString()); out.Append("\",");

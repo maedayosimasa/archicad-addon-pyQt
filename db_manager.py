@@ -89,6 +89,19 @@ class DbManager:
                 PRIMARY KEY (element_guid, property_guid)
             );
 
+            -- 開いているデータ表示・編集ウィンドウ（閉じると削除）
+            CREATE TABLE IF NOT EXISTS data_windows (
+                window_id     TEXT PRIMARY KEY,
+                window_key    TEXT NOT NULL UNIQUE,
+                title         TEXT,
+                condition_id  INTEGER,
+                stories       TEXT,
+                types         TEXT,
+                element_guids TEXT,
+                prop_guids    TEXT,
+                opened_at     TEXT NOT NULL
+            );
+
             -- パフォーマンス用インデックス
             CREATE INDEX IF NOT EXISTS idx_edit_history_element
                 ON edit_history(element_guid);
@@ -320,6 +333,57 @@ class DbManager:
             "SELECT * FROM conflict_flags WHERE cleared=0"
         ).fetchall()
         return [dict(r) for r in rows]
+
+    # ── DataWindows（複数のデータ表示・編集ウィンドウ）─────────────────
+
+    @staticmethod
+    def make_window_key(stories: list, types: dict, prop_guids: list) -> str:
+        """同じ内容のウィンドウかを判定するキー（階・要素タイプ・プロパティの組み合わせ）。"""
+        return json.dumps({
+            "stories": sorted(stories),
+            "types":   sorted(k for k, v in types.items() if v),
+            "props":   sorted(prop_guids),
+        }, ensure_ascii=False, sort_keys=True)
+
+    def find_window(self, window_key: str):
+        row = self._conn().execute(
+            "SELECT * FROM data_windows WHERE window_key=?", (window_key,)
+        ).fetchone()
+        return dict(row) if row else None
+
+    def open_window(self, window_id: str, window_key: str, title: str, condition_id,
+                    stories: list, types: dict, element_guids: list, prop_guids: list) -> bool:
+        """ウィンドウを登録する。同じキーが既にあれば登録せず False。"""
+        conn = self._conn()
+        try:
+            conn.execute(
+                """INSERT INTO data_windows
+                   (window_id, window_key, title, condition_id, stories, types,
+                    element_guids, prop_guids, opened_at)
+                   VALUES (?,?,?,?,?,?,?,?,?)""",
+                (window_id, window_key, title, condition_id,
+                 json.dumps(stories, ensure_ascii=False), json.dumps(types, ensure_ascii=False),
+                 json.dumps(element_guids), json.dumps(prop_guids, ensure_ascii=False), self._now()),
+            )
+        except sqlite3.IntegrityError:
+            return False
+        conn.commit()
+        return True
+
+    def close_window(self, window_id: str):
+        conn = self._conn()
+        conn.execute("DELETE FROM data_windows WHERE window_id=?", (window_id,))
+        conn.commit()
+
+    def list_windows(self) -> list:
+        rows = self._conn().execute("SELECT * FROM data_windows ORDER BY opened_at, rowid").fetchall()
+        return [dict(r) for r in rows]
+
+    def clear_windows(self):
+        """前回の異常終了などで残った登録を消す（起動時）。"""
+        conn = self._conn()
+        conn.execute("DELETE FROM data_windows")
+        conn.commit()
 
     # ── Lifecycle ────────────────────────────────────────────────────
 

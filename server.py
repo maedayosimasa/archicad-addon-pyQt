@@ -6,6 +6,7 @@ import threading
 import traceback
 import faulthandler
 import uuid
+from collections import deque
 from pathlib import Path
 
 # ── ロギングをインポート前に有効化（クラッシュ原因を必ず記録する）────────────
@@ -59,7 +60,7 @@ except Exception as _e:
 
 try:
     # QKeySequence / QShortcut は PyQt5/6 いずれも QtGui に属する
-    from PyQt6.QtGui import QColor, QAction, QFont, QKeySequence
+    from PyQt6.QtGui import QColor, QAction, QFont, QKeySequence, QPalette
     append_log("PyQt6.QtGui OK")
 except Exception as _e:
     append_log(f"IMPORT FATAL QtGui: {_e}\n{traceback.format_exc()}")
@@ -817,12 +818,19 @@ class ReplaceDialog(QDialog):
             "selection_only": self.chk_selection.isChecked(),
         }
 
+    def _activate_owner(self):
+        panel = getattr(self, "_panel", None)
+        if panel is not None and hasattr(self._win, "activate_panel"):
+            self._win.activate_panel(panel)
+
     def on_find(self):
+        self._activate_owner()
         n = self._win.select_matches(self.options())
         if n is not None:
             self.info_label.setText(f"一致: {n} セル")
 
     def on_replace(self):
+        self._activate_owner()
         result = self._win.replace_all(self.options())
         if result is not None:
             changed, skipped, locked = result
@@ -937,6 +945,73 @@ class SiteSummaryDialog(QDialog):
 
 
 # ─────────────────────────────────────────────────────────────────────
+# DataPanel  データ表示・編集ウィンドウ（複数同時に開ける）
+# ─────────────────────────────────────────────────────────────────────
+
+class DataPanel(QWidget):
+    """データ表示・編集ウィンドウ 1 枚分。表・ボタン・Undo 履歴・作業状態をウィンドウごとに持つ。
+
+    画面部品と操作は MainWindow._create_data_panel で組み立て、処理は MainWindow 側の
+    既存メソッドを「このウィンドウをアクティブにしてから」呼ぶ。
+    """
+    activated = pyqtSignal(object)   # このウィンドウが前面・操作対象になった
+    closed    = pyqtSignal(object)   # 閉じた（SQLite の登録を消す）
+
+    def __init__(self, window_id):
+        super().__init__()
+        self.setWindowFlags(Qt.WindowType.Window)
+        self.window_id     = window_id
+        self.window_key    = None      # None = まだデータを表示していない（再利用可能）
+        self.seq           = 0         # 表示用の通し番号
+        self.elements      = []
+        self.condition_id  = None
+        self.confirm_close = None      # callable(panel) -> bool。False なら閉じない
+        # ウィンドウごとの作業状態（MainWindow から委譲される）
+        self.current_props          = []
+        self._selected_guids        = []
+        self._pending_changes       = None
+        self._verifying_stamps      = False
+        self._pre_verify_original   = {}
+        self._pre_verify_stamps     = {}
+        self._pending_skip_count    = 0
+        self._pending_status_change = None
+        self._pending_bim_restore   = False
+        self._replace_dlg           = None
+        self._click_prev_guid       = None
+        self._click_prev_status     = 0
+
+    def has_unsynced_changes(self):
+        m = self.model
+        return any(str(v) != str(m._original_values.get(k)) for k, v in m._values.items())
+
+    def event(self, e):
+        if e.type() == QEvent.Type.WindowActivate:
+            self.activated.emit(self)
+        return super().event(e)
+
+    def closeEvent(self, e):
+        if self.confirm_close is not None and not self.confirm_close(self):
+            e.ignore()
+            return
+        super().closeEvent(e)
+        self.closed.emit(self)
+
+
+# 作業中のデータウィンドウに委譲する MainWindow の属性（self.model 等はアクティブなウィンドウのもの）
+PANEL_ATTRS = frozenset({
+    "status_label", "search_edit", "row_count_label", "btn_clear_sort", "btn_replace",
+    "btn_export_excel", "btn_import_excel", "table", "model", "proxy",
+    "btn_sync", "btn_clear_flags", "btn_bim_override", "btn_diff",
+    "btn_confirm", "btn_reset_status", "btn_confirm_all", "btn_undo", "btn_redo",
+    "btn_zoom_toggle", "zoom_slider", "zoom_factor_label", "btn_zoom_fit", "undo_stack",
+    "current_props", "_selected_guids", "_pending_changes", "_verifying_stamps",
+    "_pre_verify_original", "_pre_verify_stamps", "_pending_skip_count",
+    "_pending_status_change", "_pending_bim_restore", "_replace_dlg",
+    "_click_prev_guid", "_click_prev_status",
+})
+
+
+# ─────────────────────────────────────────────────────────────────────
 # MainWindow
 # ─────────────────────────────────────────────────────────────────────
 
@@ -947,41 +1022,35 @@ class MainWindow(QMainWindow):
         # ① DB・セッション・Undo スタックを setup_ui より先に初期化
         self.db                  = DbManager()
         self.session_id          = str(uuid.uuid4())
-        self.undo_stack          = QUndoStack(self)
-        self.undo_stack.setUndoLimit(200)
         self.current_condition_id = None
+        self._last_condition      = ([], {})   # 直近の抽出条件（階, 要素タイプ）
+
+        # データウィンドウ管理（複数表示）。前回の異常終了で残った登録は消す
+        self._panels          = {}   # window_id -> DataPanel
+        self._panel_seq       = 0
+        self._active_panel    = None
+        self._value_requests  = {}   # reqId -> DataPanel（get_values の応答先）
+        self._owners          = {k: deque() for k in ("sync", "status", "flag", "override")}
+        try:
+            self.db.clear_windows()
+        except Exception as e:
+            append_log(f"[DB ERROR] clear_windows: {e}")
+
+        # ウィンドウの大きさ・位置の保存（データウィンドウ生成より先に用意）
+        self._tracked_windows = {}           # widget -> 保存キー
+        self._last_moved      = {}           # 保存キー -> 最後に動かしたウィンドウ
+        self._closing         = False
+        self._shown_windows   = set()        # 今回表示したウィンドウ（未表示のものは保存しない）
+        self._state_timer = QTimer(self)
+        self._state_timer.setSingleShot(True)
+        self._state_timer.setInterval(500)   # 連続したサイズ変更をまとめて保存
+        self._state_timer.timeout.connect(self.save_window_state)
 
         self.setWindowTitle("Archicad BIM - 条件設定")
         self.resize(620, 420)
 
         # ② UI 構築
         self.setup_ui()
-
-        # モデルに DB / Undo 参照を注入
-        self.model._undo_stack  = self.undo_stack
-        self.model._db          = self.db
-        self.model._session_id  = self.session_id
-
-        # ⑤ Undo/Redo ボタン ←→ Undo スタック 自動連動
-        self.undo_stack.canUndoChanged.connect(lambda can: self.btn_undo.setEnabled(can))
-        self.undo_stack.canRedoChanged.connect(lambda can: self.btn_redo.setEnabled(can))
-        self.undo_stack.undoTextChanged.connect(
-            lambda t: self.btn_undo.setText(f"戻る: {t}" if t else "戻る (Undo)")
-        )
-        self.undo_stack.redoTextChanged.connect(
-            lambda t: self.btn_redo.setText(f"進む: {t}" if t else "進む (Redo)")
-        )
-        self.btn_undo.clicked.connect(self._do_undo)
-        self.btn_redo.clicked.connect(self._do_redo)
-        # undo/redo 後にテーブル全体を再描画して表示を同期させる
-        self.undo_stack.indexChanged.connect(lambda _: self.table.viewport().update())
-
-        # Ctrl+Z / Ctrl+Y キーボードショートカット（QShortcut が利用可能な場合のみ）
-        if QShortcut is not None:
-            _sc_undo = QShortcut(QKeySequence.StandardKey.Undo, self.data_panel)
-            _sc_undo.activated.connect(self._do_undo)
-            _sc_redo = QShortcut(QKeySequence.StandardKey.Redo, self.data_panel)
-            _sc_redo.activated.connect(self._do_redo)
 
         # シグナル接続
         self.signals = CommunicationSignals()
@@ -1035,14 +1104,301 @@ class MainWindow(QMainWindow):
         self._restore_conflict_flags()
 
         # ⑧ ウィンドウの大きさ・位置を前回の状態に復元し、変更のたびに自動保存
-        self._shown_windows = set()            # 今回表示したウィンドウ（未表示のものは保存しない）
-        self._state_timer = QTimer(self)
-        self._state_timer.setSingleShot(True)
-        self._state_timer.setInterval(500)     # 連続したサイズ変更をまとめて保存
-        self._state_timer.timeout.connect(self.save_window_state)
         self._track_window("main", self)
-        self._track_window("data_panel", self.data_panel)
         self._restore_splitter()
+
+    # ── 複数データウィンドウ: 作業中ウィンドウへの委譲 ──────────────────
+
+    def __getattr__(self, name):
+        # 通常の属性探索で見つからない時だけ呼ばれる → self.model 等はアクティブなウィンドウのもの
+        if name in PANEL_ATTRS:
+            panel = self.__dict__.get("_active_panel")
+            if panel is not None:
+                return getattr(panel, name)
+        raise AttributeError(name)
+
+    def __setattr__(self, name, value):
+        if name in PANEL_ATTRS and self.__dict__.get("_active_panel") is not None:
+            setattr(self.__dict__["_active_panel"], name, value)
+            return
+        super().__setattr__(name, value)
+
+    @property
+    def data_panel(self):
+        """作業中（アクティブ）のデータ表示・編集ウィンドウ。"""
+        return self._active_panel
+
+    def open_panels(self):
+        """データを表示中（SQLite に登録済み）のウィンドウ一覧。"""
+        return [p for p in self._panels.values() if p.window_key is not None]
+
+    def activate_panel(self, panel):
+        if panel is not None and panel.window_id in self._panels:
+            self.__dict__["_active_panel"] = panel
+
+    def _bind(self, panel, fn, nargs=0):
+        """部品のシグナル → 「panel をアクティブにしてから fn」を呼ぶスロット。"""
+        def slot(*args):
+            if panel.window_id not in self._panels:
+                return None   # 閉じた（破棄中の）ウィンドウからの通知は無視
+            self.activate_panel(panel)
+            return fn(*args[:nargs])
+        return slot
+
+    def _create_data_panel(self):
+        self._panel_seq += 1
+        p = DataPanel(str(uuid.uuid4()))
+        p.seq = self._panel_seq
+        p.setWindowTitle("Archicad BIM - データ表示・編集")
+        p.resize(1050, 720)
+        b = lambda fn, n=0: self._bind(p, fn, n)   # noqa: E731
+
+        dp_lay = QVBoxLayout(p)
+        dp_lay.setContentsMargins(4, 4, 4, 4)
+        dp_lay.setSpacing(4)
+        p.status_label = QLabel("待機中")
+        dp_lay.addWidget(p.status_label)
+
+        # ── Excel 風ツールバー（検索・並び替え解除・置換・Excel 入出力）──
+        tool_row = QWidget()
+        trl = QHBoxLayout(tool_row); trl.setContentsMargins(0, 0, 0, 0)
+        p.search_edit = QLineEdit()
+        p.search_edit.setPlaceholderText("表内を検索（全列・部分一致）")
+        p.search_edit.setClearButtonEnabled(True)
+        p.search_edit.textChanged.connect(b(self.on_search_changed, 1))
+        p.row_count_label = QLabel("表示 0 / 全 0 件")
+        p.btn_clear_sort = QPushButton("並び替え解除")
+        p.btn_clear_sort.setToolTip("見出しクリックで並び替え（昇順→降順→解除）")
+        p.btn_clear_sort.clicked.connect(b(self.clear_sort))
+        p.btn_replace = QPushButton("置換")
+        p.btn_replace.setToolTip("検索と置換 (Ctrl+H)")
+        p.btn_replace.clicked.connect(b(self.show_replace_dialog))
+        p.btn_export_excel = QPushButton("Excel出力")
+        p.btn_export_excel.setToolTip("表示中の行を .xlsx に書き出し（未反映の変更は赤塗り）")
+        p.btn_export_excel.clicked.connect(b(self.export_excel))
+        p.btn_import_excel = QPushButton("Excel取込")
+        p.btn_import_excel.setToolTip("編集した .xlsx を読み込み、差分のみ表に反映（Undo 可）")
+        p.btn_import_excel.clicked.connect(b(self.import_excel))
+        trl.addWidget(QLabel("検索:"))
+        trl.addWidget(p.search_edit, 1)
+        trl.addWidget(p.row_count_label)
+        for w in (p.btn_clear_sort, p.btn_replace, p.btn_export_excel, p.btn_import_excel):
+            trl.addWidget(w)
+        dp_lay.addWidget(tool_row)
+
+        # ── 表 ──
+        p.table = QTableView()
+        p.model = PropertyTableModel()
+        p.proxy = ExcelFilterProxyModel()
+        p.proxy.setSourceModel(p.model)
+        p.table.setModel(p.proxy)
+        # Excel 同様: セル単位で複数選択（Shift/Ctrl+クリック、ドラッグ）
+        p.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        p.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)
+        # 見出しクリックで並び替え。初期状態は取得順のまま（並び替えなし）
+        hh = p.table.horizontalHeader()
+        hh.setSortIndicatorClearable(True)
+        hh.setSortIndicator(-1, Qt.SortOrder.AscendingOrder)
+        p.table.setSortingEnabled(True)
+        p.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        p.table.customContextMenuRequested.connect(b(self.show_cell_menu, 1))
+        for sig in (p.proxy.modelReset, p.proxy.rowsInserted, p.proxy.rowsRemoved, p.proxy.layoutChanged):
+            sig.connect(b(self._update_row_count))
+        # EditTrigger.NoEditTriggers で Qt 内部トリガーを無効化し、
+        # doubleClicked シグナルから直接 edit() を呼ぶことで確実に編集を起動する
+        p.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        p.table.doubleClicked.connect(b(self._on_table_double_clicked, 1))
+        p.table.clicked.connect(b(self.on_table_clicked, 1))
+        hh.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        hh.customContextMenuRequested.connect(b(self.show_filter_menu, 1))
+        dp_lay.addWidget(p.table)
+
+        # ── ボタン行 ──
+        def row(*widgets):
+            w = QWidget(); lay = QHBoxLayout(w); lay.setContentsMargins(0, 0, 0, 0)
+            for x in widgets:
+                if isinstance(x, int):
+                    lay.addSpacing(x)
+                else:
+                    lay.addWidget(x)
+            dp_lay.addWidget(w)
+            return lay
+
+        p.btn_sync = QPushButton("Archicadへ反映")
+        p.btn_sync.clicked.connect(b(self.sync_data))
+        p.btn_clear_flags = QPushButton("競合フラグ解除")
+        p.btn_clear_flags.setEnabled(False)
+        p.btn_clear_flags.clicked.connect(b(self.clear_value_conflict_flags))
+        row(p.btn_sync, p.btn_clear_flags)
+
+        p.btn_bim_override = QPushButton("変更強調 OFF")
+        p.btn_bim_override.setCheckable(True)
+        p.btn_bim_override.clicked.connect(b(self.toggle_bim_override))
+        p.btn_diff = QPushButton("差分を比較")
+        p.btn_diff.setEnabled(False)
+        p.btn_diff.clicked.connect(b(self.show_diff_dialog))
+        row(p.btn_bim_override, p.btn_diff)
+
+        p.btn_confirm = QPushButton("確認済 (2)")
+        p.btn_confirm.setToolTip("選択行を ChangeStatus=2（緑）に設定")
+        p.btn_confirm.setEnabled(False)
+        p.btn_confirm.clicked.connect(b(self.mark_confirmed))
+        p.btn_reset_status = QPushButton("リセット (0)")
+        p.btn_reset_status.setToolTip("選択行を ChangeStatus=0（未変更）に戻す")
+        p.btn_reset_status.setEnabled(False)
+        p.btn_reset_status.clicked.connect(b(self.reset_change_status))
+        p.btn_confirm_all = QPushButton("全件リセット")
+        p.btn_confirm_all.setToolTip("テーブル全要素を ChangeStatus=0（未変更）にリセット")
+        p.btn_confirm_all.setEnabled(False)
+        p.btn_confirm_all.clicked.connect(b(self.reset_all_table))
+        row(p.btn_confirm, p.btn_reset_status, p.btn_confirm_all)
+
+        p.btn_undo = QPushButton("戻る (Undo)")
+        p.btn_undo.setEnabled(False)
+        p.btn_redo = QPushButton("進む (Redo)")
+        p.btn_redo.setEnabled(False)
+        p.btn_undo.clicked.connect(b(self._do_undo))
+        p.btn_redo.clicked.connect(b(self._do_redo))
+        row(p.btn_undo, p.btn_redo)
+
+        p.btn_zoom_toggle = QPushButton("ズーム OFF")
+        p.btn_zoom_toggle.setCheckable(True)
+        p.btn_zoom_toggle.setFixedWidth(90)
+        p.btn_zoom_toggle.setToolTip("ONにすると行クリック時にArchiCADでズーム表示します")
+        p.btn_zoom_toggle.toggled.connect(b(self._on_zoom_toggle, 1))
+        p.zoom_slider = QSlider(Qt.Orientation.Horizontal)
+        p.zoom_slider.setRange(10, 50)      # 値 10～50 → 1.0x～5.0x（÷10）
+        p.zoom_slider.setValue(15)          # デフォルト 1.5x
+        p.zoom_slider.setTickInterval(5)
+        p.zoom_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        p.zoom_slider.setFixedWidth(180)
+        p.zoom_factor_label = QLabel("1.5x")
+        p.zoom_factor_label.setFixedWidth(40)
+        p.zoom_slider.valueChanged.connect(lambda v: p.zoom_factor_label.setText(f"{v / 10.0:.1f}x"))
+        p.btn_zoom_fit = QPushButton("全体表示")
+        p.btn_zoom_fit.setToolTip("ArchiCADのビューを全体表示（フィット）します")
+        p.btn_zoom_fit.setFixedWidth(80)
+        p.btn_zoom_fit.clicked.connect(b(self.zoom_fit_all))
+        row(p.btn_zoom_toggle, 8, QLabel("余白:"), p.zoom_slider, p.zoom_factor_label, 8, p.btn_zoom_fit).addStretch()
+
+        # ── Undo/Redo（ウィンドウごと）──
+        p.undo_stack = QUndoStack(p)
+        p.undo_stack.setUndoLimit(200)
+        p.model._undo_stack = p.undo_stack
+        p.model._db         = self.db
+        p.model._session_id = self.session_id
+        p.undo_stack.canUndoChanged.connect(p.btn_undo.setEnabled)
+        p.undo_stack.canRedoChanged.connect(p.btn_redo.setEnabled)
+        p.undo_stack.undoTextChanged.connect(lambda t: p.btn_undo.setText(f"戻る: {t}" if t else "戻る (Undo)"))
+        p.undo_stack.redoTextChanged.connect(lambda t: p.btn_redo.setText(f"進む: {t}" if t else "進む (Redo)"))
+        p.undo_stack.indexChanged.connect(lambda _: p.table.viewport().update())
+
+        if QShortcut is not None:
+            for keys, slot, parent in ((QKeySequence.StandardKey.Undo, self._do_undo, p),
+                                       (QKeySequence.StandardKey.Redo, self._do_redo, p),
+                                       (QKeySequence.StandardKey.Copy, self.copy_selection, p.table),
+                                       (QKeySequence.StandardKey.Paste, self.paste_clipboard, p.table),
+                                       (QKeySequence("Ctrl+D"), self.fill_down, p.table),
+                                       (QKeySequence("Ctrl+H"), self.show_replace_dialog, p.table)):
+                sc = QShortcut(keys, parent)
+                if parent is p.table:
+                    sc.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+                sc.activated.connect(b(slot))
+
+        # ── 管理（アクティブ化・閉じる・大きさの記憶・ボタンの反応）──
+        p.activated.connect(self.activate_panel)
+        p.closed.connect(self._on_panel_closed)
+        p.confirm_close = self._confirm_panel_close
+        self._panels[p.window_id] = p
+        self._track_window("data_panel", p)
+        n_open = len(self.open_panels())
+        if n_open:                                   # 2 枚目以降は少しずらして重ならないように
+            p.move(p.x() + 30 * n_open, p.y() + 30 * n_open)
+        self._connect_flash(p)
+        return p
+
+    def _panel_title(self, panel, stories, types):
+        names = {s["index"]: s["name"] for s in getattr(self, "_story_list", [])}
+        floor_txt = "全階" if not stories else ", ".join(str(names.get(s, s)) for s in stories)
+        type_txt = ", ".join(ELEMENT_TYPE_LABELS.get(k, k) for k, v in types.items() if v) or "-"
+        return (f"データ表示・編集 #{panel.seq}  {floor_txt} / {type_txt}"
+                f"  ({len(panel.elements)}件 × {len(panel.current_props)}列)")
+
+    def _acquire_panel(self):
+        """データを入れるウィンドウ: 未使用の作業中ウィンドウがあれば再利用、無ければ新規。"""
+        p = self._active_panel
+        if p is not None and p.window_key is None and not p.model._elements:
+            return p
+        for q in self._panels.values():
+            if q.window_key is None and not q.model._elements:
+                return q
+        return self._create_data_panel()
+
+    def _confirm_panel_close(self, panel):
+        if not panel.has_unsynced_changes():
+            return True
+        return QMessageBox.question(
+            panel, "データ表示・編集を閉じる",
+            "Archicad に反映していない変更（赤字）があります。\n閉じると変更は破棄されます。閉じますか？",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        ) == QMessageBox.StandardButton.Yes
+
+    def _on_panel_closed(self, panel):
+        """閉じたウィンドウは SQLite の登録ごと消去する。"""
+        if panel.window_id not in self._panels:
+            return
+        del self._panels[panel.window_id]
+        if panel.window_key is not None:
+            try:
+                self.db.close_window(panel.window_id)
+            except Exception as e:
+                append_log(f"[DB ERROR] close_window: {e}")
+        for rid, q in list(self._value_requests.items()):
+            if q is panel:
+                del self._value_requests[rid]
+        for dq in self._owners.values():
+            for q in [q for q in dq if q is panel]:
+                dq.remove(q)
+        self._untrack_window(panel)
+        # 破棄中にモデル/Undo が出す通知（件数・Undo 可否の変化）で、既に消えた部品を触らないよう止める
+        for obj in (panel.undo_stack, panel.proxy, panel.model):
+            obj.blockSignals(True)
+        append_log(f"[PANEL] closed #{panel.seq} ({panel.window_id[:8]})")
+        if self._active_panel is panel:
+            remaining = list(self._panels.values())
+            if remaining:
+                self.__dict__["_active_panel"] = remaining[-1]
+            elif not self._closing:
+                # 作業中ウィンドウが無くなっても self.model 等が使えるよう未使用の 1 枚を用意
+                self.__dict__["_active_panel"] = self._create_data_panel()
+        panel.deleteLater()
+
+    def _discard_panel(self, panel):
+        """表示前のウィンドウを未使用状態に戻す（SQLite の登録も消す）。"""
+        if panel.window_key is not None:
+            try:
+                self.db.close_window(panel.window_id)
+            except Exception as e:
+                append_log(f"[DB ERROR] close_window: {e}")
+        panel.window_key = None
+        panel.elements = []
+
+    def _pop_owner(self, kind):
+        """応答の宛先ウィンドウ（送信順）。不明なら作業中のウィンドウ。"""
+        dq = self._owners.get(kind)
+        while dq:
+            p = dq.popleft()
+            if p.window_id in self._panels:
+                return p
+        return self._active_panel
+
+    def _push_owner(self, kind):
+        self._owners[kind].append(self._active_panel)
+
+    def _send_owned(self, kind, data):
+        """応答（反映結果・ステータス等）をこのウィンドウへ返すため、送信順に宛先を記録して送る。"""
+        self._push_owner(kind)
+        self.send_to_ac_async(data)
 
     # ── 両ウィンドウを同時に表示 ─────────────────────────────────────
 
@@ -1149,177 +1505,9 @@ class MainWindow(QMainWindow):
         self.condition_status_label.setFixedHeight(22)
         c_lay.addWidget(self.condition_status_label, 0)  # stretch=0 で伸びない
 
-        # ════════════════════════════════════════════════════════════
-        # 右：データ表示・編集パネル（独立ウィンドウ）
-        # ════════════════════════════════════════════════════════════
-        self.data_panel = QWidget()
-        self.data_panel.setWindowFlags(Qt.WindowType.Window)
-        self.data_panel.setWindowTitle("Archicad BIM - データ表示・編集")
-        self.data_panel.resize(1050, 720)
-
-        dp_lay = QVBoxLayout(self.data_panel)
-        dp_lay.setContentsMargins(4, 4, 4, 4)
-        dp_lay.setSpacing(4)
-
-        self.status_label = QLabel("待機中")
-        dp_lay.addWidget(self.status_label)
-
-        # ── Excel 風ツールバー（検索・並び替え解除・Excel 入出力）──────
-        tool_row = QWidget()
-        trl = QHBoxLayout(tool_row); trl.setContentsMargins(0, 0, 0, 0)
-        self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("表内を検索（全列・部分一致）")
-        self.search_edit.setClearButtonEnabled(True)
-        self.search_edit.textChanged.connect(self.on_search_changed)
-        self.row_count_label = QLabel("表示 0 / 全 0 件")
-        self.btn_clear_sort = QPushButton("並び替え解除")
-        self.btn_clear_sort.setToolTip("見出しクリックで並び替え（昇順→降順→解除）")
-        self.btn_clear_sort.clicked.connect(self.clear_sort)
-        self.btn_replace = QPushButton("置換")
-        self.btn_replace.setToolTip("検索と置換 (Ctrl+H)")
-        self.btn_replace.clicked.connect(self.show_replace_dialog)
-        self.btn_export_excel = QPushButton("Excel出力")
-        self.btn_export_excel.setToolTip("表示中の行を .xlsx に書き出し（未反映の変更は赤塗り）")
-        self.btn_export_excel.clicked.connect(self.export_excel)
-        self.btn_import_excel = QPushButton("Excel取込")
-        self.btn_import_excel.setToolTip("編集した .xlsx を読み込み、差分のみ表に反映（Undo 可）")
-        self.btn_import_excel.clicked.connect(self.import_excel)
-        trl.addWidget(QLabel("検索:"))
-        trl.addWidget(self.search_edit, 1)
-        trl.addWidget(self.row_count_label)
-        trl.addWidget(self.btn_clear_sort)
-        trl.addWidget(self.btn_replace)
-        trl.addWidget(self.btn_export_excel)
-        trl.addWidget(self.btn_import_excel)
-        dp_lay.addWidget(tool_row)
-
-        self.table = QTableView()
-        self.model = PropertyTableModel()
-        self.proxy = ExcelFilterProxyModel()
-        self.proxy.setSourceModel(self.model)
-        self.table.setModel(self.proxy)
-        # Excel 同様: セル単位で複数選択（Shift/Ctrl+クリック、ドラッグ）
-        self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)
-        # 見出しクリックで並び替え。初期状態は取得順のまま（並び替えなし）
-        hh = self.table.horizontalHeader()
-        hh.setSortIndicatorClearable(True)
-        hh.setSortIndicator(-1, Qt.SortOrder.AscendingOrder)
-        self.table.setSortingEnabled(True)
-        self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.table.customContextMenuRequested.connect(self.show_cell_menu)
-        for sig in (self.proxy.modelReset, self.proxy.rowsInserted, self.proxy.rowsRemoved,
-                    self.proxy.layoutChanged):
-            sig.connect(self._update_row_count)
-        if QShortcut is not None:
-            for keys, slot in ((QKeySequence.StandardKey.Copy, self.copy_selection),
-                               (QKeySequence.StandardKey.Paste, self.paste_clipboard),
-                               (QKeySequence("Ctrl+D"), self.fill_down),
-                               (QKeySequence("Ctrl+H"), self.show_replace_dialog)):
-                sc = QShortcut(keys, self.table)
-                sc.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
-                sc.activated.connect(slot)
-        # EditTrigger.NoEditTriggers で Qt 内部トリガーを無効化し、
-        # doubleClicked シグナルから直接 edit() を呼ぶことで確実に編集を起動する
-        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.table.doubleClicked.connect(self._on_table_double_clicked)
-        self.table.horizontalHeader().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.table.horizontalHeader().customContextMenuRequested.connect(self.show_filter_menu)
-        dp_lay.addWidget(self.table)
-
-        # 行1: 反映・競合フラグ
-        btn_row1 = QWidget()
-        brl1 = QHBoxLayout(btn_row1); brl1.setContentsMargins(0, 0, 0, 0)
-        self.btn_sync = QPushButton("Archicadへ反映")
-        self.btn_sync.clicked.connect(self.sync_data)
-        self.btn_clear_flags = QPushButton("競合フラグ解除")
-        self.btn_clear_flags.setEnabled(False)
-        self.btn_clear_flags.clicked.connect(self.clear_value_conflict_flags)
-        brl1.addWidget(self.btn_sync)
-        brl1.addWidget(self.btn_clear_flags)
-
-        # 行2: 変更強調・差分比較
-        btn_row2 = QWidget()
-        brl2 = QHBoxLayout(btn_row2); brl2.setContentsMargins(0, 0, 0, 0)
-        self.btn_bim_override = QPushButton("変更強調 OFF")
-        self.btn_bim_override.setCheckable(True)
-        self.btn_bim_override.clicked.connect(self.toggle_bim_override)
-        self.btn_diff = QPushButton("差分を比較")
-        self.btn_diff.setEnabled(False)
-        self.btn_diff.clicked.connect(self.show_diff_dialog)
-        brl2.addWidget(self.btn_bim_override)
-        brl2.addWidget(self.btn_diff)
-
-        # 行3: 確認状態管理
-        btn_row3 = QWidget()
-        brl3 = QHBoxLayout(btn_row3); brl3.setContentsMargins(0, 0, 0, 0)
-        self.btn_confirm = QPushButton("確認済 (2)")
-        self.btn_confirm.setToolTip("選択行を ChangeStatus=2（緑）に設定")
-        self.btn_confirm.setEnabled(False)
-        self.btn_confirm.clicked.connect(self.mark_confirmed)
-        self.btn_reset_status = QPushButton("リセット (0)")
-        self.btn_reset_status.setToolTip("選択行を ChangeStatus=0（未変更）に戻す")
-        self.btn_reset_status.setEnabled(False)
-        self.btn_reset_status.clicked.connect(self.reset_change_status)
-        self.btn_confirm_all = QPushButton("全件リセット")
-        self.btn_confirm_all.setToolTip("テーブル全要素を ChangeStatus=0（未変更）にリセット")
-        self.btn_confirm_all.setEnabled(False)
-        self.btn_confirm_all.clicked.connect(self.reset_all_table)
-        brl3.addWidget(self.btn_confirm)
-        brl3.addWidget(self.btn_reset_status)
-        brl3.addWidget(self.btn_confirm_all)
-
-        # 行4: Undo / Redo
-        btn_row4 = QWidget()
-        brl4 = QHBoxLayout(btn_row4); brl4.setContentsMargins(0, 0, 0, 0)
-        self.btn_undo = QPushButton("戻る (Undo)")
-        self.btn_undo.setEnabled(False)
-        self.btn_redo = QPushButton("進む (Redo)")
-        self.btn_redo.setEnabled(False)
-        brl4.addWidget(self.btn_undo)
-        brl4.addWidget(self.btn_redo)
-
-        # 行5: ズーム ON/OFF + 余白調整スライダー
-        btn_row5 = QWidget()
-        brl5 = QHBoxLayout(btn_row5); brl5.setContentsMargins(0, 0, 0, 0)
-        self.btn_zoom_toggle = QPushButton("ズーム OFF")
-        self.btn_zoom_toggle.setCheckable(True)
-        self.btn_zoom_toggle.setFixedWidth(90)
-        self.btn_zoom_toggle.setToolTip("ONにすると行クリック時にArchiCADでズーム表示します")
-        self.btn_zoom_toggle.toggled.connect(self._on_zoom_toggle)
-        lbl_zoom = QLabel("余白:")
-        self.zoom_slider = QSlider(Qt.Orientation.Horizontal)
-        # 値 10～50 → 1.0x～5.0x（÷10）  ※倍率=ビューBox拡大率
-        self.zoom_slider.setRange(10, 50)
-        self.zoom_slider.setValue(15)        # デフォルト 1.5x
-        self.zoom_slider.setTickInterval(5)
-        self.zoom_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-        self.zoom_slider.setFixedWidth(180)
-        self.zoom_factor_label = QLabel("1.5x")
-        self.zoom_factor_label.setFixedWidth(40)
-        self.zoom_slider.valueChanged.connect(
-            lambda v: self.zoom_factor_label.setText(f"{v / 10.0:.1f}x")
-        )
-        self.btn_zoom_fit = QPushButton("全体表示")
-        self.btn_zoom_fit.setToolTip("ArchiCADのビューを全体表示（フィット）します")
-        self.btn_zoom_fit.setFixedWidth(80)
-        self.btn_zoom_fit.clicked.connect(self.zoom_fit_all)
-        brl5.addWidget(self.btn_zoom_toggle)
-        brl5.addSpacing(8)
-        brl5.addWidget(lbl_zoom)
-        brl5.addWidget(self.zoom_slider)
-        brl5.addWidget(self.zoom_factor_label)
-        brl5.addSpacing(8)
-        brl5.addWidget(self.btn_zoom_fit)
-        brl5.addStretch()
-
-        dp_lay.addWidget(btn_row1)
-        dp_lay.addWidget(btn_row2)
-        dp_lay.addWidget(btn_row3)
-        dp_lay.addWidget(btn_row4)
-        dp_lay.addWidget(btn_row5)
-
-        self.table.clicked.connect(self.on_table_clicked)
+        self._setup_button_feedback()
+        # 右：データ表示・編集ウィンドウ（最初の 1 枚。データ取得で使われ、以後は必要に応じて増える）
+        self.activate_panel(self._create_data_panel())
 
     # ── プロパティ順序ソート ─────────────────────────────────────────
 
@@ -1335,7 +1523,70 @@ class MainWindow(QMainWindow):
 
     # ── エラー処理 ───────────────────────────────────────────────────
 
+    # ── ボタンの処理中表示（取得中は少し濃く、完了で元に戻す）──────────────
+
+    BUSY_TIMEOUT_MS = 30000   # 応答が無くても濃いままにならないよう自動で戻す
+    FLASH_MS        = 250     # その場で終わる操作は押した瞬間だけ濃くする
+
+    def _setup_button_feedback(self):
+        self._busy_buttons = {}   # button -> (元のスタイル, トークン)
+        self._busy_token = 0
+        self._connect_flash(self)
+
+    def _connect_flash(self, root):
+        """root 配下の全ボタンに「押した瞬間だけ少し濃く」を付ける（データウィンドウ生成時にも呼ぶ）。"""
+        for btn in root.findChildren(QPushButton):
+            # 処理側の clicked より後に接続 → 処理中にしたボタンは点滅させない
+            btn.clicked.connect(lambda _checked=False, b=btn: self.flash_button(b))
+
+    @staticmethod
+    def _shaded_style(btn):
+        base = btn.palette().color(QPalette.ColorRole.Button)
+        return (f"QPushButton {{ background-color: {base.darker(120).name()};"
+                f" border: 1px solid {base.darker(160).name()}; border-radius: 3px; padding: 3px 8px; }}")
+
+    def is_button_busy(self, btn):
+        return btn in self._busy_buttons
+
+    def set_button_busy(self, btn):
+        """ArchiCAD からの応答待ちの間、ボタンを少し濃くする。"""
+        if btn in self._busy_buttons:
+            return
+        self._busy_token += 1
+        token = self._busy_token
+        self._busy_buttons[btn] = (btn.styleSheet(), token)
+        btn.setStyleSheet(self._shaded_style(btn))
+        QTimer.singleShot(self.BUSY_TIMEOUT_MS, lambda: self.clear_button_busy(btn, token))
+
+    def clear_button_busy(self, btn, token=None):
+        entry = self._busy_buttons.get(btn)
+        if entry is None or (token is not None and entry[1] != token):
+            return   # 既に戻っている / 新しい処理中に置き換わった
+        del self._busy_buttons[btn]
+        try:
+            btn.setStyleSheet(entry[0])
+        except RuntimeError:
+            pass   # ウィンドウを閉じてボタンが破棄済み（タイマー経由で呼ばれた場合）
+
+    def clear_all_busy(self):
+        for btn in list(self._busy_buttons):
+            self.clear_button_busy(btn)
+
+    def flash_button(self, btn):
+        """応答を待たない操作: 押した瞬間だけ少し濃くして戻す。"""
+        if btn in self._busy_buttons:
+            return
+        self.set_button_busy(btn)
+        token = self._busy_buttons[btn][1]
+        QTimer.singleShot(self.FLASH_MS, lambda: self.clear_button_busy(btn, token))
+
     def on_error(self, m):
+        self.clear_all_busy()
+        # 値を待っていて、まだ一度も表示していないウィンドウは登録ごと破棄（同条件で取り直せるように）
+        for rid, panel in list(self._value_requests.items()):
+            del self._value_requests[rid]
+            if not panel.isVisible() and not panel._verifying_stamps:
+                self._discard_panel(panel)
         if self._verifying_stamps:
             self._verifying_stamps  = False
             self._pending_changes   = None
@@ -1367,7 +1618,9 @@ class MainWindow(QMainWindow):
             append_log(f"[DB] condition saved: id={self.current_condition_id}")
         except Exception as e:
             append_log(f"[DB ERROR] save_condition: {e}")
+        self._last_condition = (stories, types)  # データウィンドウの同一判定・タイトルに使う
         self.condition_status_label.setText("要素抽出中...")
+        self.set_button_busy(self.btn_search)   # プロパティ一覧の取得まで
         self.send_to_ac_async({"command": "get_elements", "stories": stories, **types})
 
     def on_config(self, data):
@@ -1376,6 +1629,7 @@ class MainWindow(QMainWindow):
         sr = QTreeWidgetItem(self.filter_tree, ["階層"])
         sr.setCheckState(0, Qt.CheckState.Unchecked)       # チェックで全階をまとめて選択/解除
         self._story_root = sr
+        self._story_list = data.get("stories", [])
         for s in data.get("stories", []):
             c = QTreeWidgetItem(sr, [s["name"]])
             c.setData(0, Qt.ItemDataRole.UserRole, s["index"])
@@ -1447,9 +1701,11 @@ class MainWindow(QMainWindow):
                 append_log(f"[DB] elements saved: {len(self.current_elements)}")
         except Exception as e:
             append_log(f"[DB ERROR] on_elements: {e}")
-        # 要素が取得できたら自動的にプロパティ一覧を取得
+        # 要素が取得できたら自動的にプロパティ一覧を取得（ボタンはプロパティ一覧受信で戻す）
         if self.current_elements:
             self.request_definitions()
+        else:
+            self.clear_button_busy(self.btn_search)
 
     # ── プロパティ定義 ───────────────────────────────────────────────
 
@@ -1515,6 +1771,7 @@ class MainWindow(QMainWindow):
         self.prop_tree.blockSignals(False)
 
     def on_definitions(self, data):
+        self.clear_button_busy(self.btn_search)
         self._all_defs = data.get("definitions", [])
         # 簡易版の基本情報は最初からチェック → そのまま［データ取得］できる
         self._populate_prop_tree(checked=set(SIMPLE_KEYS))
@@ -1547,29 +1804,76 @@ class MainWindow(QMainWindow):
                 if d:
                     sel.append(d)
             it += 1
-        if sel and hasattr(self, "current_elements"):
-            # ツリーは既に表示順（簡易版は W→L→H…、詳細版は dialog_order 順）なのでその順で列にする
-            self.current_props = sel
-            self.send_to_ac_async({
-                "command":   "get_values",
-                "guids":     [e["guid"] for e in self.current_elements],
-                "propGuids": [p["guid"] for p in self.current_props],
-            })
+        if not (sel and getattr(self, "current_elements", None)):
+            return
+        stories, types = self._last_condition
+        prop_guids = [p["guid"] for p in sel]
+        key = DbManager.make_window_key(stories, types, prop_guids)
+
+        # 同じ条件（階・要素タイプ・プロパティ）のウィンドウは開かない → 既存を前面に
+        existing = next((p for p in self._panels.values() if p.window_key == key), None)
+        if existing is not None or self.db.find_window(key) is not None:
+            QMessageBox.information(
+                self, "データ表示・編集",
+                "同じ条件（階・要素タイプ・プロパティ）のウィンドウは既に開いています。\n"
+                "そのウィンドウを前面に表示します。\n\n"
+                "最新の値を取り直す場合は、そのウィンドウを閉じてから［データ取得］してください。")
+            if existing is not None:
+                self.activate_panel(existing)
+                existing.show(); existing.raise_(); existing.activateWindow()
+            return
+
+        # 新しいウィンドウ（未使用のものがあれば再利用）を SQLite に登録してから値を要求
+        panel = self._acquire_panel()
+        panel.elements      = list(self.current_elements)
+        panel.condition_id  = self.current_condition_id
+        panel.current_props = sel   # ツリーは既に表示順（簡易版は W→L→H…）なのでその順で列にする
+        panel.window_key    = key
+        title = self._panel_title(panel, stories, types)
+        panel.setWindowTitle(title)
+        self.db.open_window(panel.window_id, key, title, panel.condition_id, stories, types,
+                            [e["guid"] for e in panel.elements], prop_guids)
+        self.activate_panel(panel)
+        self._value_requests[panel.window_id] = panel
+        self.set_button_busy(self.btn_get_values)
+        append_log(f"[PANEL] open #{panel.seq} key={key}")
+        self.send_to_ac_async({
+            "command":   "get_values",
+            "reqId":     panel.window_id,
+            "guids":     [e["guid"] for e in panel.elements],
+            "propGuids": prop_guids,
+        })
+
+    def _panel_for_values(self, data):
+        """値の応答の宛先ウィンドウ（reqId で判別。古いアドオンは要求順）。"""
+        rid = data.get("reqId")
+        if rid and rid in self._value_requests:
+            return self._value_requests.pop(rid)
+        if self._value_requests:
+            first = next(iter(self._value_requests))
+            return self._value_requests.pop(first)
+        return self._active_panel
 
     def on_values(self, data):
+        self.activate_panel(self._panel_for_values(data))
         if self._verifying_stamps:
             self._verifying_stamps = False
             self._on_pre_apply_verify(data)
             return
+        self.clear_button_busy(self.btn_get_values)
+        panel = self.data_panel
+        if not panel.elements:   # 旧来の 1 枚運用（直接呼ばれた場合）は条件設定側の要素を使う
+            panel.elements = list(getattr(self, "current_elements", []))
+            panel.condition_id = self.current_condition_id
         v, s = {}, {}
         for item in data.get("values", []):
             g = item["guid"]
             s[g] = item.get("modiStamp", 0)
             for pg, val in item["props"].items():
                 v[(g, pg)] = val
-        self.model.set_data(self.current_elements, self.current_props, v, s)
-        # モデルに現在の condition_id を反映
-        self.model._current_condition_id = self.current_condition_id
+        self.model.set_data(panel.elements, self.current_props, v, s)
+        # モデルにこのウィンドウの condition_id を反映
+        self.model._current_condition_id = panel.condition_id
         self.btn_confirm_all.setEnabled(bool(self.model._elements))
         self.btn_diff.setEnabled(bool(self.model._elements))
         self._apply_enum_delegates()
@@ -1589,7 +1893,7 @@ class MainWindow(QMainWindow):
         self.data_panel.raise_()
         # ③ SQLite に保存
         try:
-            self.db.upsert_elements(self.current_elements, self.current_condition_id, s)
+            self.db.upsert_elements(panel.elements, panel.condition_id, s)
             self.db.upsert_properties(getattr(self, "current_props", []))
             self.db.upsert_values(v, s)
             append_log(f"[DB] values saved: {len(v)} cells")
@@ -1673,6 +1977,12 @@ class MainWindow(QMainWindow):
             guid = payload.get("guid", "")
             if not guid:
                 return
+            # その要素を表示しているウィンドウ（作業中のウィンドウを優先）を対象にする
+            panels = [self._active_panel] + [p for p in self._panels.values() if p is not self._active_panel]
+            target = next((p for p in panels if p is not None
+                           and any(e["guid"] == guid for e in p.model._elements)), None)
+            if target is not None:
+                self.activate_panel(target)
             row = next((i for i, e in enumerate(self.model._elements) if e["guid"] == guid), -1)
             if row < 0:
                 append_log(f"on_archicad_selection_changed: guid={guid} not found in table")
@@ -1850,6 +2160,7 @@ class MainWindow(QMainWindow):
         self._site_request_id = getattr(self, "_site_request_id", 0) + 1
         req = self._site_request_id
         self._site_pending = req
+        self.set_button_busy(self.btn_site_summary)
         self.send_to_ac_async({"command": "get_site_summary"})
         # 応答が来ないまま「取得中」で止まらないよう時間切れを設ける
         QTimer.singleShot(self.SITE_SUMMARY_TIMEOUT_MS, lambda: self._on_site_summary_timeout(req))
@@ -1858,6 +2169,7 @@ class MainWindow(QMainWindow):
         if getattr(self, "_site_pending", None) != req:
             return  # 既に応答済み、または新しい要求に置き換わった
         self._site_pending = None
+        self.clear_button_busy(self.btn_site_summary)
         self.condition_status_label.setText("敷地情報: ArchiCAD から応答がありません")
         append_log("[SITE SUMMARY] timeout (no response from add-on)")
         QMessageBox.warning(
@@ -1871,6 +2183,7 @@ class MainWindow(QMainWindow):
 
     def on_site_summary(self, data):
         self._site_pending = None
+        self.clear_button_busy(self.btn_site_summary)
         try:
             summary = site_summary.build_site_summary(data)
         except Exception as e:
@@ -1894,6 +2207,7 @@ class MainWindow(QMainWindow):
     def show_replace_dialog(self):
         if getattr(self, "_replace_dlg", None) is None:
             self._replace_dlg = ReplaceDialog(self, parent=self.data_panel)
+            self._replace_dlg._panel = self.data_panel   # どのデータウィンドウの置換か
             self._track_window("replace", self._replace_dlg)
         if self.search_edit.text() and not self._replace_dlg.find_edit.text():
             self._replace_dlg.find_edit.setText(self.search_edit.text())
@@ -2109,7 +2423,7 @@ class MainWindow(QMainWindow):
     def clear_value_conflict_flags(self):
         flag_guids = list(self.model._value_conflict_guids)
         if flag_guids:
-            self.send_to_ac_async({
+            self._send_owned("flag", {
                 "command":  "clear_change_flags",
                 "guids":    flag_guids,
                 "propName": "変更フラグ",
@@ -2127,6 +2441,7 @@ class MainWindow(QMainWindow):
         self.status_label.setText("フラグ解除中（ArchiCAD含む）...")
 
     def on_flag_result(self, data):
+        self.activate_panel(self._pop_owner("flag"))
         prop_count = data.get("propCount", 0)
         created    = data.get("created", False)
         if data.get("status") == "ok":
@@ -2144,16 +2459,19 @@ class MainWindow(QMainWindow):
     def toggle_bim_override(self):
         floor = self._last_archicad_floor if self._last_archicad_floor is not None else -1
         append_log(f"[OVERRIDE] floor={floor} active={self._pyqt_active}")
+        self.set_button_busy(self.btn_bim_override)
         if self.btn_bim_override.isChecked():
             self.btn_bim_override.setText("変更強調 ON")
             self.status_label.setText("変更強調適用中...")
-            self.send_to_ac_async({"command": "apply_bim_override", "floor": floor})
+            self._send_owned("override", {"command": "apply_bim_override", "floor": floor})
         else:
             self.btn_bim_override.setText("変更強調 OFF")
             self.status_label.setText("変更強調解除中...")
-            self.send_to_ac_async({"command": "remove_bim_override", "floor": floor})
+            self._send_owned("override", {"command": "remove_bim_override", "floor": floor})
 
     def on_bim_override_result(self, data):
+        self.activate_panel(self._pop_owner("override"))
+        self.clear_button_busy(self.btn_bim_override)
         action = data.get("action", "")
         status = data.get("status", "")
         if action == "setup":
@@ -2198,14 +2516,16 @@ class MainWindow(QMainWindow):
         if not self._selected_guids:
             return
         self._pending_status_change = {"guids": list(self._selected_guids), "value": 2}
-        self.send_to_ac_async({"command": "set_change_status", "guids": self._selected_guids, "status": 2})
+        self.set_button_busy(self.btn_confirm)
+        self._send_owned("status", {"command": "set_change_status", "guids": self._selected_guids, "status": 2})
         self.status_label.setText(f"確認済設定中: {len(self._selected_guids)}件...")
 
     def reset_change_status(self):
         if not self._selected_guids:
             return
         self._pending_status_change = {"guids": list(self._selected_guids), "value": 0}
-        self.send_to_ac_async({"command": "set_change_status", "guids": self._selected_guids, "status": 0})
+        self.set_button_busy(self.btn_reset_status)
+        self._send_owned("status", {"command": "set_change_status", "guids": self._selected_guids, "status": 0})
         self.status_label.setText(f"ステータスリセット中: {len(self._selected_guids)}件...")
 
     def reset_all_table(self):
@@ -2221,10 +2541,14 @@ class MainWindow(QMainWindow):
         self._pending_status_change = {"guids": list(guids), "value": 0}
         self._pending_bim_restore   = True   # 完了後に表現の上書きセットを解除
         self._floor_before_op       = self._last_archicad_floor  # リセット前フロアを保存
-        self.send_to_ac_async({"command": "set_change_status", "guids": guids, "status": 0})
+        self.set_button_busy(self.btn_confirm_all)
+        self._send_owned("status", {"command": "set_change_status", "guids": guids, "status": 0})
         self.status_label.setText(f"全件リセット中: {len(guids)}件...")
 
     def on_change_status_result(self, data):
+        self.activate_panel(self._pop_owner("status"))
+        for btn in (self.btn_confirm, self.btn_reset_status, self.btn_confirm_all):
+            self.clear_button_busy(btn)
         try:
             append_log(f"on_change_status_result: {data}")
             if data.get("status") == "ok":
@@ -2244,7 +2568,7 @@ class MainWindow(QMainWindow):
                     self._pending_bim_restore = False
                     floor = self._floor_before_op if self._floor_before_op is not None else self._last_archicad_floor
                     cmd_floor = floor if floor is not None else -1
-                    self.send_to_ac_async({"command": "remove_bim_override", "floor": cmd_floor})
+                    self._send_owned("override", {"command": "remove_bim_override", "floor": cmd_floor})
                     self.btn_bim_override.setChecked(False)
                     self.btn_bim_override.setText("変更強調 OFF")
                     append_log(f"[RESET-ALL] BIM override removed floor={floor}")
@@ -2311,12 +2635,15 @@ class MainWindow(QMainWindow):
         self._pre_verify_original = dict(self.model._original_values)
         self._pre_verify_stamps   = dict(self.model._stamps)
         self._verifying_stamps    = True
+        self.set_button_busy(self.btn_sync)   # 反映結果（sync_complete）まで
         self._floor_before_op     = self._last_archicad_floor   # 反映前フロアを保存
         self.btn_sync.setEnabled(False)
         changed_guids = list({c["guid"]   for c in changes})
         changed_props = list({c["propId"] for c in changes if c.get("propId")})
         self.status_label.setText("stamp/値を確認中...")
-        self.send_to_ac_async({"command": "get_values", "guids": changed_guids, "propGuids": changed_props})
+        self._value_requests[self.data_panel.window_id] = self.data_panel
+        self.send_to_ac_async({"command": "get_values", "reqId": self.data_panel.window_id,
+                               "guids": changed_guids, "propGuids": changed_props})
 
     def _on_pre_apply_verify(self, data):
         self.btn_sync.setEnabled(True)
@@ -2364,7 +2691,7 @@ class MainWindow(QMainWindow):
         if not conflicts:
             append_log(f"[PRE-VERIFY] 競合なし → 反映 {len(pending)} 件")
             self.status_label.setText("反映中...")
-            self.send_to_ac_async({"command": "apply_changes", "changes": pending})
+            self._send_owned("sync", {"command": "apply_changes", "changes": pending})
             return
 
         safe_changes     = [c for c in pending if (c["guid"], c["propId"]) not in conflict_keys]
@@ -2396,7 +2723,7 @@ class MainWindow(QMainWindow):
         if clicked == btn_overwrite:
             append_log(f"[PRE-VERIFY] 全上書き → {len(pending)} 件")
             self.status_label.setText("反映中（全上書き）...")
-            self.send_to_ac_async({"command": "apply_changes", "changes": pending})
+            self._send_owned("sync", {"command": "apply_changes", "changes": pending})
 
         elif clicked == btn_skip:
             for cf in conflicts:
@@ -2428,7 +2755,7 @@ class MainWindow(QMainWindow):
 
             flag_guids = list(self.model._value_conflict_guids)
             if flag_guids:
-                self.send_to_ac_async({
+                self._send_owned("flag", {
                     "command":  "mark_change_flags",
                     "guids":    flag_guids,
                     "flag":     "⚠変更あり",
@@ -2437,14 +2764,18 @@ class MainWindow(QMainWindow):
             if safe_changes:
                 append_log(f"[PRE-VERIFY] 競合スキップ → safe {len(safe_changes)} 件 / skip {len(conflict_changes)} 件")
                 self.status_label.setText(f"競合スキップして反映中... ({len(safe_changes)}件)")
-                self.send_to_ac_async({"command": "apply_changes", "changes": safe_changes})
+                self._send_owned("sync", {"command": "apply_changes", "changes": safe_changes})
             else:
                 self.status_label.setText("反映キャンセル（全て競合）")
+                self.clear_button_busy(self.btn_sync)
         else:
             self.status_label.setText("反映を中止しました")
+            self.clear_button_busy(self.btn_sync)
 
     def on_sync_complete(self, data):
+        self.activate_panel(self._pop_owner("sync"))
         append_log("=== SYNC COMPLETE RECEIVED ===")
+        self.clear_button_busy(self.btn_sync)
         append_log(f"sync payload keys: {list(data.keys()) if isinstance(data, dict) else type(data).__name__}")
         append_log(f"sync results count: {len(data.get('results', []))}")
         try:
@@ -2522,7 +2853,7 @@ class MainWindow(QMainWindow):
             if sc > 0:
                 floor = self._floor_before_op if self._floor_before_op is not None else self._last_archicad_floor
                 cmd_floor = floor if floor is not None else -1
-                self.send_to_ac_async({"command": "apply_bim_override", "floor": cmd_floor})
+                self._send_owned("override", {"command": "apply_bim_override", "floor": cmd_floor})
                 append_log(f"[APPLY OVERRIDE] floor={cmd_floor}")
                 self.btn_bim_override.setChecked(True)
                 self.btn_bim_override.setText("変更強調 ON")
@@ -2537,14 +2868,21 @@ class MainWindow(QMainWindow):
         return QSettings(str(SETTINGS_PATH), QSettings.Format.IniFormat)
 
     def _track_window(self, key, widget):
-        """前回の大きさ・位置を復元し、以後の移動・サイズ変更を自動保存の対象にする。"""
-        if not hasattr(self, "_tracked_windows"):
-            self._tracked_windows = {}
-        self._tracked_windows[key] = widget
+        """前回の大きさ・位置を復元し、以後の移動・サイズ変更を自動保存の対象にする。
+        データウィンドウは複数あっても同じキー（最後に動かしたものの大きさを次回に使う）。"""
+        self._tracked_windows[widget] = key
         geom = self._settings().value(f"geometry/{key}")
         if geom is not None:
             widget.restoreGeometry(geom)
         widget.installEventFilter(self)
+
+    def _untrack_window(self, widget):
+        if self._tracked_windows.pop(widget, None) is not None:
+            try:
+                widget.removeEventFilter(self)
+            except RuntimeError:
+                pass
+        self._shown_windows.discard(widget)
 
     def _restore_splitter(self):
         state = self._settings().value("splitter/condition")
@@ -2553,21 +2891,27 @@ class MainWindow(QMainWindow):
         self.h_split.splitterMoved.connect(lambda *_: self._state_timer.start())
 
     def eventFilter(self, obj, event):
-        tracked = getattr(self, "_tracked_windows", {})
-        if obj in tracked.values():
+        tracked = self.__dict__.get("_tracked_windows", {})
+        if obj in tracked:
             t = event.type()
             if t == QEvent.Type.Show:
                 self._shown_windows.add(obj)
             if t in (QEvent.Type.Resize, QEvent.Type.Move) and obj in self._shown_windows:
+                self._last_moved[tracked[obj]] = obj   # 同じキーは最後に動かしたものを保存
                 self._state_timer.start()
         return super().eventFilter(obj, event)
 
     def save_window_state(self):
         """表示したことのあるウィンドウの大きさ・位置と、条件設定の左右分割を保存する。"""
         s = self._settings()
-        for key, widget in getattr(self, "_tracked_windows", {}).items():
+        chosen = {}
+        for widget, key in self._tracked_windows.items():
             if widget in self._shown_windows:   # 今回開いていないものは前回値を残す
-                s.setValue(f"geometry/{key}", widget.saveGeometry())
+                chosen.setdefault(key, widget)
+        chosen.update({k: w for k, w in self._last_moved.items()
+                       if w in self._shown_windows and w in self._tracked_windows})
+        for key, widget in chosen.items():
+            s.setValue(f"geometry/{key}", widget.saveGeometry())
         if self in self._shown_windows:
             s.setValue("splitter/condition", self.h_split.saveState())
         s.sync()
@@ -2654,20 +2998,25 @@ class MainWindow(QMainWindow):
             append_log(f"[WINDOW STATE ERROR] {e}")
         # 後片付け中にイベントフィルタが呼ばれないよう監視を外す
         self._state_timer.stop()
-        for widget in getattr(self, "_tracked_windows", {}).values():
-            try:
-                widget.removeEventFilter(self)
-            except RuntimeError:
-                pass   # 既に破棄済みのダイアログ
+        for widget in list(self._tracked_windows):
+            self._untrack_window(widget)
         self._tracked_windows = {}
         if self.server_thread:
             self.server_thread.stop()
+        # データウィンドウはすべて閉じる（終了時は確認なし）。SQLite の登録も消去
+        self._closing = True
+        for panel in list(self._panels.values()):
+            panel.confirm_close = None
+            panel.close()
+        try:
+            self.db.clear_windows()
+        except Exception:
+            pass
         try:
             self.db.purge_old_history(keep_rows=5000)
             self.db.close()
         except Exception:
             pass
-        self.data_panel.close()
         event.accept()
 
 

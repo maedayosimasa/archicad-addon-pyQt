@@ -959,8 +959,11 @@ def test_site_summary_timeout_when_addon_does_not_answer(main_window, monkeypatc
     timers = []
     monkeypatch.setattr(server.QTimer, "singleShot", staticmethod(lambda ms, fn: timers.append((ms, fn))))
     w.request_site_summary()
-    assert timers[0][0] == 15000
-    timers[0][1]()                                    # 応答なしのまま時間切れ
+    site_timers = [fn for ms, fn in timers if ms == 15000]   # ボタン用 30 秒タイマーとは別
+    assert len(site_timers) == 1
+    assert w.is_button_busy(w.btn_site_summary)
+    site_timers[0]()                                  # 応答なしのまま時間切れ
+    assert not w.is_button_busy(w.btn_site_summary)   # ボタンの色も戻る
     assert w.condition_status_label.text() == "敷地情報: ArchiCAD から応答がありません"
     kind, _, text = w.msgbox.calls[-1]
     assert kind == "warning" and "再起動" in text
@@ -969,7 +972,8 @@ def test_site_summary_timeout_when_addon_does_not_answer(main_window, monkeypatc
 def test_site_summary_timeout_ignored_after_response(main_window, monkeypatch):
     w = main_window
     timers = []
-    monkeypatch.setattr(server.QTimer, "singleShot", staticmethod(lambda ms, fn: timers.append(fn)))
+    monkeypatch.setattr(server.QTimer, "singleShot",
+                        staticmethod(lambda ms, fn: timers.append(fn) if ms == 15000 else None))
     w.request_site_summary()
     w.on_site_summary(_site_payload())                # 時間内に応答
     timers[0]()
@@ -1233,3 +1237,114 @@ def test_close_stops_tracking(main_window):
     assert w._tracked_windows == {} and not w._state_timer.isActive()
     w.data_panel.resize(300, 200)                       # 閉じた後の変更は保存処理を起動しない
     assert not w._state_timer.isActive()
+
+# ── ボタンの処理中表示（取得中は少し濃く、完了で戻す）──────────────
+
+@pytest.fixture
+def no_timers(monkeypatch):
+    """QTimer.singleShot を記録だけにする（時間経過を手動で起こす）。"""
+    calls = []
+    monkeypatch.setattr(server.QTimer, "singleShot", staticmethod(lambda ms, fn: calls.append((ms, fn))))
+    return calls
+
+
+def test_busy_button_is_darker_and_restored(main_window, no_timers):
+    w = main_window
+    btn = w.btn_get_values
+    btn.setStyleSheet("color: blue;")
+    base = btn.palette().color(server.QPalette.ColorRole.Button)   # 濃くする前の色
+    w.set_button_busy(btn)
+    assert w.is_button_busy(btn) and "background-color" in btn.styleSheet()
+    assert base.darker(120).name() in btn.styleSheet()        # 少し濃い色
+    w.set_button_busy(btn)                                     # 二重に濃くしない
+    assert len(w._busy_buttons) == 1
+    w.clear_button_busy(btn)
+    assert not w.is_button_busy(btn) and btn.styleSheet() == "color: blue;"   # 元のスタイルに戻る
+
+
+def test_busy_auto_restores_after_timeout(main_window, no_timers):
+    w = main_window
+    w.set_button_busy(w.btn_sync)
+    ms, fn = no_timers[-1]
+    assert ms == w.BUSY_TIMEOUT_MS
+    fn()                                                       # 応答が無くても 30 秒で戻る
+    assert not w.is_button_busy(w.btn_sync)
+    w.set_button_busy(w.btn_sync)
+    fn()                                                       # 古いタイマーは新しい処理中を戻さない
+    assert w.is_button_busy(w.btn_sync)
+
+
+def test_flash_for_immediate_buttons(main_window, no_timers):
+    w = main_window
+    w.btn_clear_sort.click()                                   # その場で終わる操作
+    assert w.is_button_busy(w.btn_clear_sort)
+    flash = [fn for ms, fn in no_timers if ms == w.FLASH_MS]
+    flash[-1]()
+    assert not w.is_button_busy(w.btn_clear_sort)
+
+
+def test_search_and_values_buttons_follow_responses(main_window, no_timers):
+    w = main_window
+    w.btn_search.click()
+    assert w.is_button_busy(w.btn_search)                      # 抽出中
+    w.on_elements({"elements": [{"guid": G1, "type": "Wall"}]})
+    assert w.is_button_busy(w.btn_search)                      # プロパティ一覧の取得中も濃いまま
+    w.on_definitions({"definitions": [{"guid": "builtin:element_id", "name": "ID", "group": "IDとカテゴリ"}]})
+    assert not w.is_button_busy(w.btn_search)                  # 完了で戻る
+
+    w.btn_search.click()
+    w.on_elements({"elements": []})                            # 該当なしでも戻る
+    assert not w.is_button_busy(w.btn_search)
+
+    w.btn_get_values.click()
+    assert w.is_button_busy(w.btn_get_values)
+    w.on_values({"values": []})
+    assert not w.is_button_busy(w.btn_get_values)
+
+
+def test_get_values_without_selection_only_flashes(main_window, no_timers):
+    w = main_window
+    w.btn_get_values.click()                                   # 何も選んでいない → 送信しない
+    assert w.sent == []
+    assert [ms for ms, _ in no_timers if ms == w.FLASH_MS]     # 押した反応だけ見せる
+
+
+def test_sync_status_override_site_buttons(loaded, no_timers, monkeypatch):
+    w = loaded
+    _edit(w, G1, "P-WIDTH", "150")
+    w.sync_data()
+    assert w.is_button_busy(w.btn_sync)
+    w.on_values(_values_payload(stamps=(11, 20, 30)))         # 競合なし → 反映送信、まだ濃い
+    assert w.is_button_busy(w.btn_sync)
+    w.on_sync_complete({"results": [{"guid": G1, "status": "success"}]})
+    assert not w.is_button_busy(w.btn_sync)
+
+    w._selected_guids = [G1]
+    w.mark_confirmed()
+    assert w.is_button_busy(w.btn_confirm)
+    w.on_change_status_result({"status": "ok", "value": 2, "set": 1})
+    assert not w.is_button_busy(w.btn_confirm)
+
+    w.btn_bim_override.setChecked(True)
+    w.toggle_bim_override()
+    assert w.is_button_busy(w.btn_bim_override)
+    w.on_bim_override_result({"action": "applied", "status": "ok"})
+    assert not w.is_button_busy(w.btn_bim_override)
+
+    w.request_site_summary()
+    assert w.is_button_busy(w.btn_site_summary)
+    w.on_site_summary({"elements": [], "projectInfo": []})
+    assert not w.is_button_busy(w.btn_site_summary)
+
+
+def test_sync_cancel_and_error_restore(loaded, no_timers, monkeypatch):
+    _ConflictBoxDriver(monkeypatch, "全て中止")
+    w = loaded
+    _edit(w, G1, "P-WIDTH", "150")
+    w.sync_data()
+    w.on_values(_values_payload(width=("111", "200", "300")))  # 競合 → 中止
+    assert not w.is_button_busy(w.btn_sync)
+
+    w.set_button_busy(w.btn_get_values); w.set_button_busy(w.btn_search)
+    w.on_error("接続できません")                               # エラー時はすべて戻す
+    assert w._busy_buttons == {}
