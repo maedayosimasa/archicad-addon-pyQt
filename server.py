@@ -1784,9 +1784,14 @@ class MainWindow(QMainWindow):
     # ── 両ウィンドウを同時に表示 ─────────────────────────────────────
 
     def _show_all_windows(self):
-        """ArchiCAD からの project_config 受信時: 条件設定パネルのみ表示。
-        データパネルは [データ取得] ボタンで初めて開く。"""
-        self.show()
+        """ArchiCAD からの project_config 受信時（＝ダイアログの［構成を取得］の後）に
+        条件設定パネルを表示して前面に出す。データパネルは [データ取得] ボタンで初めて開く。"""
+        if self.isMinimized():
+            self.showNormal()
+        else:
+            self.show()
+        self.raise_()
+        self.activateWindow()
 
     # ── ⑦ 起動時復元 ────────────────────────────────────────────────
 
@@ -3831,6 +3836,9 @@ if __name__ == "__main__":
     server_thread = TcpServerThread(win.signals)
     win.server_thread = server_thread
     server_thread.start()
-    # 起動時は条件設定パネルのみ表示（データパネルは [データ取得] で開く）
-    win.show()
+    # 起動直後は表示しない（アドオン読み込み時に起動されるため、Archicad のダイアログより先に
+    # 出てしまうのを防ぐ）。ダイアログの［構成を取得］→ project_config 受信時に初めて表示する。
+    # 単体で動作確認する場合は --show を付けて起動する。
+    if "--show" in sys.argv:
+        win.show()
     sys.exit(app.exec())

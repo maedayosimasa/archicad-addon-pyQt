@@ -278,7 +278,9 @@ void SenderLoop() {
             WriteExternalLog("Attempting to send message to Python (" + std::to_string(msg.length()) + " bytes)");
             bool sentOk = false;
             int retry = 0;
-            const int MAX_RETRY = 3;
+            // Python（PyQt）は起動に数秒かかる。［構成を取得］で起動した直後でも構成が届くよう
+            // 最大 約15 秒（200ms × 75 回）接続を待つ（PyQt は構成を受け取って初めて表示される）
+            const int MAX_RETRY = 75;
             while (retry < MAX_RETRY && !stopSender) {
                 SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
                 if (s != INVALID_SOCKET) {
@@ -299,8 +301,9 @@ void SenderLoop() {
                 if (sentOk) break;
                 retry++;
                 if (retry < MAX_RETRY) {
-                    WriteExternalLog("Send retry " + std::to_string(retry) + " for " + std::to_string(msg.length()) + " bytes");
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    if (retry <= 3 || retry % 10 == 0)
+                        WriteExternalLog("Send retry " + std::to_string(retry) + " for " + std::to_string(msg.length()) + " bytes");
+                    std::this_thread::sleep_for(std::chrono::milliseconds(200));
                 }
             }
             if (!sentOk) WriteExternalLog("FAILED to send message after retries. Dropping message.");

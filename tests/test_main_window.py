@@ -111,6 +111,20 @@ def test_show_all_windows(main_window):
     assert main_window.isVisible()
 
 
+def test_window_hidden_until_project_config(main_window):
+    # 起動直後（project_config 受信前）は表示されない
+    assert not main_window.isVisible()
+    main_window.signals.show_window.emit()
+    assert main_window.isVisible()
+
+
+def test_show_all_windows_restores_minimized(main_window):
+    main_window.show()
+    main_window.showMinimized()
+    main_window._show_all_windows()
+    assert main_window.isVisible() and not main_window.isMinimized()
+
+
 # ── 条件設定 → 要素抽出 → プロパティ一覧 → データ取得 ─────────────
 
 def test_full_fetch_flow(main_window):
